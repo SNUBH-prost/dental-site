@@ -3,11 +3,14 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 const DEPARTMENTS = [
-  { id: "surgery",      name: "외과 / 치주과", icon: "🦷" },
-  { id: "medicine",     name: "내과",          icon: "🩺" },
-  { id: "conservative", name: "보존과",         icon: "🔬" },
-  { id: "orthodontics", name: "교정과",         icon: "📐" },
-  { id: "prosthetics",  name: "보철과",         icon: "⚙️"  }
+  { id: "surgery",          name: "외과 / 치주과",   icon: "🦷" },
+  { id: "medicine",         name: "내과",            icon: "🩺" },
+  { id: "conservative",     name: "보존과",           icon: "🔬" },
+  { id: "orthodontics",     name: "교정과",           icon: "📐" },
+  { id: "prost-fixed",      name: "보철 — 고정성",   icon: "🦷" },
+  { id: "prost-implant",    name: "보철 — 임플란트", icon: "⚙️"  },
+  { id: "prost-removable",  name: "보철 — 가철성",   icon: "🔩" },
+  { id: "prost-materials",  name: "보철 — 재료",     icon: "🧪" }
 ];
 
 let allCases = [];

@@ -4,11 +4,14 @@ const db   = firebase.firestore();
 const auth = firebase.auth();
 
 const DEPARTMENTS = [
-  { id: "surgery",      name: "외과 / 치주과" },
-  { id: "medicine",     name: "내과"          },
-  { id: "conservative", name: "보존과"         },
-  { id: "orthodontics", name: "교정과"         },
-  { id: "prosthetics",  name: "보철과"         }
+  { id: "surgery",         name: "외과 / 치주과"   },
+  { id: "medicine",        name: "내과"            },
+  { id: "conservative",    name: "보존과"           },
+  { id: "orthodontics",    name: "교정과"           },
+  { id: "prost-fixed",     name: "보철 — 고정성"   },
+  { id: "prost-implant",   name: "보철 — 임플란트" },
+  { id: "prost-removable", name: "보철 — 가철성"   },
+  { id: "prost-materials", name: "보철 — 재료"     }
 ];
 
 // 편집 중인 항목 ID
