@@ -180,7 +180,13 @@ function formHTML(type, d = {}) {
         </div>
         <div class="form-group full">
           <label>상세 설명</label>
-          <textarea id="${type}-description" rows="5" placeholder="케이스/자료 상세 내용">${d.description || ''}</textarea>
+          <textarea id="${type}-description" rows="10"
+            placeholder="케이스/자료 상세 내용&#10;&#10;💡 이미지를 이 칸에 바로 드래그하면 글 중간에 삽입됩니다."
+            ondragover="event.preventDefault();this.classList.add('drag-active')"
+            ondragleave="this.classList.remove('drag-active')"
+            ondrop="dropImageIntoText(event,'${type}-description')"
+            style="min-height:200px">${d.description || ''}</textarea>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem">이미지를 텍스트 영역으로 드래그하면 현재 커서 위치에 자동 삽입됩니다.</div>
         </div>
         <div class="form-group full">
           <label>태그</label>
@@ -471,4 +477,95 @@ async function editContent(id) {
 function cancelEdit(type) {
   if (type === 'case') { editingCaseId = null; renderCaseForm(); switchPanel('cases-list'); }
   else                 { editingContentId = null; renderContentForm(); switchPanel('contents-list'); }
+}
+
+// ── 텍스트 영역 드래그 이미지 삽입 ───────────────────────────
+async function dropImageIntoText(e, textareaId) {
+  e.preventDefault();
+  const textarea = document.getElementById(textareaId);
+  textarea.classList.remove('drag-active');
+
+  const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+  if (!file) return;
+
+  const placeholder = `![업로드 중...]()`;
+  const start = textarea.selectionStart;
+  const before = textarea.value.slice(0, start);
+  const after  = textarea.value.slice(start);
+  textarea.value = before + placeholder + after;
+
+  showToast('업로드 중...', 'success');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', cloudinaryConfig.uploadPreset);
+
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`, {
+      method: 'POST', body: formData
+    });
+    const data = await res.json();
+    if (!data.secure_url) throw new Error('업로드 실패');
+
+    const markdown = `![](${data.secure_url})`;
+    textarea.value = textarea.value.replace(placeholder, markdown);
+    showToast('이미지 삽입 완료!', 'success');
+  } catch(err) {
+    textarea.value = textarea.value.replace(placeholder, '');
+    showToast('이미지 업로드 실패', 'error');
+  }
+}
+
+// ── 인라인 이미지 업로드 ──────────────────────────────────────
+function handleInlineDrop(e) {
+  e.preventDefault();
+  document.getElementById('inline-upload-zone').classList.remove('dragover');
+  const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+  if (file) uploadInlineFile(file);
+}
+
+function uploadInlineImage(e) {
+  const file = e.target.files[0];
+  if (file) uploadInlineFile(file);
+  e.target.value = '';
+}
+
+async function uploadInlineFile(file) {
+  const progWrap = document.getElementById('inline-progress');
+  const progBar  = document.getElementById('inline-progress-bar');
+  const result   = document.getElementById('inline-result');
+  result.style.display = 'none';
+  progWrap.style.display = 'block';
+  progBar.style.width = '30%';
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', cloudinaryConfig.uploadPreset);
+
+    progBar.style.width = '60%';
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`, {
+      method: 'POST', body: formData
+    });
+    const data = await res.json();
+    if (!data.secure_url) throw new Error('업로드 실패');
+
+    progBar.style.width = '100%';
+    setTimeout(() => { progWrap.style.display = 'none'; progBar.style.width = '0%'; }, 400);
+
+    const url = data.secure_url;
+    document.getElementById('inline-url-img').value     = `![이미지](${url})`;
+    document.getElementById('inline-url-caption').value = `![캡션을_여기에](${url})`;
+    document.getElementById('inline-preview-img').src   = url;
+    result.style.display = 'block';
+    showToast('업로드 완료! URL을 복사하세요.', 'success');
+  } catch(e) {
+    progWrap.style.display = 'none';
+    showToast('업로드 실패: ' + e.message, 'error');
+  }
+}
+
+function copyInline(inputId) {
+  const el = document.getElementById(inputId);
+  navigator.clipboard.writeText(el.value).then(() => showToast('클립보드에 복사됐습니다!', 'success'));
 }

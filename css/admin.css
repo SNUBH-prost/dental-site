@@ -436,6 +436,13 @@ textarea { resize: vertical; min-height: 100px; }
   margin-top: 1.5rem;
 }
 
+/* ── 텍스트 영역 드래그 ── */
+textarea.drag-active {
+  border-color: var(--primary-light);
+  background: #f0f7ff;
+  outline: 2px dashed var(--primary-light);
+}
+
 /* ── Spinner ── */
 .spinner {
   width: 20px;
