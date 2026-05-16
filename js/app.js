@@ -135,7 +135,7 @@ function openModal(id, type) {
   document.getElementById('modal-dept').textContent  = dept ? dept.name : '';
   document.getElementById('modal-title').textContent = item.title;
   document.getElementById('modal-date').textContent  = item.date || '';
-  document.getElementById('modal-description').textContent = item.description || '';
+  document.getElementById('modal-description').innerHTML = marked.parse(item.description || '');
   document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
 
   renderRefs(item.references || []);
