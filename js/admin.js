@@ -162,24 +162,16 @@ function setupTextareaDrop(type) {
   const textarea = document.getElementById(`${type}-description`);
   if (!textarea) return;
 
-  // 클릭·키 입력 때마다 커서 위치 저장
   let savedPos = 0;
-  const savePos = () => { savedPos = textarea.selectionStart; };
-  textarea.addEventListener('click',  savePos);
-  textarea.addEventListener('keyup',  savePos);
-  textarea.addEventListener('input',  savePos);
+  textarea.addEventListener('click',  () => { savedPos = textarea.selectionStart; });
+  textarea.addEventListener('keyup',  () => { savedPos = textarea.selectionStart; });
+  textarea.addEventListener('input',  () => { savedPos = textarea.selectionStart; });
+  textarea.addEventListener('dragenter', () => { savedPos = textarea.selectionStart; });
 
-  textarea.addEventListener('dragenter', e => {
-    if (Array.from(e.dataTransfer.types).includes('Files')) {
-      savedPos = textarea.selectionStart; // 드래그 시작 시점 커서 저장
-    }
-  });
-
+  // 반드시 무조건 preventDefault — 이게 없으면 drop 자체가 안 됨
   textarea.addEventListener('dragover', e => {
-    if (Array.from(e.dataTransfer.types).includes('Files')) {
-      e.preventDefault();
-      textarea.classList.add('drag-active');
-    }
+    e.preventDefault();
+    textarea.classList.add('drag-active');
   });
 
   textarea.addEventListener('dragleave', () => {
@@ -187,14 +179,13 @@ function setupTextareaDrop(type) {
   });
 
   textarea.addEventListener('drop', e => {
+    e.preventDefault(); // drop 허용 — 파일 체크 전에 반드시 먼저 호출
+    textarea.classList.remove('drag-active');
     const imageFile = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
     if (!imageFile) return;
-    e.preventDefault();
-    textarea.classList.remove('drag-active');
     dropImageIntoText(textarea, imageFile, savedPos);
   });
 
-  // Ctrl+V 이미지 붙여넣기
   textarea.addEventListener('paste', e => {
     const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
     if (!item) return;
