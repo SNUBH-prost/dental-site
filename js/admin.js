@@ -127,6 +127,42 @@ async function loadContentsList() {
   }).join('')}</div>`;
 }
 
+// ── JSON 가져오기 ─────────────────────────────────────────────
+function importFromJSON() {
+  const raw     = document.getElementById('import-json-input').value.trim();
+  const errEl   = document.getElementById('import-error');
+  const type    = document.getElementById('import-type').value;
+  errEl.style.display = 'none';
+
+  if (!raw) { errEl.textContent = 'JSON을 붙여넣어 주세요.'; errEl.style.display = 'inline'; return; }
+
+  let data;
+  try {
+    // Claude가 ```json ... ``` 블록으로 감쌀 경우 자동 제거
+    const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
+    data = JSON.parse(cleaned);
+  } catch(e) {
+    errEl.textContent = 'JSON 파싱 오류: ' + e.message;
+    errEl.style.display = 'inline';
+    return;
+  }
+
+  if (type === 'case') {
+    editingCaseId = null;
+    renderCaseForm(data);
+    switchPanel('case-add');
+  } else {
+    editingContentId = null;
+    renderContentForm(data);
+    switchPanel('content-add');
+  }
+
+  showToast('폼에 가져왔습니다! 내용 확인 후 저장하세요.', 'success');
+
+  // 입력창 초기화
+  document.getElementById('import-json-input').value = '';
+}
+
 // ── 삭제 ─────────────────────────────────────────────────────
 async function deleteItem(collection, id) {
   if (!confirm('정말 삭제하시겠습니까?')) return;
@@ -155,6 +191,72 @@ function renderContentForm(data = {}) {
   renderPhotoPreview('content');
   renderTagChips('content');
   setupTextareaDrop('content');
+}
+
+// ── 서식 툴바 ─────────────────────────────────────────────────
+function applyFmt(type, id) {
+  const ta    = document.getElementById(`${id}-description`);
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const sel   = ta.value.slice(start, end);
+  const before = ta.value.slice(0, start);
+  const after  = ta.value.slice(end);
+
+  const maps = {
+    bold:   { wrap: ['**','**'],  placeholder: '굵은 텍스트' },
+    italic: { wrap: ['*','*'],    placeholder: '기울임 텍스트' },
+    strike: { wrap: ['~~','~~'],  placeholder: '취소선 텍스트' },
+    h1:     { line: '# ',         placeholder: '제목 1' },
+    h2:     { line: '## ',        placeholder: '제목 2' },
+    h3:     { line: '### ',       placeholder: '제목 3' },
+    ul:     { line: '- ',         placeholder: '목록 항목' },
+    hr:     { insert: '\n---\n' }
+  };
+
+  const rule = maps[type];
+  let result, cursor;
+
+  if (rule.insert) {
+    result = before + rule.insert + after;
+    cursor = start + rule.insert.length;
+  } else if (rule.wrap) {
+    const [open, close] = rule.wrap;
+    const text = sel || rule.placeholder;
+    result = before + open + text + close + after;
+    cursor = start + open.length + text.length + close.length;
+  } else if (rule.line) {
+    const nlBefore = (before.length > 0 && !before.endsWith('\n')) ? '\n' : '';
+    const text = sel || rule.placeholder;
+    const inserted = nlBefore + rule.line + text + '\n';
+    result = before + inserted + after;
+    cursor = start + inserted.length;
+  }
+
+  ta.value = result;
+  ta.setSelectionRange(cursor, cursor);
+  ta.focus();
+}
+
+function applyColor(color, id) {
+  const ta    = document.getElementById(`${id}-description`);
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const sel   = ta.value.slice(start, end) || '텍스트';
+  const tag   = `<span style="color:${color}">${sel}</span>`;
+  ta.value = ta.value.slice(0, start) + tag + ta.value.slice(end);
+  ta.setSelectionRange(start + tag.length, start + tag.length);
+  ta.focus();
+}
+
+function applyHighlight(color, id) {
+  const ta    = document.getElementById(`${id}-description`);
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const sel   = ta.value.slice(start, end) || '텍스트';
+  const tag   = `<mark style="background:${color}">${sel}</mark>`;
+  ta.value = ta.value.slice(0, start) + tag + ta.value.slice(end);
+  ta.setSelectionRange(start + tag.length, start + tag.length);
+  ta.focus();
 }
 
 // ── 텍스트 영역 드래그 이벤트 등록 ──────────────────────────
@@ -219,9 +321,37 @@ function formHTML(type, d = {}) {
         </div>
         <div class="form-group full">
           <label>상세 설명</label>
+          <div class="editor-toolbar">
+            <button type="button" class="tb-btn" title="굵게" onclick="applyFmt('bold','${type}')"><b>B</b></button>
+            <button type="button" class="tb-btn" title="기울임" onclick="applyFmt('italic','${type}')"><i>I</i></button>
+            <button type="button" class="tb-btn" title="취소선" onclick="applyFmt('strike','${type}')"><s>S</s></button>
+            <div class="tb-sep"></div>
+            <button type="button" class="tb-btn" title="제목 1" onclick="applyFmt('h1','${type}')">H1</button>
+            <button type="button" class="tb-btn" title="제목 2" onclick="applyFmt('h2','${type}')">H2</button>
+            <button type="button" class="tb-btn" title="제목 3" onclick="applyFmt('h3','${type}')">H3</button>
+            <div class="tb-sep"></div>
+            <button type="button" class="tb-btn" title="목록" onclick="applyFmt('ul','${type}')">• 목록</button>
+            <button type="button" class="tb-btn" title="구분선" onclick="applyFmt('hr','${type}')">― 선</button>
+            <div class="tb-sep"></div>
+            <span class="tb-label">글자색</span>
+            <button type="button" class="tb-color" style="background:#ef4444" title="빨강"  onclick="applyColor('#ef4444','${type}')"></button>
+            <button type="button" class="tb-color" style="background:#f97316" title="주황"  onclick="applyColor('#f97316','${type}')"></button>
+            <button type="button" class="tb-color" style="background:#16a34a" title="초록"  onclick="applyColor('#16a34a','${type}')"></button>
+            <button type="button" class="tb-color" style="background:#2563eb" title="파랑"  onclick="applyColor('#2563eb','${type}')"></button>
+            <button type="button" class="tb-color" style="background:#7c3aed" title="보라"  onclick="applyColor('#7c3aed','${type}')"></button>
+            <button type="button" class="tb-color" style="background:#64748b" title="회색"  onclick="applyColor('#64748b','${type}')"></button>
+            <div class="tb-sep"></div>
+            <span class="tb-label">형광펜</span>
+            <button type="button" class="tb-color tb-hl" style="background:#fef08a" title="노랑"  onclick="applyHighlight('#fef08a','${type}')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#bbf7d0" title="초록"  onclick="applyHighlight('#bbf7d0','${type}')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#bae6fd" title="파랑"  onclick="applyHighlight('#bae6fd','${type}')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#fecdd3" title="분홍"  onclick="applyHighlight('#fecdd3','${type}')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#fed7aa" title="주황"  onclick="applyHighlight('#fed7aa','${type}')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#e9d5ff" title="���라"  onclick="applyHighlight('#e9d5ff','${type}')"></button>
+          </div>
           <textarea id="${type}-description" rows="10"
             placeholder="케이스/자료 상세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
-            style="min-height:200px">${d.description || ''}</textarea>
+            style="min-height:200px;border-top:none;border-radius:0 0 8px 8px">${d.description || ''}</textarea>
           <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem">이미지를 텍스트 영역으로 드래그하면 현재 커서 위치에 자동 삽입됩니다.</div>
         </div>
         <div class="form-group full">
@@ -516,12 +646,16 @@ function cancelEdit(type) {
 }
 
 // ── 텍스트 영역 이미지 업로드 후 삽입 ───────────────────────
+let _pendingImg = null;
+
 async function dropImageIntoText(textarea, file, insertPos) {
   if (insertPos == null) insertPos = textarea.value.length;
-  const placeholder = `![업로드 중...]()`;
+
+  const placeholder = '![업로드 중...]()';
   const before = textarea.value.slice(0, insertPos);
   const after  = textarea.value.slice(insertPos);
-  textarea.value = before + '\n' + placeholder + '\n' + after;
+  const sep    = (before.length > 0 && !before.endsWith('\n')) ? '\n' : '';
+  textarea.value = before + sep + placeholder + '\n' + after;
 
   showToast('업로드 중...', 'success');
 
@@ -530,18 +664,69 @@ async function dropImageIntoText(textarea, file, insertPos) {
     formData.append('file', file);
     formData.append('upload_preset', cloudinaryConfig.uploadPreset);
 
-    const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`, {
-      method: 'POST', body: formData
-    });
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`, { method: 'POST', body: formData });
     const data = await res.json();
     if (!data.secure_url) throw new Error('업로드 실패');
 
-    textarea.value = textarea.value.replace(placeholder, `![](${data.secure_url})`);
-    showToast('이미지 삽입 완료!', 'success');
+    // 플레이스홀더 제거 후 크기 선택 팝업 표시
+    textarea.value = textarea.value.replace(sep + placeholder + '\n', '');
+    _pendingImg = { textarea, url: data.secure_url, insertPos };
+    showSizePicker(data.secure_url);
+
   } catch(err) {
-    textarea.value = textarea.value.replace('\n' + placeholder + '\n', '');
+    textarea.value = textarea.value.replace(sep + placeholder + '\n', '');
     showToast('이미지 업로드 실패', 'error');
   }
+}
+
+// ── 크기 선택 팝업 ────────────────────────────────────────────
+function showSizePicker(previewUrl) {
+  closeSizePicker();
+  const el = document.createElement('div');
+  el.id = 'size-picker';
+  el.innerHTML = `
+    <div class="sp-preview"><img src="${previewUrl}" alt=""></div>
+    <div class="sp-label">이미지 크기 선택</div>
+    <div class="sp-btns">
+      <button onclick="insertSizedImage('sm')"><span class="sp-icon">◼</span><br>소<br><small>30%</small></button>
+      <button onclick="insertSizedImage('md')"><span class="sp-icon" style="font-size:1.3rem">◼</span><br>중<br><small>50%</small></button>
+      <button onclick="insertSizedImage('lg')"><span class="sp-icon" style="font-size:1.8rem">◼</span><br>대<br><small>75%</small></button>
+      <button onclick="insertSizedImage('')" ><span class="sp-icon" style="font-size:2.2rem">◼</span><br>전체<br><small>100%</small></button>
+      <button onclick="insertSizedImage('row')"><span style="font-size:1.1rem">◼◼</span><br>나란히<br><small>48%</small></button>
+    </div>
+    <button class="sp-close" onclick="closeSizePicker()">✕</button>`;
+  document.body.appendChild(el);
+}
+
+function insertSizedImage(size) {
+  if (!_pendingImg) return;
+  const { textarea, url, insertPos } = _pendingImg;
+  _pendingImg = null;
+  closeSizePicker();
+
+  let markdown;
+  if (size === 'row') {
+    // 나란히: HTML inline-block 사용 (마크다운으론 inline 불가)
+    markdown = `<img src="${url}" style="width:48%;display:inline-block;vertical-align:top;border-radius:8px;margin:0 1% 0.5rem 0;border:1px solid #e2e8f0">`;
+  } else if (size === '') {
+    markdown = `![](${url})`;
+  } else {
+    markdown = `![${size}](${url})`;
+  }
+
+  const before = textarea.value.slice(0, insertPos);
+  const after  = textarea.value.slice(insertPos);
+  const sep    = (before.length > 0 && !before.endsWith('\n')) ? '\n' : '';
+  textarea.value = before + sep + markdown + '\n' + after;
+  const newPos = insertPos + sep.length + markdown.length + 1;
+  textarea.setSelectionRange(newPos, newPos);
+  textarea.focus();
+  showToast('삽입 완료!', 'success');
+}
+
+function closeSizePicker() {
+  const el = document.getElementById('size-picker');
+  if (el) el.remove();
 }
 
 // ── 인라인 이미지 업로드 ──────────────────────────────────────

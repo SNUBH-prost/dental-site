@@ -2,6 +2,17 @@
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// ── marked 커스텀 렌더러 (이미지 크기) ───────────────────────
+(function setupMarked() {
+  const renderer = new marked.Renderer();
+  const sizeMap  = { sm: '30%', md: '50%', lg: '75%' };
+  renderer.image = (href, title, text) => {
+    const w = sizeMap[text] || '100%';
+    return `<img src="${href}" alt="${title || ''}" style="width:${w};display:block;border-radius:8px;margin:0.75rem 0;border:1px solid #e2e8f0;max-width:100%">`;
+  };
+  marked.setOptions({ renderer, breaks: true });
+})();
+
 const DEPARTMENTS = [
   { id: "surgery",          name: "외과 / 치주과",   icon: "🦷" },
   { id: "medicine",         name: "내과",            icon: "🩺" },

@@ -47,6 +47,7 @@
       <a onclick="switchPanel('contents-list')"id="nav-contents-list">각과 자료 목록</a>
       <a onclick="switchPanel('content-add')"  id="nav-content-add">+ 새 자료</a>
       <a onclick="switchPanel('image-upload')" id="nav-image-upload">🖼 이미지 URL 복사</a>
+      <a onclick="switchPanel('json-import')"  id="nav-json-import">📋 Claude JSON 가져오기</a>
       <a href="index.html" style="opacity:0.6">← 사이트로 돌아가기</a>
     </aside>
 
@@ -130,6 +131,49 @@
             <div id="inline-preview" style="margin-top:1rem;">
               <img id="inline-preview-img" src="" alt="" style="max-width:300px;border-radius:8px;border:1px solid var(--border);">
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Claude JSON 가져오기 -->
+      <div id="panel-json-import" class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📋 Claude JSON 가져오기</div>
+        </div>
+        <div class="form-card">
+          <p style="font-size:0.88rem;color:var(--text-muted);margin-bottom:1rem;">
+            Claude 채팅에서 받은 JSON을 아래에 붙여넣으면 모든 필드가 자동으로 채워집니다.
+          </p>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label>등록 유형</label>
+            <select id="import-type" style="max-width:220px">
+              <option value="case">임상 케이스</option>
+              <option value="content">각과 자료</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:1rem">
+            <label>JSON 붙여넣기</label>
+            <textarea id="import-json-input" rows="14"
+              placeholder='Claude에게 "아래 형식 JSON으로 만들어줘" 라고 하면 됩니다:&#10;&#10;{&#10;  "title": "케이스 제목",&#10;  "department": "prost-removable",&#10;  "date": "2026-05-16",&#10;  "summary": "한 줄 요약",&#10;  "description": "## 제목\n내용...",&#10;  "tags": ["태그1", "태그2"],&#10;  "references": [&#10;    {&#10;      "authors": "저자명",&#10;      "year": "2024",&#10;      "title": "논문 제목",&#10;      "journal": "저널명",&#10;      "volume": "73(1)",&#10;      "pages": "7-21",&#10;      "doi": "10.xxxx/xxxxx"&#10;    }&#10;  ]&#10;}'
+              style="font-family:monospace;font-size:0.82rem"></textarea>
+          </div>
+          <div style="display:flex;gap:0.75rem;align-items:center">
+            <button class="btn btn-primary" onclick="importFromJSON()">폼에 가져오기 →</button>
+            <span id="import-error" style="color:var(--danger);font-size:0.83rem;display:none"></span>
+          </div>
+        </div>
+
+        <div class="form-card" style="background:#f8fafc">
+          <div class="section-label" style="margin-top:0">과(department) 코드 목록</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;font-size:0.83rem;margin-top:0.5rem">
+            <span><code>surgery</code> — 외과/치주과</span>
+            <span><code>medicine</code> — 내과</span>
+            <span><code>conservative</code> — 보존과</span>
+            <span><code>orthodontics</code> — 교정과</span>
+            <span><code>prost-fixed</code> — 보철 고정성</span>
+            <span><code>prost-implant</code> — 보철 임플란트</span>
+            <span><code>prost-removable</code> — 보철 가철성</span>
+            <span><code>prost-materials</code> — 보철 재료</span>
           </div>
         </div>
       </div>

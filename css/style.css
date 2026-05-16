@@ -462,6 +462,13 @@ main {
 
 .modal-description a { color: var(--primary); text-decoration: underline; }
 
+.modal-description mark {
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+.modal-description span[style] { border-radius: 2px; }
+
 .modal-description img {
   max-width: 100%;
   border-radius: 8px;

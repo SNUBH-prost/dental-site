@@ -436,6 +436,167 @@ textarea { resize: vertical; min-height: 100px; }
   margin-top: 1.5rem;
 }
 
+/* ── 서식 툴바 ── */
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  padding: 0.5rem 0.75rem;
+  background: #f8fafc;
+  border: 1.5px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+}
+
+.tb-btn {
+  padding: 0.28rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.12s, border-color 0.12s;
+  line-height: 1.4;
+}
+
+.tb-btn:hover {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.tb-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 0.25rem;
+  flex-shrink: 0;
+}
+
+.tb-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0 0.2rem 0 0.1rem;
+  white-space: nowrap;
+}
+
+.tb-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,0,0,0.12);
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.tb-color:hover {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+/* 형광펜 색상은 테두리 진하게 */
+.tb-hl {
+  border-radius: 4px;
+  border-color: rgba(0,0,0,0.18);
+}
+
+/* ── 이미지 크기 선택 팝업 ── */
+#size-picker {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem 1.5rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  z-index: 999;
+  min-width: 340px;
+  text-align: center;
+}
+
+.sp-preview {
+  width: 100%;
+  height: 100px;
+  overflow: hidden;
+  border-radius: 8px;
+  margin-bottom: 0.85rem;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sp-preview img {
+  max-height: 100px;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.sp-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.85rem;
+}
+
+.sp-btns {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.sp-btns button {
+  flex: 1;
+  padding: 0.65rem 0.4rem;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  transition: border-color 0.12s, background 0.12s;
+  line-height: 1.5;
+}
+
+.sp-btns button:hover {
+  border-color: var(--primary);
+  background: var(--primary-pale);
+  color: var(--primary);
+}
+
+.sp-btns button small {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.72rem;
+}
+
+.sp-icon { font-size: 0.75rem; color: var(--primary); }
+
+.sp-close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.2rem;
+  border-radius: 4px;
+}
+
+.sp-close:hover { background: #f1f5f9; }
+
 /* ── 텍스트 영역 드래그 ── */
 textarea.drag-active {
   border-color: var(--primary-light);
