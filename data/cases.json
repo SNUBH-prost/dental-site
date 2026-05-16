@@ -1,0 +1,54 @@
+{
+  "departments": [
+    { "id": "surgery", "name": "외과 / 치주과", "icon": "🦷" },
+    { "id": "medicine", "name": "내과", "icon": "🩺" },
+    { "id": "conservative", "name": "보존과", "icon": "🔬" },
+    { "id": "orthodontics", "name": "교정과", "icon": "📐" },
+    { "id": "prosthetics", "name": "보철과", "icon": "⚙️" }
+  ],
+  "clinicalCases": [
+    {
+      "id": "case-001",
+      "title": "예시 케이스 - 임플란트 식립",
+      "date": "2026-05-16",
+      "department": "surgery",
+      "summary": "하악 제1대구치 결손 부위 임플란트 식립 케이스",
+      "description": "45세 남성 환자로 하악 좌측 제1대구치 결손 상태. 골이식 후 임플란트 식립을 시행하였다. 수술 전 CBCT 분석을 통해 골량 및 골질을 평가하였으며, guided surgery 방식으로 정확한 위치에 식립하였다.",
+      "photos": [
+        {
+          "url": "https://drive.google.com/uc?export=view&id=구글드라이브_파일ID_1",
+          "caption": "초진 파노라마"
+        },
+        {
+          "url": "https://drive.google.com/uc?export=view&id=구글드라이브_파일ID_2",
+          "caption": "CBCT 분석"
+        }
+      ],
+      "references": [
+        {
+          "authors": "Buser D, Sennerby L, De Bruyn H",
+          "year": "2017",
+          "title": "Modern implant dentistry based on osseointegration: 50 years of progress, current trends and open questions",
+          "journal": "Periodontol 2000",
+          "volume": "73(1)",
+          "pages": "7-21",
+          "doi": "10.1111/prd.12185"
+        }
+      ],
+      "tags": ["임플란트", "골이식", "하악"]
+    }
+  ],
+  "departmentContents": [
+    {
+      "id": "content-001",
+      "department": "surgery",
+      "title": "발치 후 처치 프로토콜",
+      "date": "2026-05-16",
+      "summary": "발치 후 처치 및 주의사항 정리",
+      "description": "발치 후 지혈, 통증 관리, 감염 예방에 관한 임상 프로토콜.",
+      "photos": [],
+      "references": [],
+      "tags": ["발치", "프로토콜"]
+    }
+  ]
+}

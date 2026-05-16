@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>치과 임상 자료실</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="header-inner">
+    <a class="logo" href="#" onclick="showPage('home')">치과<span>임상</span>자료실</a>
+    <nav>
+      <a href="#" data-page="home" class="active" onclick="showPage('home')">홈</a>
+      <a href="#" data-page="cases" onclick="showPage('cases')">임상 케이스</a>
+      <a href="#" data-page="dept-surgery"      onclick="showPage('dept-surgery')">외과/치주</a>
+      <a href="#" data-page="dept-medicine"     onclick="showPage('dept-medicine')">내과</a>
+      <a href="#" data-page="dept-conservative" onclick="showPage('dept-conservative')">보존과</a>
+      <a href="#" data-page="dept-orthodontics" onclick="showPage('dept-orthodontics')">교정과</a>
+      <a href="#" data-page="dept-prosthetics"  onclick="showPage('dept-prosthetics')">보철과</a>
+      <a href="admin.html" style="margin-left:0.5rem; opacity:0.6; font-size:0.8rem;">관리</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ── Home ── -->
+  <div id="page-home" class="page active">
+    <div class="hero">
+      <h1>치과 임상 자료실</h1>
+      <p>임상 케이스 및 각과별 참고 자료를 정리한 공유 플랫폼입니다.</p>
+    </div>
+    <div class="section-header">
+      <div class="section-title">진료과별 자료</div>
+    </div>
+    <div class="dept-grid" id="dept-grid-home"></div>
+    <div class="section-header">
+      <div class="section-title">최근 임상 케이스</div>
+      <a href="#" onclick="showPage('cases')" style="font-size:0.85rem;color:var(--primary-light);">전체 보기 →</a>
+    </div>
+    <div class="card-grid" id="recent-cases"></div>
+  </div>
+
+  <!-- ── Clinical Cases ── -->
+  <div id="page-cases" class="page">
+    <div class="section-header">
+      <div class="section-title">임상 케이스</div>
+    </div>
+    <div class="toolbar">
+      <input class="search-input" type="text" placeholder="케이스 검색..."
+        oninput="renderCases(this.value, document.getElementById('case-dept-filter').value)">
+      <select class="filter-select" id="case-dept-filter"
+        onchange="renderCases(document.querySelector('#page-cases .search-input').value, this.value)">
+        <option value="">전체 과</option>
+        <option value="surgery">외과 / 치주과</option>
+        <option value="medicine">내과</option>
+        <option value="conservative">보존과</option>
+        <option value="orthodontics">교정과</option>
+        <option value="prosthetics">보철과</option>
+      </select>
+    </div>
+    <div class="card-grid" id="cases-grid"></div>
+  </div>
+
+  <!-- ── 외과/치주과 ── -->
+  <div id="page-dept-surgery" class="page">
+    <div class="section-header"><div class="section-title">🦷 외과 / 치주과</div></div>
+    <div class="toolbar">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('surgery',this.value)">
+    </div>
+    <div class="card-grid" id="dept-content-surgery"></div>
+  </div>
+
+  <!-- ── 내과 ── -->
+  <div id="page-dept-medicine" class="page">
+    <div class="section-header"><div class="section-title">🩺 내과</div></div>
+    <div class="toolbar">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('medicine',this.value)">
+    </div>
+    <div class="card-grid" id="dept-content-medicine"></div>
+  </div>
+
+  <!-- ── 보존과 ── -->
+  <div id="page-dept-conservative" class="page">
+    <div class="section-header"><div class="section-title">🔬 보존과</div></div>
+    <div class="toolbar">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('conservative',this.value)">
+    </div>
+    <div class="card-grid" id="dept-content-conservative"></div>
+  </div>
+
+  <!-- ── 교정과 ── -->
+  <div id="page-dept-orthodontics" class="page">
+    <div class="section-header"><div class="section-title">📐 교정과</div></div>
+    <div class="toolbar">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('orthodontics',this.value)">
+    </div>
+    <div class="card-grid" id="dept-content-orthodontics"></div>
+  </div>
+
+  <!-- ── 보철과 ── -->
+  <div id="page-dept-prosthetics" class="page">
+    <div class="section-header"><div class="section-title">⚙️ 보철과</div></div>
+    <div class="toolbar">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('prosthetics',this.value)">
+    </div>
+    <div class="card-grid" id="dept-content-prosthetics"></div>
+  </div>
+</main>
+
+<!-- ── 케이스 상세 모달 ── -->
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="gallery-section"></div>
+    <div class="modal-body">
+      <div class="modal-dept-tag" id="modal-dept"></div>
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-date"   id="modal-date"></div>
+      <div class="modal-section-label">설명</div>
+      <div class="modal-description" id="modal-description"></div>
+      <div class="modal-tags" id="modal-tags"></div>
+      <div id="refs-section">
+        <div class="modal-section-label" style="margin-top:1.5rem">참고 논문</div>
+        <ul class="reference-list" id="modal-refs"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

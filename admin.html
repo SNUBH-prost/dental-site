@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 패널 - 치과 임상 자료실</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<!-- ── 로그인 ── -->
+<div id="login-screen" class="login-wrap">
+  <div class="login-box">
+    <h2>치과 임상 자료실</h2>
+    <p>관리자로 로그인하세요</p>
+    <div class="form-group" style="margin-bottom:0.85rem">
+      <label>이메일</label>
+      <input type="email" id="login-email" placeholder="이메일 입력" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="form-group" style="margin-bottom:1.5rem">
+      <label>비밀번호</label>
+      <input type="password" id="login-pw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()" id="login-btn">로그인</button>
+    <p id="login-error" style="color:#c0392b;font-size:0.82rem;margin-top:0.75rem;text-align:center;display:none;"></p>
+  </div>
+</div>
+
+<!-- ── 관리자 화면 ── -->
+<div id="admin-screen" style="display:none">
+  <header>
+    <div class="header-inner">
+      <a class="logo" href="index.html">치과<span>임상</span>자료실 — 관리자</a>
+      <div class="user-info">
+        <span id="user-email-display"></span>
+        <button class="btn btn-outline btn-sm" onclick="doLogout()" style="color:#fff;border-color:rgba(255,255,255,0.5)">로그아웃</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="admin-wrap">
+    <!-- 사이드바 -->
+    <aside class="sidebar">
+      <div class="sidebar-title">메뉴</div>
+      <a onclick="switchPanel('cases-list')"   class="active" id="nav-cases-list">임상 케이스 목록</a>
+      <a onclick="switchPanel('case-add')"     id="nav-case-add">+ 새 케이스</a>
+      <a onclick="switchPanel('contents-list')"id="nav-contents-list">각과 자료 목록</a>
+      <a onclick="switchPanel('content-add')"  id="nav-content-add">+ 새 자료</a>
+      <a href="index.html" style="opacity:0.6">← 사이트로 돌아가기</a>
+    </aside>
+
+    <!-- 패널들 -->
+    <div style="min-width:0">
+
+      <!-- 임상 케이스 목록 -->
+      <div id="panel-cases-list" class="panel active">
+        <div class="panel-header">
+          <div class="panel-title">임상 케이스 목록</div>
+          <button class="btn btn-primary btn-sm" onclick="switchPanel('case-add')">+ 새 케이스</button>
+        </div>
+        <div id="cases-list-content"><p style="color:var(--text-muted);font-size:0.9rem;">불러오는 중...</p></div>
+      </div>
+
+      <!-- 새 케이스 추가 / 편집 -->
+      <div id="panel-case-add" class="panel">
+        <div class="panel-header">
+          <div class="panel-title" id="case-form-title">새 임상 케이스</div>
+        </div>
+        <div id="case-form-content"></div>
+      </div>
+
+      <!-- 각과 자료 목록 -->
+      <div id="panel-contents-list" class="panel">
+        <div class="panel-header">
+          <div class="panel-title">각과 자료 목록</div>
+          <button class="btn btn-primary btn-sm" onclick="switchPanel('content-add')">+ 새 자료</button>
+        </div>
+        <div id="contents-list-content"><p style="color:var(--text-muted);font-size:0.9rem;">불러오는 중...</p></div>
+      </div>
+
+      <!-- 새 자료 추가 / 편집 -->
+      <div id="panel-content-add" class="panel">
+        <div class="panel-header">
+          <div class="panel-title" id="content-form-title">새 각과 자료</div>
+        </div>
+        <div id="content-form-content"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/cloudinary-config.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
