@@ -127,40 +127,40 @@ async function loadContentsList() {
   }).join('')}</div>`;
 }
 
-// ── JSON 가져오기 ─────────────────────────────────────────────
-function importFromJSON() {
-  const raw     = document.getElementById('import-json-input').value.trim();
-  const errEl   = document.getElementById('import-error');
-  const type    = document.getElementById('import-type').value;
+// ── JSON 파일 가져오기 ────────────────────────────────────────
+function importFromJSONFile(event) {
+  const errEl = document.getElementById('import-error');
+  const type  = document.getElementById('import-type').value;
   errEl.style.display = 'none';
 
-  if (!raw) { errEl.textContent = 'JSON을 붙여넣어 주세요.'; errEl.style.display = 'inline'; return; }
+  const file = event.target.files[0];
+  if (!file) return;
 
-  let data;
-  try {
-    // Claude가 ```json ... ``` 블록으로 감쌀 경우 자동 제거
-    const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
-    data = JSON.parse(cleaned);
-  } catch(e) {
-    errEl.textContent = 'JSON 파싱 오류: ' + e.message;
-    errEl.style.display = 'inline';
-    return;
-  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    let data;
+    try {
+      data = JSON.parse(e.target.result);
+    } catch(err) {
+      errEl.textContent = 'JSON 파싱 오류: ' + err.message;
+      errEl.style.display = 'inline';
+      return;
+    }
 
-  if (type === 'case') {
-    editingCaseId = null;
-    renderCaseForm(data);
-    switchPanel('case-add');
-  } else {
-    editingContentId = null;
-    renderContentForm(data);
-    switchPanel('content-add');
-  }
+    if (type === 'case') {
+      editingCaseId = null;
+      renderCaseForm(data);
+      switchPanel('case-add');
+    } else {
+      editingContentId = null;
+      renderContentForm(data);
+      switchPanel('content-add');
+    }
 
-  showToast('폼에 가져왔습니다! 내용 확인 후 저장하세요.', 'success');
-
-  // 입력창 초기화
-  document.getElementById('import-json-input').value = '';
+    showToast('폼에 가져왔습니다! 내용 확인 후 저장하세요.', 'success');
+    event.target.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
 }
 
 // ── 삭제 ─────────────────────────────────────────────────────
