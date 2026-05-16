@@ -162,10 +162,24 @@ function setupTextareaDrop(type) {
   const textarea = document.getElementById(`${type}-description`);
   if (!textarea) return;
 
+  // 클릭·키 입력 때마다 커서 위치 저장
+  let savedPos = 0;
+  const savePos = () => { savedPos = textarea.selectionStart; };
+  textarea.addEventListener('click',  savePos);
+  textarea.addEventListener('keyup',  savePos);
+  textarea.addEventListener('input',  savePos);
+
+  textarea.addEventListener('dragenter', e => {
+    if (Array.from(e.dataTransfer.types).includes('Files')) {
+      savedPos = textarea.selectionStart; // 드래그 시작 시점 커서 저장
+    }
+  });
+
   textarea.addEventListener('dragover', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    textarea.classList.add('drag-active');
+    if (Array.from(e.dataTransfer.types).includes('Files')) {
+      e.preventDefault();
+      textarea.classList.add('drag-active');
+    }
   });
 
   textarea.addEventListener('dragleave', () => {
@@ -173,20 +187,19 @@ function setupTextareaDrop(type) {
   });
 
   textarea.addEventListener('drop', e => {
+    const imageFile = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+    if (!imageFile) return;
     e.preventDefault();
-    e.stopPropagation();
     textarea.classList.remove('drag-active');
-    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
-    if (file) dropImageIntoText(textarea, file);
+    dropImageIntoText(textarea, imageFile, savedPos);
   });
 
-  // 클립보드 붙여넣기(Ctrl+V)로도 이미지 삽입
+  // Ctrl+V 이미지 붙여넣기
   textarea.addEventListener('paste', e => {
     const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
     if (!item) return;
     e.preventDefault();
-    const file = item.getAsFile();
-    if (file) dropImageIntoText(textarea, file);
+    dropImageIntoText(textarea, item.getAsFile(), textarea.selectionStart);
   });
 }
 
@@ -512,11 +525,11 @@ function cancelEdit(type) {
 }
 
 // ── 텍스트 영역 이미지 업로드 후 삽입 ───────────────────────
-async function dropImageIntoText(textarea, file) {
+async function dropImageIntoText(textarea, file, insertPos) {
+  if (insertPos == null) insertPos = textarea.value.length;
   const placeholder = `![업로드 중...]()`;
-  const start  = textarea.selectionStart;
-  const before = textarea.value.slice(0, start);
-  const after  = textarea.value.slice(start);
+  const before = textarea.value.slice(0, insertPos);
+  const after  = textarea.value.slice(insertPos);
   textarea.value = before + '\n' + placeholder + '\n' + after;
 
   showToast('업로드 중...', 'success');
