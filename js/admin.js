@@ -144,6 +144,7 @@ function renderCaseForm(data = {}) {
   document.getElementById('case-form-content').innerHTML = formHTML('case', data);
   renderPhotoPreview('case');
   renderTagChips('case');
+  setupTextareaDrop('case');
 }
 
 function renderContentForm(data = {}) {
@@ -153,6 +154,40 @@ function renderContentForm(data = {}) {
   document.getElementById('content-form-content').innerHTML = formHTML('content', data);
   renderPhotoPreview('content');
   renderTagChips('content');
+  setupTextareaDrop('content');
+}
+
+// ── 텍스트 영역 드래그 이벤트 등록 ──────────────────────────
+function setupTextareaDrop(type) {
+  const textarea = document.getElementById(`${type}-description`);
+  if (!textarea) return;
+
+  textarea.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    textarea.classList.add('drag-active');
+  });
+
+  textarea.addEventListener('dragleave', () => {
+    textarea.classList.remove('drag-active');
+  });
+
+  textarea.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    textarea.classList.remove('drag-active');
+    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+    if (file) dropImageIntoText(textarea, file);
+  });
+
+  // 클립보드 붙여넣기(Ctrl+V)로도 이미지 삽입
+  textarea.addEventListener('paste', e => {
+    const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
+    if (!item) return;
+    e.preventDefault();
+    const file = item.getAsFile();
+    if (file) dropImageIntoText(textarea, file);
+  });
 }
 
 function formHTML(type, d = {}) {
@@ -181,10 +216,7 @@ function formHTML(type, d = {}) {
         <div class="form-group full">
           <label>상세 설명</label>
           <textarea id="${type}-description" rows="10"
-            placeholder="케이스/자료 상세 내용&#10;&#10;💡 이미지를 이 칸에 바로 드래그하면 글 중간에 삽입됩니다."
-            ondragover="event.preventDefault();this.classList.add('drag-active')"
-            ondragleave="this.classList.remove('drag-active')"
-            ondrop="dropImageIntoText(event,'${type}-description')"
+            placeholder="케이스/자료 상세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
             style="min-height:200px">${d.description || ''}</textarea>
           <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem">이미지를 텍스트 영역으로 드래그하면 현재 커서 위치에 자동 삽입됩니다.</div>
         </div>
@@ -479,20 +511,13 @@ function cancelEdit(type) {
   else                 { editingContentId = null; renderContentForm(); switchPanel('contents-list'); }
 }
 
-// ── 텍스트 영역 드래그 이미지 삽입 ───────────────────────────
-async function dropImageIntoText(e, textareaId) {
-  e.preventDefault();
-  const textarea = document.getElementById(textareaId);
-  textarea.classList.remove('drag-active');
-
-  const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
-  if (!file) return;
-
+// ── 텍스트 영역 이미지 업로드 후 삽입 ───────────────────────
+async function dropImageIntoText(textarea, file) {
   const placeholder = `![업로드 중...]()`;
-  const start = textarea.selectionStart;
+  const start  = textarea.selectionStart;
   const before = textarea.value.slice(0, start);
   const after  = textarea.value.slice(start);
-  textarea.value = before + placeholder + after;
+  textarea.value = before + '\n' + placeholder + '\n' + after;
 
   showToast('업로드 중...', 'success');
 
@@ -507,11 +532,10 @@ async function dropImageIntoText(e, textareaId) {
     const data = await res.json();
     if (!data.secure_url) throw new Error('업로드 실패');
 
-    const markdown = `![](${data.secure_url})`;
-    textarea.value = textarea.value.replace(placeholder, markdown);
+    textarea.value = textarea.value.replace(placeholder, `![](${data.secure_url})`);
     showToast('이미지 삽입 완료!', 'success');
   } catch(err) {
-    textarea.value = textarea.value.replace(placeholder, '');
+    textarea.value = textarea.value.replace('\n' + placeholder + '\n', '');
     showToast('이미지 업로드 실패', 'error');
   }
 }
