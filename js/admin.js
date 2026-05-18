@@ -14,6 +14,10 @@ const DEPARTMENTS = [
   { id: "prost-materials", name: "보철 — 재료"     }
 ];
 
+function escapeAttr(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // 편집 중인 항목 ID
 let editingCaseId    = null;
 let editingContentId = null;
@@ -178,6 +182,9 @@ function renderCaseForm(data = {}) {
   caseTags   = data.tags ? [...data.tags] : [];
   document.getElementById('case-form-title').textContent = editingCaseId ? '케이스 편집' : '새 임상 케이스';
   document.getElementById('case-form-content').innerHTML = formHTML('case', data);
+  document.getElementById('case-title').value = data.title || '';
+  document.getElementById('case-summary').value = data.summary || '';
+  document.getElementById('case-description').value = data.description || '';
   renderPhotoPreview('case');
   renderTagChips('case');
   setupTextareaDrop('case');
@@ -188,6 +195,9 @@ function renderContentForm(data = {}) {
   contentTags   = data.tags ? [...data.tags] : [];
   document.getElementById('content-form-title').textContent = editingContentId ? '자료 편집' : '새 각과 자료';
   document.getElementById('content-form-content').innerHTML = formHTML('content', data);
+  document.getElementById('content-title').value = data.title || '';
+  document.getElementById('content-summary').value = data.summary || '';
+  document.getElementById('content-description').value = data.description || '';
   renderPhotoPreview('content');
   renderTagChips('content');
   setupTextareaDrop('content');
@@ -305,7 +315,7 @@ function formHTML(type, d = {}) {
       <div class="form-grid">
         <div class="form-group full">
           <label>제목 *</label>
-          <input type="text" id="${type}-title" value="${d.title || ''}" placeholder="케이스/자료 제목">
+          <input type="text" id="${type}-title" value="" placeholder="케이스/자료 제목">
         </div>
         <div class="form-group">
           <label>진료과 *</label>
@@ -317,7 +327,7 @@ function formHTML(type, d = {}) {
         </div>
         <div class="form-group full">
           <label>한 줄 요약</label>
-          <input type="text" id="${type}-summary" value="${d.summary || ''}" placeholder="목록에 표시되는 짧은 설명">
+          <input type="text" id="${type}-summary" value="" placeholder="목록에 표시되는 짧은 설명">
         </div>
         <div class="form-group full">
           <label>상세 설명</label>
@@ -351,7 +361,7 @@ function formHTML(type, d = {}) {
           </div>
           <textarea id="${type}-description" rows="10"
             placeholder="케이스/자료 상세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
-            style="min-height:200px;border-top:none;border-radius:0 0 8px 8px">${d.description || ''}</textarea>
+            style="min-height:200px;border-top:none;border-radius:0 0 8px 8px"></textarea>
           <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem">이미지를 텍스트 영역으로 드래그하면 현재 커서 위치에 자동 삽입됩니다.</div>
         </div>
         <div class="form-group full">
@@ -411,17 +421,17 @@ function refBlockHTML(type, idx, r = {}) {
       <button class="btn btn-danger btn-sm ref-remove" onclick="removeRef('${type}',${idx})">✕</button>
       <div class="ref-grid">
         <div class="form-group"><label>저자</label>
-          <input type="text" id="${type}-ref-authors-${idx}" value="${r.authors||''}" placeholder="저자명"></div>
+          <input type="text" id="${type}-ref-authors-${idx}" value="${escapeAttr(r.authors)}" placeholder="저자명"></div>
         <div class="form-group"><label>연도</label>
-          <input type="text" id="${type}-ref-year-${idx}" value="${r.year||''}" placeholder="2024"></div>
+          <input type="text" id="${type}-ref-year-${idx}" value="${escapeAttr(r.year)}" placeholder="2024"></div>
         <div class="form-group" style="grid-column:1/-1"><label>논문 제목</label>
-          <input type="text" id="${type}-ref-title-${idx}" value="${r.title||''}" placeholder="논문 제목"></div>
+          <input type="text" id="${type}-ref-title-${idx}" value="${escapeAttr(r.title)}" placeholder="논문 제목"></div>
         <div class="form-group"><label>저널명</label>
-          <input type="text" id="${type}-ref-journal-${idx}" value="${r.journal||''}" placeholder="저널명"></div>
+          <input type="text" id="${type}-ref-journal-${idx}" value="${escapeAttr(r.journal)}" placeholder="저널명"></div>
         <div class="form-group"><label>권호/페이지</label>
-          <input type="text" id="${type}-ref-pages-${idx}" value="${(r.volume?r.volume+', ':''+(r.pages||''))}" placeholder="73(1), 7-21"></div>
+          <input type="text" id="${type}-ref-pages-${idx}" value="${escapeAttr((r.volume ? r.volume + ', ' : '') + (r.pages || ''))}" placeholder="73(1), 7-21"></div>
         <div class="form-group"><label>DOI (선택)</label>
-          <input type="text" id="${type}-ref-doi-${idx}" value="${r.doi||''}" placeholder="10.xxxx/xxxxx"></div>
+          <input type="text" id="${type}-ref-doi-${idx}" value="${escapeAttr(r.doi)}" placeholder="10.xxxx/xxxxx"></div>
       </div>
     </div>`;
 }
