@@ -187,6 +187,7 @@
 <div id="modal-overlay" class="modal-overlay">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">✕</button>
+    <button class="modal-share-btn" onclick="_copyShareLink()" title="링크 복사">🔗</button>
     <div id="gallery-section"></div>
     <div class="modal-body">
       <div class="modal-dept-tag" id="modal-dept"></div>
@@ -214,6 +215,38 @@
   </div>
 </div>
 <div id="ed-toast"></div>
+
+<!-- ── 주석 에디터 오버레이 ── -->
+<div id="ann-editor-overlay" style="display:none">
+  <div id="ann-toolbar">
+    <div class="ann-tool-group">
+      <button id="ann-btn-arrow" class="ann-tool-btn active" onclick="_annSetTool('arrow')">→ 화살표</button>
+      <button id="ann-btn-circle" class="ann-tool-btn" onclick="_annSetTool('circle')">○ 원</button>
+      <button id="ann-btn-text" class="ann-tool-btn" onclick="_annSetTool('text')">T 텍스트</button>
+    </div>
+    <div class="ann-color-group">
+      <button class="ann-color-btn active" data-color="#ef4444" style="background:#ef4444" onclick="_annSetColor('#ef4444')"></button>
+      <button class="ann-color-btn" data-color="#f97316" style="background:#f97316" onclick="_annSetColor('#f97316')"></button>
+      <button class="ann-color-btn" data-color="#facc15" style="background:#facc15" onclick="_annSetColor('#facc15')"></button>
+      <button class="ann-color-btn" data-color="#22c55e" style="background:#22c55e" onclick="_annSetColor('#22c55e')"></button>
+      <button class="ann-color-btn" data-color="#60a5fa" style="background:#60a5fa" onclick="_annSetColor('#60a5fa')"></button>
+      <button class="ann-color-btn" data-color="#ffffff" style="background:#fff;border:2px solid #475569" onclick="_annSetColor('#ffffff')"></button>
+    </div>
+    <div class="ann-action-group">
+      <button class="ann-action-btn" onclick="_annUndo()">↩ 실행취소</button>
+      <button class="ann-action-btn danger" onclick="_annClear()">🗑 전체삭제</button>
+      <button class="ann-action-btn save" onclick="_annSave()">저장 ✓</button>
+      <button class="ann-action-btn" onclick="_annCancel()">취소</button>
+    </div>
+  </div>
+  <div id="ann-canvas-area">
+    <div id="ann-img-wrap">
+      <img id="ann-img" alt="">
+      <svg id="ann-svg"></svg>
+    </div>
+  </div>
+  <div id="ann-hint">드래그로 그리기 · 클릭으로 텍스트 배치</div>
+</div>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>

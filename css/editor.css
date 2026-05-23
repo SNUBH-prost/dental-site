@@ -507,3 +507,125 @@
   .editor-panel .ref-grid { grid-template-columns: 1fr; }
   #ed-size-picker { min-width: 280px; }
 }
+
+/* ── 주석 에디터 오버레이 ── */
+#ann-editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0f172a;
+  z-index: 2000;
+  flex-direction: column;
+}
+#ann-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1rem;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.ann-tool-group, .ann-color-group, .ann-action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.ann-tool-group  { border-right: 1px solid #334155; padding-right: 0.6rem; }
+.ann-color-group { border-right: 1px solid #334155; padding-right: 0.6rem; }
+.ann-tool-btn {
+  background: #334155;
+  border: none;
+  color: #cbd5e1;
+  padding: 0.38rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.81rem;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.ann-tool-btn:hover { background: #475569; color: #fff; }
+.ann-tool-btn.active { background: var(--primary); color: #fff; }
+.ann-color-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+.ann-color-btn:hover { transform: scale(1.15); }
+.ann-color-btn.active { border-color: #fff !important; transform: scale(1.2); }
+.ann-action-btn {
+  background: #334155;
+  border: none;
+  color: #cbd5e1;
+  padding: 0.38rem 0.7rem;
+  border-radius: 6px;
+  font-size: 0.81rem;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.ann-action-btn:hover { background: #475569; }
+.ann-action-btn.save { background: var(--primary); color: #fff; }
+.ann-action-btn.save:hover { background: var(--primary-light); }
+.ann-action-btn.danger:hover { background: #7f1d1d; color: #fca5a5; }
+#ann-canvas-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 1rem;
+}
+#ann-img-wrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+#ann-img {
+  display: block;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 110px);
+  object-fit: contain;
+}
+#ann-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: crosshair;
+}
+#ann-hint {
+  text-align: center;
+  color: #475569;
+  font-size: 0.77rem;
+  padding: 0.35rem;
+  flex-shrink: 0;
+}
+
+/* 사진 미리보기 주석 버튼 */
+.photo-ann-btn {
+  position: absolute;
+  bottom: 40px;
+  right: 8px;
+  background: rgba(15,23,42,0.72);
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.22rem 0.5rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.12s;
+  line-height: 1.4;
+}
+.photo-ann-btn:hover { background: var(--primary); }
+.ann-count {
+  display: inline-block;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
