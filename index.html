@@ -15,8 +15,8 @@
   <link rel="apple-touch-icon" href="/dental-site/icons/icon-192.png">
   <link rel="icon" type="image/svg+xml" href="/dental-site/icons/icon.svg">
 
-  <link rel="stylesheet" href="css/style.css?v=5">
-  <link rel="stylesheet" href="css/editor.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=6">
+  <link rel="stylesheet" href="css/editor.css?v=6">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
 <body>
@@ -36,14 +36,10 @@
           진료과 <span class="arrow">▾</span>
         </button>
         <div class="nav-group-panel">
-          <a href="#" data-page="dept-surgery"        onclick="showPage('dept-surgery');closeDeptMenu()">🦷 외과/치주</a>
-          <a href="#" data-page="dept-medicine"        onclick="showPage('dept-medicine');closeDeptMenu()">🩺 내과</a>
-          <a href="#" data-page="dept-conservative"    onclick="showPage('dept-conservative');closeDeptMenu()">🔬 보존과</a>
-          <a href="#" data-page="dept-orthodontics"    onclick="showPage('dept-orthodontics');closeDeptMenu()">📐 교정과</a>
-          <a href="#" data-page="dept-prost-fixed"     onclick="showPage('dept-prost-fixed');closeDeptMenu()">🦷 고정성</a>
-          <a href="#" data-page="dept-prost-implant"   onclick="showPage('dept-prost-implant');closeDeptMenu()">⚙️ 임플란트</a>
-          <a href="#" data-page="dept-prost-removable" onclick="showPage('dept-prost-removable');closeDeptMenu()">🔩 가철성</a>
-          <a href="#" data-page="dept-prost-materials" onclick="showPage('dept-prost-materials');closeDeptMenu()">🧪 재료</a>
+          <a href="#" data-page="dept-fixed"   onclick="showPage('dept-fixed');closeDeptMenu()">🦷 고정성</a>
+          <a href="#" data-page="dept-implant" onclick="showPage('dept-implant');closeDeptMenu()">⚙️ 임플란트</a>
+          <a href="#" data-page="dept-rpd"     onclick="showPage('dept-rpd');closeDeptMenu()">🔩 RPD</a>
+          <a href="#" data-page="dept-cd"      onclick="showPage('dept-cd');closeDeptMenu()">😁 CD</a>
         </div>
       </div>
 
@@ -69,14 +65,10 @@
     <a href="#" onclick="showPage('home');toggleMobileMenu()">🏠 홈</a>
     <a href="#" onclick="showPage('cases');toggleMobileMenu()">📋 임상 케이스</a>
     <div class="drawer-section-label">진료과</div>
-    <a href="#" onclick="showPage('dept-surgery');toggleMobileMenu()">🦷 외과/치주</a>
-    <a href="#" onclick="showPage('dept-medicine');toggleMobileMenu()">🩺 내과</a>
-    <a href="#" onclick="showPage('dept-conservative');toggleMobileMenu()">🔬 보존과</a>
-    <a href="#" onclick="showPage('dept-orthodontics');toggleMobileMenu()">📐 교정과</a>
-    <a href="#" onclick="showPage('dept-prost-fixed');toggleMobileMenu()">🦷 고정성</a>
-    <a href="#" onclick="showPage('dept-prost-implant');toggleMobileMenu()">⚙️ 임플란트</a>
-    <a href="#" onclick="showPage('dept-prost-removable');toggleMobileMenu()">🔩 가철성</a>
-    <a href="#" onclick="showPage('dept-prost-materials');toggleMobileMenu()">🧪 재료</a>
+    <a href="#" onclick="showPage('dept-fixed');toggleMobileMenu()">🦷 고정성</a>
+    <a href="#" onclick="showPage('dept-implant');toggleMobileMenu()">⚙️ 임플란트</a>
+    <a href="#" onclick="showPage('dept-rpd');toggleMobileMenu()">🔩 RPD</a>
+    <a href="#" onclick="showPage('dept-cd');toggleMobileMenu()">😁 CD</a>
     <div class="drawer-section-label">기타</div>
     <a href="admin.html">⚙ 관리</a>
   </div>
@@ -112,15 +104,11 @@
       <button id="bm-filter-btn" class="bm-filter-btn" onclick="toggleBookmarkFilter()">★ 북마크</button>
       <select class="filter-select" id="case-dept-filter"
         onchange="renderCases(document.querySelector('#page-cases .search-input').value, this.value)">
-        <option value="">전체 과</option>
-        <option value="surgery">외과 / 치주과</option>
-        <option value="medicine">내과</option>
-        <option value="conservative">보존과</option>
-        <option value="orthodontics">교정과</option>
-        <option value="prost-fixed">보철 — 고정성</option>
-        <option value="prost-implant">보철 — 임플란트</option>
-        <option value="prost-removable">보철 — 가철성</option>
-        <option value="prost-materials">보철 — 재료</option>
+        <option value="">전체</option>
+        <option value="fixed">고정성</option>
+        <option value="implant">임플란트</option>
+        <option value="rpd">RPD</option>
+        <option value="cd">CD</option>
       </select>
       <div class="view-toggle-group">
         <button id="view-grid-btn" class="view-toggle-btn active" onclick="setViewMode('grid')" title="카드 보기">
@@ -134,76 +122,40 @@
     <div class="card-grid" id="cases-grid"></div>
   </div>
 
-  <!-- ── 외과/치주과 ── -->
-  <div id="page-dept-surgery" class="page">
-    <div class="section-header"><div class="section-title">🦷 외과 / 치주과</div></div>
+  <!-- ── 고정성 ── -->
+  <div id="page-dept-fixed" class="page">
+    <div class="section-header"><div class="section-title">🦷 고정성</div></div>
     <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('surgery',this.value)">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('fixed',this.value)">
     </div>
-    <div class="card-grid" id="dept-content-surgery"></div>
+    <div class="card-grid" id="dept-content-fixed"></div>
   </div>
 
-  <!-- ── 내과 ── -->
-  <div id="page-dept-medicine" class="page">
-    <div class="section-header"><div class="section-title">🩺 내과</div></div>
+  <!-- ── 임플란트 ── -->
+  <div id="page-dept-implant" class="page">
+    <div class="section-header"><div class="section-title">⚙️ 임플란트</div></div>
     <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('medicine',this.value)">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('implant',this.value)">
     </div>
-    <div class="card-grid" id="dept-content-medicine"></div>
+    <div class="card-grid" id="dept-content-implant"></div>
   </div>
 
-  <!-- ── 보존과 ── -->
-  <div id="page-dept-conservative" class="page">
-    <div class="section-header"><div class="section-title">🔬 보존과</div></div>
+  <!-- ── RPD ── -->
+  <div id="page-dept-rpd" class="page">
+    <div class="section-header"><div class="section-title">🔩 RPD</div></div>
     <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('conservative',this.value)">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('rpd',this.value)">
     </div>
-    <div class="card-grid" id="dept-content-conservative"></div>
+    <div class="card-grid" id="dept-content-rpd"></div>
   </div>
 
-  <!-- ── 교정과 ── -->
-  <div id="page-dept-orthodontics" class="page">
-    <div class="section-header"><div class="section-title">📐 교정과</div></div>
+  <!-- ── CD ── -->
+  <div id="page-dept-cd" class="page">
+    <div class="section-header"><div class="section-title">😁 CD</div></div>
     <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('orthodontics',this.value)">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('cd',this.value)">
     </div>
-    <div class="card-grid" id="dept-content-orthodontics"></div>
-  </div>
-
-  <!-- ── 보철 — 고정성 ── -->
-  <div id="page-dept-prost-fixed" class="page">
-    <div class="section-header"><div class="section-title">🦷 보철 — 고정성</div></div>
-    <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('prost-fixed',this.value)">
-    </div>
-    <div class="card-grid" id="dept-content-prost-fixed"></div>
-  </div>
-
-  <!-- ── 보철 — 임플란트 ── -->
-  <div id="page-dept-prost-implant" class="page">
-    <div class="section-header"><div class="section-title">⚙️ 보철 — 임플란트</div></div>
-    <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('prost-implant',this.value)">
-    </div>
-    <div class="card-grid" id="dept-content-prost-implant"></div>
-  </div>
-
-  <!-- ── 보철 — 가철성 ── -->
-  <div id="page-dept-prost-removable" class="page">
-    <div class="section-header"><div class="section-title">🔩 보철 — 가철성</div></div>
-    <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('prost-removable',this.value)">
-    </div>
-    <div class="card-grid" id="dept-content-prost-removable"></div>
-  </div>
-
-  <!-- ── 보철 — 재료 ── -->
-  <div id="page-dept-prost-materials" class="page">
-    <div class="section-header"><div class="section-title">🧪 보철 — 재료</div></div>
-    <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('prost-materials',this.value)">
-    </div>
-    <div class="card-grid" id="dept-content-prost-materials"></div>
+    <div class="card-grid" id="dept-content-cd"></div>
   </div>
 </main>
 
