@@ -414,7 +414,7 @@ function _edFormHTML(d = {}) {
             <button type="button" class="tb-color tb-hl" style="background:#fecdd3" onclick="_edHl('#fecdd3')"></button>
           </div>
           <textarea id="ed-description" rows="10"
-            placeholder="케이스/자료 상세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
+            placeholder="케이스/자료 새세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
             style="min-height:200px;border-top:none;border-radius:0 0 8px 8px"></textarea>
           <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem">이미지를 텍스트 영역으로 드래그하면 현재 커서 위치에 자동 삽입됩니다.</div>
         </div>
@@ -468,7 +468,7 @@ function _edFormHTML(d = {}) {
 function _edRefBlockHTML(idx, r, ea) {
   if (!ea) ea = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const pagesVal   = (r.volume ? r.volume + ', ' : '') + (r.pages || '');
-  const absSaved   = r.abstract ? '<div class="ref-abstract-saved">초록 저장됨 ✓</div>' : '';
+  const absSaved   = r.abstract ? '<div class="ref-abstract-saved">초록 저장됨 (한국어) ✓</div>' : '';
   return `
     <div class="ref-block" id="ed-ref-${idx}">
       <button class="btn btn-danger btn-sm ref-remove" onclick="_edRemoveRef(${idx})">✕</button>
@@ -610,7 +610,6 @@ async function _edPubMedSearch(idx) {
     }).join('');
     resultsEl.style.display = 'block';
 
-    // 외부 클릭 시 닫기
     const close = (e) => {
       if (!resultsEl.contains(e.target) && e.target !== titleEl) {
         resultsEl.style.display = 'none';
@@ -648,21 +647,26 @@ async function _edSelectPubMed(idx, itemIdx) {
   set('title', title); set('authors', authors); set('year', year);
   set('journal', item.source); set('pages', pages); set('doi', doi);
 
-  // 초록 가져오기
+  // 초록 가져오기 → 한국어 번역
   _edToast('초록을 가져오는 중...');
   try {
     const fetchRes = await fetch(`${_PUBMED}efetch.fcgi?db=pubmed&id=${item.uid}&retmode=xml`);
     const xml = await fetchRes.text();
     const doc = new DOMParser().parseFromString(xml, 'text/xml');
     const parts = Array.from(doc.querySelectorAll('AbstractText'));
-    const abstract = parts.map(el => {
+    const abstractEn = parts.map(el => {
       const label = el.getAttribute('Label');
       return label ? `[${label}] ${el.textContent}` : el.textContent;
     }).join('\n\n');
 
+    let abstract = abstractEn;
+    if (abstractEn) {
+      _edToast('초록을 한국어로 번역하는 중...');
+      abstract = await _translateToKorean(abstractEn);
+    }
+
     set('abstract', abstract);
 
-    // "초록 저장됨" 표시 업데이트
     const block = document.getElementById(`ed-ref-${idx}`);
     if (block) {
       let saved = block.querySelector('.ref-abstract-saved');
@@ -671,12 +675,41 @@ async function _edSelectPubMed(idx, itemIdx) {
         saved.className = 'ref-abstract-saved';
         document.getElementById(`ed-ref-abstract-${idx}`).insertAdjacentElement('afterend', saved);
       }
-      saved.textContent = abstract ? '초록 저장됨 ✓' : '';
+      saved.textContent = abstract ? '초록 저장됨 (한국어) ✓' : '';
     }
-    _edToast(abstract ? '논문 정보 및 초록이 입력되었습니다 ✓' : '논문 정보가 입력되었습니다 ✓');
+    _edToast(abstract ? '논문 정보 및 한국어 초록이 입력되었습니다 ✓' : '논문 정보가 입력되었습니다 ✓');
   } catch(e) {
     _edToast('논문 기본 정보가 입력되었습니다 ✓');
   }
+}
+
+// ── 한국어 번역 (MyMemory 무료 API) ────────────────────────────
+async function _translateToKorean(text) {
+  if (!text) return '';
+  const LIMIT = 450;
+
+  const chunks = [];
+  let pos = 0;
+  while (pos < text.length) {
+    if (text.length - pos <= LIMIT) { chunks.push(text.slice(pos)); break; }
+    let end = pos + LIMIT;
+    const dot = text.lastIndexOf('. ', end);
+    if (dot > pos + 50) end = dot + 2;
+    chunks.push(text.slice(pos, end));
+    pos = end;
+  }
+
+  const results = [];
+  for (const chunk of chunks) {
+    try {
+      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=en|ko`);
+      const data = await res.json();
+      results.push(data.responseStatus === 200 && data.responseData?.translatedText
+        ? data.responseData.translatedText
+        : chunk);
+    } catch { results.push(chunk); }
+  }
+  return results.join(' ');
 }
 
 // ── 마크다운 툴바 ─────────────────────────────────────────────
