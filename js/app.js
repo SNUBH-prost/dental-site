@@ -223,6 +223,9 @@ function renderGallery() {
       ${currentPhotos.length > 1 ? `
         <button class="gallery-nav prev" onclick="changePhoto(-1)">&#8249;</button>
         <button class="gallery-nav next" onclick="changePhoto(1)">&#8250;</button>` : ''}
+      <button class="gallery-fs-btn" onclick="_openFsGallery()" title="전체화면">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h4v1.5H2.5V4H1V1zm10 0h4v3h-1.5V2.5H11V1zM1 12h1.5v1.5H4V15H1v-3zm10.5 1.5H13V12h1.5v3H11v-1.5z"/></svg>
+      </button>
     </div>
     <div class="gallery-thumbs">
       ${currentPhotos.map((ph,i)=>`
@@ -308,6 +311,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const state = e.state || { page: 'home' };
     const modalEl = document.getElementById('modal-overlay');
     const modalOpen = modalEl.classList.contains('open');
+    const fsOv = document.getElementById('fs-gallery');
+    const fsOpen = fsOv && fsOv.classList.contains('open');
+
+    // 전체화면 열린 상태에서 뒤로가기 → 전체화면만 닫기
+    if (fsOpen) {
+      fsOv.classList.remove('open');
+      return;
+    }
 
     if (modalOpen) {
       // 모달 열린 상태에서 뒤로가기 → 모달 닫기
@@ -1356,6 +1367,56 @@ function _setupGalleryZoom() {
       pan = false;
       if (_gz.s <= 1.05) _resetGalleryZoom();
     }
+  }, { passive: true });
+}
+
+// ── 전체화면 갤러리 ────────────────────────────────────────────
+function _openFsGallery() {
+  let ov = document.getElementById('fs-gallery');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'fs-gallery';
+    ov.innerHTML = `
+      <button class="fs-close" onclick="_closeFsGallery()">✕</button>
+      <span class="fs-counter" id="fs-counter"></span>
+      <button class="fs-nav fs-prev" onclick="_fsChangePhoto(-1)">&#8249;</button>
+      <img id="fs-img" src="" alt="">
+      <button class="fs-nav fs-next" onclick="_fsChangePhoto(1)">&#8250;</button>`;
+    document.body.appendChild(ov);
+    _setupFsSwipe(ov);
+  }
+  _updateFsGallery();
+  ov.classList.add('open');
+  history.pushState({ page: _currentPage, fs: true }, '');
+}
+
+function _closeFsGallery() {
+  const ov = document.getElementById('fs-gallery');
+  if (!ov || !ov.classList.contains('open')) return;
+  ov.classList.remove('open');
+  history.back();
+}
+
+function _fsChangePhoto(dir) {
+  currentPhotoIndex = (currentPhotoIndex + dir + currentPhotos.length) % currentPhotos.length;
+  _updateFsGallery();
+  updateGallery();
+}
+
+function _updateFsGallery() {
+  const p = currentPhotos[currentPhotoIndex];
+  const img = document.getElementById('fs-img');
+  const ctr = document.getElementById('fs-counter');
+  if (img) img.src = p.url;
+  if (ctr) ctr.textContent = `${currentPhotoIndex + 1} / ${currentPhotos.length}`;
+}
+
+function _setupFsSwipe(ov) {
+  let sx = 0;
+  ov.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+  ov.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) > 50) _fsChangePhoto(dx < 0 ? 1 : -1);
   }, { passive: true });
 }
 
