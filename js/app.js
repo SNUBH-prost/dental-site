@@ -29,6 +29,9 @@ let _bookmarks = new Set(JSON.parse(localStorage.getItem('dental-bm') || '[]'));
 let _showBmOnly = false;
 let _gz = { s: 1, ox: 50, oy: 50, tx: 0, ty: 0 }; // gallery zoom state
 let _viewMode = localStorage.getItem('dental-view') || 'grid';
+let _currentPage = 'home';
+let _isPopState = false;
+let _modalPushed = false;
 
 // ── 데이터 로드 ───────────────────────────────────────────────
 async function loadData() {
@@ -55,6 +58,10 @@ function showPage(pageId) {
   const navLink = document.querySelector(`nav a[data-page="${pageId}"]`);
   if (navLink) navLink.classList.add('active');
   window.scrollTo(0, 0);
+  _currentPage = pageId;
+  if (!_isPopState) {
+    history.pushState({ page: pageId }, '');
+  }
 }
 
 // ── Home ──────────────────────────────────────────────────────
@@ -172,13 +179,21 @@ function openModal(id, type) {
 
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
-  history.replaceState(null, '', '#' + type + '-' + id);
+  if (!_isPopState) {
+    _modalPushed = true;
+    history.pushState({ page: _currentPage, modal: { id, type } }, '', '#' + type + '-' + id);
+  }
 }
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
-  history.replaceState(null, '', location.pathname + location.search);
+  if (_modalPushed) {
+    _modalPushed = false;
+    history.back();
+  } else {
+    history.replaceState({ page: _currentPage }, '', location.pathname + location.search);
+  }
 }
 
 function _copyShareLink() {
@@ -280,10 +295,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('view-grid-btn')?.classList.toggle('active', _viewMode === 'grid');
   document.getElementById('view-list-btn')?.classList.toggle('active', _viewMode === 'list');
 
+  // 초기 히스토리 상태 설정
+  history.replaceState({ page: 'home' }, '');
+
   await loadData();
 
   const _h = location.hash.slice(1);
   if (_h) { const _m = _h.match(/^(case|content)-(.+)$/); if (_m) openModal(_m[2], _m[1]); }
+
+  // 뒤로가기 핸들러
+  window.addEventListener('popstate', e => {
+    const state = e.state || { page: 'home' };
+    const modalEl = document.getElementById('modal-overlay');
+    const modalOpen = modalEl.classList.contains('open');
+
+    if (modalOpen) {
+      // 모달 열린 상태에서 뒤로가기 → 모달 닫기
+      _modalPushed = false;
+      modalEl.classList.remove('open');
+      document.body.style.overflow = '';
+      return;
+    }
+
+    if (state.modal && !modalOpen) {
+      // 앞으로가기로 모달 상태 복원
+      _isPopState = true;
+      openModal(state.modal.id, state.modal.type);
+      _isPopState = false;
+      return;
+    }
+
+    // 페이지 이동
+    _isPopState = true;
+    showPage(state.page || 'home');
+    _isPopState = false;
+  });
 
   document.getElementById('modal-overlay').addEventListener('click', e => {
     if (e.target.id === 'modal-overlay') closeModal();
