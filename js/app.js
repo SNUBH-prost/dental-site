@@ -1303,6 +1303,49 @@ function _setupGalleryZoom() {
   }, { passive: true });
 }
 
+// ── PWA 설치 배너 ──────────────────────────────────────────────
+let _pwaPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _pwaPrompt = e;
+  // Only show once per session if not dismissed
+  if (!sessionStorage.getItem('pwa-dismissed')) {
+    _showPwaBanner();
+  }
+});
+
+function _showPwaBanner() {
+  if (document.getElementById('pwa-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'pwa-banner';
+  banner.innerHTML = `
+    <span class="pwa-icon">📱</span>
+    <span class="pwa-text">홈 화면에 앱으로 추가하면 더 편리하게 사용할 수 있어요</span>
+    <button class="pwa-install-btn" onclick="_installPwa()">설치</button>
+    <button class="pwa-dismiss-btn" onclick="_dismissPwaBanner()">✕</button>
+  `;
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => banner.classList.add('visible'));
+}
+
+function _installPwa() {
+  if (!_pwaPrompt) return;
+  _pwaPrompt.prompt();
+  _pwaPrompt.userChoice.then(r => {
+    if (r.outcome === 'accepted') _dismissPwaBanner();
+    _pwaPrompt = null;
+  });
+}
+
+function _dismissPwaBanner() {
+  const b = document.getElementById('pwa-banner');
+  if (!b) return;
+  b.classList.remove('visible');
+  sessionStorage.setItem('pwa-dismissed', '1');
+  setTimeout(() => b.remove(), 350);
+}
+
 // ── 토스트 ────────────────────────────────────────────────────
 function _edToast(msg, type = 'success') {
   const t = document.getElementById('ed-toast');
