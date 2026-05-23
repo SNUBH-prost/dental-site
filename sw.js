@@ -1,4 +1,4 @@
-const CACHE = 'dental-v1';
+const CACHE = 'dental-v2';
 const STATIC = [
   '/dental-site/',
   '/dental-site/index.html',
