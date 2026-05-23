@@ -477,6 +477,30 @@
 #ed-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 #ed-toast.error { background: #ef4444; }
 
+/* PubMed 검색 결과 드롭다운 */
+.pubmed-results {
+  display: none;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.13);
+  margin-top: 0.35rem;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 200;
+}
+.pubmed-result-item {
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.pubmed-result-item:last-child { border-bottom: none; }
+.pubmed-result-item:hover { background: var(--primary-pale); }
+.pr-title { font-size: 0.84rem; font-weight: 600; color: var(--text); margin-bottom: 0.2rem; line-height: 1.4; }
+.pr-meta  { font-size: 0.75rem; color: var(--text-muted); }
+.ref-abstract-saved { font-size: 0.75rem; color: #10b981; margin-top: 0.3rem; font-weight: 600; }
+
 @media (max-width: 600px) {
   .editor-panel { padding: 1.25rem; }
   .editor-panel .form-grid { grid-template-columns: 1fr; }

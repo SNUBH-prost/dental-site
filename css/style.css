@@ -733,6 +733,33 @@ main {
   margin-left: 0.5rem;
 }
 
+.ref-doi-link { color: var(--primary); font-size: 0.78rem; margin-left: 0.4rem; }
+
+.ref-abs-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.74rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  vertical-align: middle;
+}
+.ref-abs-toggle:hover { background: var(--primary-pale); color: var(--primary); border-color: var(--primary-light); }
+
+.ref-abstract-text {
+  margin-top: 0.65rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
 /* ── Toolbar ── */
 .toolbar {
   display: flex;
