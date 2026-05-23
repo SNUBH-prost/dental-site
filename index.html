@@ -6,6 +6,7 @@
   <title>치과 임상 자료실</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/editor.css">
+  <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
 <body>
 
@@ -38,6 +39,7 @@
       <a href="admin.html" class="nav-link nav-admin">관리</a>
     </nav>
 
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="다크 모드 전환">🌙</button>
     <button class="hamburger" id="hamburger" onclick="toggleMobileMenu()" aria-label="메뉴">
       <span></span><span></span><span></span>
     </button>
@@ -94,6 +96,7 @@
     <div class="toolbar">
       <input class="search-input" type="text" placeholder="케이스 검색..."
         oninput="renderCases(this.value, document.getElementById('case-dept-filter').value)">
+      <button id="bm-filter-btn" class="bm-filter-btn" onclick="toggleBookmarkFilter()">★ 북마크</button>
       <select class="filter-select" id="case-dept-filter"
         onchange="renderCases(document.querySelector('#page-cases .search-input').value, this.value)">
         <option value="">전체 과</option>
