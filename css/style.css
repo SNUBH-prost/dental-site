@@ -975,6 +975,7 @@ main {
   align-items: center;
   gap: 0.6rem;
   min-width: 0;
+  padding: 0;
 }
 .card-grid.list-view .card-dept {
   font-size: 0.72rem;
