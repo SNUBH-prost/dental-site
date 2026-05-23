@@ -122,6 +122,14 @@
         <option value="prost-removable">보철 — 가철성</option>
         <option value="prost-materials">보철 — 재료</option>
       </select>
+      <div class="view-toggle-group">
+        <button id="view-grid-btn" class="view-toggle-btn active" onclick="setViewMode('grid')" title="카드 보기">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        </button>
+        <button id="view-list-btn" class="view-toggle-btn" onclick="setViewMode('list')" title="목록 보기">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
+        </button>
+      </div>
     </div>
     <div class="card-grid" id="cases-grid"></div>
   </div>

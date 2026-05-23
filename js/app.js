@@ -32,6 +32,7 @@ let isAdmin = false;
 let _bookmarks = new Set(JSON.parse(localStorage.getItem('dental-bm') || '[]'));
 let _showBmOnly = false;
 let _gz = { s: 1, ox: 50, oy: 50, tx: 0, ty: 0 }; // gallery zoom state
+let _viewMode = localStorage.getItem('dental-view') || 'grid';
 
 // ── 데이터 로드 ───────────────────────────────────────────────
 async function loadData() {
@@ -89,6 +90,7 @@ function renderCases(filter = '', deptFilter = '') {
     return matchText && matchDept && matchBm;
   });
   const el = document.getElementById('cases-grid');
+  el.className = _viewMode === 'list' ? 'card-grid list-view' : 'card-grid';
   el.innerHTML = list.length ? list.map(c => cardHTML(c, 'case')).join('') :
     '<div class="empty">검색 결과가 없습니다.</div>';
 }
@@ -277,6 +279,10 @@ function toggleRefAbs(btn, id) {
 document.addEventListener('DOMContentLoaded', async () => {
   const _ttBtn = document.getElementById('theme-toggle');
   if (_ttBtn) _ttBtn.textContent = (localStorage.getItem('dental-theme')||'light') === 'dark' ? '☀️' : '🌙';
+
+  // 뷰 모드 초기 버튼 상태
+  document.getElementById('view-grid-btn')?.classList.toggle('active', _viewMode === 'grid');
+  document.getElementById('view-list-btn')?.classList.toggle('active', _viewMode === 'list');
 
   await loadData();
 
@@ -1186,6 +1192,17 @@ function _toggleBookmark(id) {
     document.getElementById('case-dept-filter')?.value || ''
   );
   renderDeptPages();
+}
+
+function setViewMode(mode) {
+  _viewMode = mode;
+  localStorage.setItem('dental-view', mode);
+  document.getElementById('view-grid-btn')?.classList.toggle('active', mode === 'grid');
+  document.getElementById('view-list-btn')?.classList.toggle('active', mode === 'list');
+  renderCases(
+    document.querySelector('#page-cases .search-input')?.value || '',
+    document.getElementById('case-dept-filter')?.value || ''
+  );
 }
 
 function toggleBookmarkFilter() {
