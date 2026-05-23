@@ -222,8 +222,12 @@ function renderRefs(refs) {
   section.style.display = 'block';
   el.innerHTML = refs.map((r, i) => {
     const doiLink  = r.doi ? `<a href="https://doi.org/${r.doi}" target="_blank" class="ref-doi-link">DOI ↗</a>` : '';
-    const absBtn   = r.abstract ? `<button class="ref-abs-toggle" onclick="toggleRefAbs(this,'ref-abs-${i}')">초록 ▼</button>` : '';
-    const absBlock = r.abstract ? `<div class="ref-abstract-text" id="ref-abs-${i}" style="display:none">${_esc(r.abstract).replace(/\n/g,'<br>')}</div>` : '';
+    const hasAbs   = r.abstract || r.abstractEn;
+    const absBtn   = hasAbs ? `<button class="ref-abs-toggle" onclick="toggleRefAbs(this,'ref-abs-${i}')">초록 ▼</button>` : '';
+    let absContent = '';
+    if (r.abstractEn) absContent += `<div class="ref-abs-section"><div class="ref-abs-label">영문</div><div>${_esc(r.abstractEn).replace(/\n/g,'<br>')}</div></div>`;
+    if (r.abstract)   absContent += `<div class="ref-abs-section"><div class="ref-abs-label">한글</div><div>${_esc(r.abstract).replace(/\n/g,'<br>')}</div></div>`;
+    const absBlock = hasAbs ? `<div class="ref-abstract-text" id="ref-abs-${i}" style="display:none">${absContent}</div>` : '';
     return `<li><div class="ref-main"><strong>${_esc(r.authors)}</strong> (${_esc(r.year)}). ${_esc(r.title)}. <em>${_esc(r.journal)}</em>${r.volume?', '+_esc(r.volume):''}${r.pages?', '+_esc(r.pages):''}. ${doiLink}${absBtn}</div>${absBlock}</li>`;
   }).join('');
 }
@@ -468,7 +472,7 @@ function _edFormHTML(d = {}) {
 function _edRefBlockHTML(idx, r, ea) {
   if (!ea) ea = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const pagesVal   = (r.volume ? r.volume + ', ' : '') + (r.pages || '');
-  const absSaved   = r.abstract ? '<div class="ref-abstract-saved">초록 저장됨 ✓</div>' : '';
+  const absSaved   = (r.abstract || r.abstractEn) ? '<div class="ref-abstract-saved">초록 저장됨 (영문+한글) ✓</div>' : '';
   return `
     <div class="ref-block" id="ed-ref-${idx}">
       <button class="btn btn-danger btn-sm ref-remove" onclick="_edRemoveRef(${idx})">✕</button>
@@ -484,6 +488,7 @@ function _edRefBlockHTML(idx, r, ea) {
           </div>
           <input type="text" id="ed-ref-title-${idx}" value="${ea(r.title)}" placeholder="논문 제목">
           <div class="pubmed-results" id="ed-ref-results-${idx}"></div>
+          <input type="hidden" id="ed-ref-abstract-en-${idx}" value="${ea(r.abstractEn)}">
           <input type="hidden" id="ed-ref-abstract-${idx}" value="${ea(r.abstract)}">
           ${absSaved}
         </div>
@@ -551,7 +556,7 @@ function _edRemoveRef(idx) {
     block.querySelector('.ref-remove').setAttribute('onclick', `_edRemoveRef(${i})`);
     const pb = block.querySelector('.pubmed-search-btn');
     if (pb) pb.setAttribute('onclick', `_edPubMedSearch(${i})`);
-    ['authors','year','title','journal','pages','doi','abstract','results'].forEach(f => {
+    ['authors','year','title','journal','pages','doi','abstract','abstract-en','results'].forEach(f => {
       const el = block.querySelector(`[id*="-ref-${f}-"]`);
       if (el) el.id = `ed-ref-${f}-${i}`;
     });
@@ -567,7 +572,8 @@ function _edCollectRefs() {
       volume: dash > -1 ? pages.slice(0, dash) : '',
       pages:  dash > -1 ? pages.slice(dash + 2) : pages,
       doi: g('doi'),
-      abstract: g('abstract')
+      abstract: g('abstract'),
+      abstractEn: g('abstract-en')
     };
   }).filter(r => r.title || r.authors);
 }
@@ -666,6 +672,7 @@ async function _edSelectPubMed(idx, itemIdx) {
       abstract = await _translateToKorean(abstractEn);
     }
 
+    set('abstract-en', abstractEn);
     set('abstract', abstract);
 
     // "초록 저장됨" 표시 업데이트
@@ -677,9 +684,9 @@ async function _edSelectPubMed(idx, itemIdx) {
         saved.className = 'ref-abstract-saved';
         document.getElementById(`ed-ref-abstract-${idx}`).insertAdjacentElement('afterend', saved);
       }
-      saved.textContent = abstract ? '초록 저장됨 (한국어) ✓' : '';
+      saved.textContent = (abstract || abstractEn) ? '초록 저장됨 (영문+한글) ✓' : '';
     }
-    _edToast(abstract ? '논문 정보 및 한국어 초록이 입력되었습니다 ✓' : '논문 정보가 입력되었습니다 ✓');
+    _edToast(abstract ? '논문 정보 및 초록이 입력되었습니다 ✓' : '논문 정보가 입력되었습니다 ✓');
   } catch(e) {
     _edToast('논문 기본 정보가 입력되었습니다 ✓');
   }
