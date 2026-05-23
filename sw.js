@@ -1,9 +1,7 @@
-const CACHE = 'dental-v2';
+const CACHE = 'dental-v3';
 const STATIC = [
   '/dental-site/',
   '/dental-site/index.html',
-  '/dental-site/css/style.css',
-  '/dental-site/css/editor.css',
   '/dental-site/js/app.js',
   '/dental-site/icons/icon.svg',
   'https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js'
@@ -26,18 +24,19 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Always fetch Firebase, Cloudinary, PubMed, translation APIs from network
+  // Always fetch from network: Firebase, Cloudinary, PubMed, translation, CSS
   if (
     url.hostname.includes('firebaseapp.com') ||
     url.hostname.includes('googleapis.com') ||
     url.hostname.includes('cloudinary.com') ||
     url.hostname.includes('ncbi.nlm.nih.gov') ||
-    url.hostname.includes('mymemory.translated.net')
+    url.hostname.includes('mymemory.translated.net') ||
+    url.pathname.endsWith('.css')
   ) {
     return;
   }
 
-  // Network-first for HTML pages, cache-first for static assets
+  // Network-first for HTML pages
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request).catch(() => caches.match('/dental-site/index.html'))
