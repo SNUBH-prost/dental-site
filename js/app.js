@@ -29,6 +29,8 @@ let allContents = [];
 let currentPhotos = [];
 let currentPhotoIndex = 0;
 let isAdmin = false;
+let _bookmarks = new Set(JSON.parse(localStorage.getItem('dental-bm') || '[]'));
+let _showBmOnly = false;
 
 // ── 데이터 로드 ───────────────────────────────────────────────
 async function loadData() {
@@ -81,7 +83,8 @@ function renderCases(filter = '', deptFilter = '') {
     const q = filter.trim();
     const matchText = !q || c.title.includes(q) || (c.summary||'').includes(q) || (c.tags||[]).some(t => t.includes(q));
     const matchDept = !deptFilter || c.department === deptFilter;
-    return matchText && matchDept;
+    const matchBm   = !_showBmOnly || _bookmarks.has(c.id);
+    return matchText && matchDept && matchBm;
   });
   const el = document.getElementById('cases-grid');
   el.innerHTML = list.length ? list.map(c => cardHTML(c, 'case')).join('') :
@@ -117,7 +120,11 @@ function cardHTML(item, type) {
   const thumb = firstPhoto
     ? `<div class="card-thumb"><img src="${firstPhoto.url}" alt="" onerror="this.parentElement.innerHTML='<span>🦷</span>'"></div>`
     : `<div class="card-thumb"><span>🦷</span></div>`;
-  const tags = (item.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+  const tags = (item.tags || []).map(t =>
+    `<span class="tag" onclick="event.stopPropagation();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
+  ).join('');
+  const isBm = _bookmarks.has(item.id);
+  const bmBtn = `<button class="card-bm-btn${isBm?' active':''}" onclick="event.stopPropagation();_toggleBookmark('${item.id}')" title="${isBm?'북마크 해제':'북마크'}">★</button>`;
   const adminBtns = isAdmin ? `
     <div class="card-admin-row" onclick="event.stopPropagation()">
       <button class="card-admin-btn edit" onclick="openEditorFor('${item.id}','${type}')">✏️ 편집</button>
@@ -126,6 +133,7 @@ function cardHTML(item, type) {
   return `
     <div class="card" onclick="openModal('${item.id}','${type}')">
       ${thumb}
+      ${bmBtn}
       <div class="card-body">
         <div class="card-dept">${deptName}</div>
         <div class="card-title">${item.title}</div>
@@ -155,7 +163,9 @@ function openModal(id, type) {
   document.getElementById('modal-title').textContent = item.title;
   document.getElementById('modal-date').textContent  = item.date || '';
   document.getElementById('modal-description').innerHTML = marked.parse(item.description || '');
-  document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('');
+  document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>
+    `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
+  ).join('');
 
   renderRefs(item.references || []);
   renderGallery();
@@ -205,6 +215,7 @@ function renderGallery() {
           onerror="this.style.display='none'">`).join('')}
     </div>`;
   _placeAnnSVG(el.querySelector('.gallery-main'), p);
+  _setupGallerySwipe();
 }
 
 function changePhoto(dir) {
@@ -258,6 +269,9 @@ function toggleRefAbs(btn, id) {
 
 // ── Init ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  const _ttBtn = document.getElementById('theme-toggle');
+  if (_ttBtn) _ttBtn.textContent = (localStorage.getItem('dental-theme')||'light') === 'dark' ? '☀️' : '🌙';
+
   await loadData();
 
   const _h = location.hash.slice(1);
@@ -1127,6 +1141,68 @@ function _annCancel() {
   if (overlay) overlay.style.display='none';
   if (document.getElementById('editor-overlay')?.classList.contains('open')) return;
   document.body.style.overflow='';
+}
+
+// ── 다크 모드 ─────────────────────────────────────────────────
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('dental-theme', next);
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = isDark ? '🌙' : '☀️';
+}
+
+// ── 북마크 ────────────────────────────────────────────────────
+function _toggleBookmark(id) {
+  if (_bookmarks.has(id)) _bookmarks.delete(id);
+  else _bookmarks.add(id);
+  localStorage.setItem('dental-bm', JSON.stringify([..._bookmarks]));
+  renderHome();
+  renderCases(
+    document.querySelector('#page-cases .search-input')?.value || '',
+    document.getElementById('case-dept-filter')?.value || ''
+  );
+  renderDeptPages();
+}
+
+function toggleBookmarkFilter() {
+  _showBmOnly = !_showBmOnly;
+  const btn = document.getElementById('bm-filter-btn');
+  if (btn) btn.classList.toggle('active', _showBmOnly);
+  renderCases(
+    document.querySelector('#page-cases .search-input')?.value || '',
+    document.getElementById('case-dept-filter')?.value || ''
+  );
+}
+
+// ── 태그 필터 ─────────────────────────────────────────────────
+function _filterByTag(tag) {
+  showPage('cases');
+  const searchInput = document.querySelector('#page-cases .search-input');
+  if (searchInput) searchInput.value = tag;
+  const deptFilter = document.getElementById('case-dept-filter');
+  if (deptFilter) deptFilter.value = '';
+  _showBmOnly = false;
+  const bmBtn = document.getElementById('bm-filter-btn');
+  if (bmBtn) bmBtn.classList.remove('active');
+  renderCases(tag, '');
+}
+
+// ── 갤러리 스와이프 ───────────────────────────────────────────
+function _setupGallerySwipe() {
+  const gm = document.querySelector('.gallery-main');
+  if (!gm || currentPhotos.length <= 1) return;
+  let _sx = 0, _sy = 0;
+  gm.addEventListener('touchstart', e => {
+    _sx = e.touches[0].clientX;
+    _sy = e.touches[0].clientY;
+  }, { passive: true });
+  gm.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - _sx;
+    const dy = e.changedTouches[0].clientY - _sy;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) changePhoto(dx < 0 ? 1 : -1);
+  }, { passive: true });
 }
 
 // ── 토스트 ────────────────────────────────────────────────────
