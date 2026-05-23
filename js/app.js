@@ -648,17 +648,23 @@ async function _edSelectPubMed(idx, itemIdx) {
   set('title', title); set('authors', authors); set('year', year);
   set('journal', item.source); set('pages', pages); set('doi', doi);
 
-  // 초록 가져오기
+  // 초록 가져오기 → 한국어 번역
   _edToast('초록을 가져오는 중...');
   try {
     const fetchRes = await fetch(`${_PUBMED}efetch.fcgi?db=pubmed&id=${item.uid}&retmode=xml`);
     const xml = await fetchRes.text();
     const doc = new DOMParser().parseFromString(xml, 'text/xml');
     const parts = Array.from(doc.querySelectorAll('AbstractText'));
-    const abstract = parts.map(el => {
+    const abstractEn = parts.map(el => {
       const label = el.getAttribute('Label');
       return label ? `[${label}] ${el.textContent}` : el.textContent;
     }).join('\n\n');
+
+    let abstract = abstractEn;
+    if (abstractEn) {
+      _edToast('초록을 한국어로 번역하는 중...');
+      abstract = await _translateToKorean(abstractEn);
+    }
 
     set('abstract', abstract);
 
@@ -671,12 +677,42 @@ async function _edSelectPubMed(idx, itemIdx) {
         saved.className = 'ref-abstract-saved';
         document.getElementById(`ed-ref-abstract-${idx}`).insertAdjacentElement('afterend', saved);
       }
-      saved.textContent = abstract ? '초록 저장됨 ✓' : '';
+      saved.textContent = abstract ? '초록 저장됨 (한국어) ✓' : '';
     }
-    _edToast(abstract ? '논문 정보 및 초록이 입력되었습니다 ✓' : '논문 정보가 입력되었습니다 ✓');
+    _edToast(abstract ? '논문 정보 및 한국어 초록이 입력되었습니다 ✓' : '논문 정보가 입력되었습니다 ✓');
   } catch(e) {
     _edToast('논문 기본 정보가 입력되었습니다 ✓');
   }
+}
+
+// ── 한국어 번역 (MyMemory 무료 API) ──────────────────────────
+async function _translateToKorean(text) {
+  if (!text) return '';
+  const LIMIT = 450;
+
+  // 문장 경계로 청크 분할
+  const chunks = [];
+  let pos = 0;
+  while (pos < text.length) {
+    if (text.length - pos <= LIMIT) { chunks.push(text.slice(pos)); break; }
+    let end = pos + LIMIT;
+    const dot = text.lastIndexOf('. ', end);
+    if (dot > pos + 50) end = dot + 2;
+    chunks.push(text.slice(pos, end));
+    pos = end;
+  }
+
+  const results = [];
+  for (const chunk of chunks) {
+    try {
+      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=en|ko`);
+      const data = await res.json();
+      results.push(data.responseStatus === 200 && data.responseData?.translatedText
+        ? data.responseData.translatedText
+        : chunk);
+    } catch { results.push(chunk); }
+  }
+  return results.join(' ');
 }
 
 // ── 마크다운 툴바 ─────────────────────────────────────────────
