@@ -162,11 +162,28 @@ function openModal(id, type) {
 
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+  history.replaceState(null, '', '#' + type + '-' + id);
 }
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
+  history.replaceState(null, '', location.pathname + location.search);
+}
+
+function _copyShareLink() {
+  const url = location.href;
+  navigator.clipboard?.writeText(url).then(() => _edToast('링크가 복사되었습니다!')).catch(() => {
+    const el = document.createElement('input');
+    el.value = url; document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+    _edToast('링크가 복사되었습니다!');
+  }) ?? (() => {
+    const el = document.createElement('input');
+    el.value = url; document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+    _edToast('링크가 복사되었습니다!');
+  })();
 }
 
 // ── Gallery ────────────────────────────────────────────────────
@@ -191,6 +208,7 @@ function renderGallery() {
         <img src="${ph.url}" alt="" class="${i===0?'active':''}" onclick="gotoPhoto(${i})"
           onerror="this.style.display='none'">`).join('')}
     </div>`;
+  _placeAnnSVG(el.querySelector('.gallery-main'), p);
 }
 
 function changePhoto(dir) {
@@ -210,6 +228,8 @@ function updateGallery() {
   document.getElementById('gallery-counter').textContent = `${currentPhotoIndex+1} / ${currentPhotos.length}`;
   document.querySelectorAll('.gallery-thumbs img').forEach((img,i) =>
     img.classList.toggle('active', i === currentPhotoIndex));
+  const gm = document.querySelector('.gallery-main');
+  if (gm) _placeAnnSVG(gm, p);
 }
 
 // ── References ─────────────────────────────────────────────────
@@ -241,8 +261,11 @@ function toggleRefAbs(btn, id) {
 }
 
 // ── Init ───────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  loadData();
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadData();
+
+  const _h = location.hash.slice(1);
+  if (_h) { const _m = _h.match(/^(case|content)-(.+)$/); if (_m) openModal(_m[2], _m[1]); }
 
   document.getElementById('modal-overlay').addEventListener('click', e => {
     if (e.target.id === 'modal-overlay') closeModal();
@@ -251,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.id === 'editor-overlay') closeEditor();
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeModal(); closeEditor(); }
+    if (e.key === 'Escape') { closeModal(); closeEditor(); _annCancel(); }
     if (document.getElementById('modal-overlay').classList.contains('open')) {
       if (e.key === 'ArrowLeft')  changePhoto(-1);
       if (e.key === 'ArrowRight') changePhoto(1);
@@ -350,7 +373,7 @@ function closeEditor() {
 
 // ── 폼 렌더 ──────────────────────────────────────────────────
 function _renderEditorForm(data = {}) {
-  _edPhotos = (data.photos || []).map(p => ({ url: p.url, caption: p.caption || '' }));
+  _edPhotos = (data.photos || []).map(p => ({ url: p.url, caption: p.caption || '', annotations: p.annotations || [] }));
   _edTags   = data.tags ? [...data.tags] : [];
   document.getElementById('editor-form-title').textContent =
     _edId
@@ -527,19 +550,23 @@ function _edHandleDrop(e) {
   _edAddFiles(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')));
 }
 function _edAddFiles(files) {
-  files.forEach(f => _edPhotos.push({ url: URL.createObjectURL(f), caption: '', file: f }));
+  files.forEach(f => _edPhotos.push({ url: URL.createObjectURL(f), caption: '', file: f, annotations: [] }));
   _edRenderPhotoPreview();
 }
 function _edRenderPhotoPreview() {
   const el = document.getElementById('ed-photo-preview');
   if (!el) return;
-  el.innerHTML = _edPhotos.map((p,i) => `
+  el.innerHTML = _edPhotos.map((p,i) => {
+    const cnt = (p.annotations||[]).length;
+    return `
     <div class="photo-preview-item">
       <img src="${p.url}" alt="">
       <button class="photo-remove" onclick="_edRemovePhoto(${i})">✕</button>
+      <button class="photo-ann-btn" onclick="openAnnotationEditor(${i})" title="주석 편집">✏️${cnt > 0 ? ` <span class="ann-count">${cnt}</span>` : ''}</button>
       <input class="caption-input" type="text" placeholder="사진 설명 (선택)"
         value="${p.caption}" oninput="_edPhotos[${i}].caption=this.value">
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 function _edRemovePhoto(idx) { _edPhotos.splice(idx, 1); _edRenderPhotoPreview(); }
 
@@ -849,19 +876,19 @@ async function _edUploadPhotos() {
   const progWrap = document.getElementById('ed-progress');
   const progBar  = document.getElementById('ed-progress-bar');
   const toUpload = _edPhotos.filter(p => p.file);
-  if (!toUpload.length) return _edPhotos.map(p => ({ url: p.url, caption: p.caption }));
+  if (!toUpload.length) return _edPhotos.map(p => ({ url: p.url, caption: p.caption, annotations: p.annotations||[] }));
   progWrap.style.display = 'block';
   let done = 0;
   const results = [];
   for (const photo of _edPhotos) {
-    if (!photo.file) { results.push({ url: photo.url, caption: photo.caption }); continue; }
+    if (!photo.file) { results.push({ url: photo.url, caption: photo.caption, annotations: photo.annotations||[] }); continue; }
     const fd = new FormData();
     fd.append('file', photo.file);
     fd.append('upload_preset', cloudinaryConfig.uploadPreset);
     const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`, { method: 'POST', body: fd });
     const data = await res.json();
     if (!data.secure_url) throw new Error(data.error?.message || '업로드 실패');
-    results.push({ url: data.secure_url, caption: photo.caption });
+    results.push({ url: data.secure_url, caption: photo.caption, annotations: photo.annotations||[] });
     done++;
     progBar.style.width = `${Math.round(done / toUpload.length * 100)}%`;
   }
@@ -905,6 +932,203 @@ async function _edSave() {
     btn.textContent = _edId ? '저장' : '등록';
     btn.disabled = false;
   }
+}
+
+// ── 이미지 주석 뷰어 ──────────────────────────────────────────
+function _populateAnnSVG(svgEl, annotations, w, h) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const sw = Math.max(w, h) * 0.007;
+  const fs = Math.max(w, h) * 0.044;
+  const as = sw * 4.5;
+  annotations.forEach(ann => {
+    const color = ann.color || '#ef4444';
+    if (ann.type === 'arrow') {
+      const x1=ann.x1*w, y1=ann.y1*h, x2=ann.x2*w, y2=ann.y2*h;
+      if (Math.hypot(x2-x1,y2-y1) < 4) return;
+      const angle = Math.atan2(y2-y1, x2-x1);
+      const ex=x2-Math.cos(angle)*as*0.4, ey=y2-Math.sin(angle)*as*0.4;
+      const a1=angle-Math.PI*0.75, a2=angle+Math.PI*0.75;
+      const pts=`${x2},${y2} ${x2+as*Math.cos(a1)},${y2+as*Math.sin(a1)} ${x2+as*Math.cos(a2)},${y2+as*Math.sin(a2)}`;
+      const g = document.createElementNS(ns,'g');
+      [[`rgba(0,0,0,.45)`,sw*2.5],[color,sw]].forEach(([c,w2],idx)=>{
+        const l=document.createElementNS(ns,'line');
+        l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',ex);l.setAttribute('y2',ey);
+        l.setAttribute('stroke',c);l.setAttribute('stroke-width',w2);l.setAttribute('stroke-linecap','round');
+        g.appendChild(l);
+        const p=document.createElementNS(ns,'polygon');
+        p.setAttribute('points',pts);p.setAttribute('fill',c);g.appendChild(p);
+      });
+      svgEl.appendChild(g);
+    } else if (ann.type === 'circle') {
+      const cx=ann.cx*w, cy=ann.cy*h, rx=ann.rx*w, ry=ann.ry*h;
+      if (rx<3||ry<3) return;
+      [`rgba(0,0,0,.45)`,color].forEach((c,i)=>{
+        const el=document.createElementNS(ns,'ellipse');
+        el.setAttribute('cx',cx);el.setAttribute('cy',cy);
+        el.setAttribute('rx',rx);el.setAttribute('ry',ry);
+        el.setAttribute('stroke',c);el.setAttribute('stroke-width',i===0?sw*2.5:sw);el.setAttribute('fill','none');
+        svgEl.appendChild(el);
+      });
+    } else if (ann.type === 'text') {
+      const tx=ann.x*w, ty=ann.y*h;
+      [['rgba(0,0,0,.7)',sw*4,'none'],[color,0,color]].forEach(([sc,sw2,fc])=>{
+        const t=document.createElementNS(ns,'text');
+        t.setAttribute('x',tx);t.setAttribute('y',ty);
+        t.setAttribute('font-size',fs);t.setAttribute('font-weight','700');t.setAttribute('font-family','sans-serif');
+        if(sw2>0){t.setAttribute('stroke',sc);t.setAttribute('stroke-width',sw2);t.setAttribute('stroke-linejoin','round');}
+        t.setAttribute('fill',fc);t.textContent=ann.text;
+        svgEl.appendChild(t);
+      });
+    }
+  });
+}
+
+function _placeAnnSVG(galleryMainEl, photo) {
+  galleryMainEl.querySelectorAll('.ann-overlay').forEach(e=>e.remove());
+  if (!photo?.annotations?.length) return;
+  const img = galleryMainEl.querySelector('img');
+  if (!img) return;
+  const place = () => {
+    galleryMainEl.querySelectorAll('.ann-overlay').forEach(e=>e.remove());
+    const ir=img.getBoundingClientRect(), cr=galleryMainEl.getBoundingClientRect();
+    const left=ir.left-cr.left, top=ir.top-cr.top, w=ir.width, h=ir.height;
+    if (w<1||h<1) return;
+    const wrap=document.createElement('div');
+    wrap.className='ann-overlay';
+    wrap.style.cssText=`position:absolute;left:${left}px;top:${top}px;width:${w}px;height:${h}px;pointer-events:none;`;
+    const ns='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(ns,'svg');
+    svg.setAttribute('width',w);svg.setAttribute('height',h);svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    _populateAnnSVG(svg,photo.annotations,w,h);
+    wrap.appendChild(svg);galleryMainEl.appendChild(wrap);
+  };
+  if (img.complete&&img.naturalWidth) place(); else img.addEventListener('load',place,{once:true});
+}
+
+// ── 이미지 주석 에디터 ────────────────────────────────────────
+let _annState = { photoIdx:-1, annotations:[], tool:'arrow', color:'#ef4444', drawing:false, sx:0, sy:0, previewEl:null };
+
+function openAnnotationEditor(photoIdx) {
+  _annState.photoIdx = photoIdx;
+  _annState.annotations = JSON.parse(JSON.stringify(_edPhotos[photoIdx].annotations||[]));
+  _annState.tool='arrow'; _annState.color='#ef4444'; _annState.drawing=false; _annState.previewEl=null;
+  const overlay = document.getElementById('ann-editor-overlay');
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.querySelectorAll('.ann-tool-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('ann-btn-arrow').classList.add('active');
+  document.querySelectorAll('.ann-color-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+  const img = document.getElementById('ann-img');
+  img.src = _edPhotos[photoIdx].url;
+  const setup = () => { _annSetupSVGEvents(); _annRedraw(); };
+  if (img.complete&&img.naturalWidth) setup(); else img.onload=setup;
+}
+
+function _annSetupSVGEvents() {
+  const svg=document.getElementById('ann-svg'), img=document.getElementById('ann-img');
+  const w=img.clientWidth, h=img.clientHeight;
+  svg.style.width=w+'px'; svg.style.height=h+'px';
+  svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+  svg.onmousedown=_annMouseDown; svg.onmousemove=_annMouseMove;
+  svg.onmouseup=_annMouseUp; svg.onmouseleave=e=>{if(_annState.drawing)_annMouseUp(e);};
+  svg.ontouchstart=e=>{e.preventDefault();_annMouseDown(_t2m(e));};
+  svg.ontouchmove=e=>{e.preventDefault();_annMouseMove(_t2m(e));};
+  svg.ontouchend=e=>{e.preventDefault();_annMouseUp(_t2m(e));};
+}
+function _t2m(e){const t=e.touches[0]||e.changedTouches[0];return{clientX:t.clientX,clientY:t.clientY};}
+function _annXY(e){
+  const svg=document.getElementById('ann-svg'), r=svg.getBoundingClientRect();
+  return {x:(e.clientX-r.left)/r.width, y:(e.clientY-r.top)/r.height};
+}
+function _annMouseDown(e) {
+  if (_annState.tool==='text') {
+    const {x,y}=_annXY(e);
+    const text=prompt('텍스트 입력:');
+    if (text?.trim()) { _annState.annotations.push({id:Date.now().toString(36),type:'text',x,y,text:text.trim(),color:_annState.color}); _annRedraw(); }
+    return;
+  }
+  _annState.drawing=true;
+  const {x,y}=_annXY(e); _annState.sx=x; _annState.sy=y;
+}
+function _annMouseMove(e) {
+  if (!_annState.drawing) return;
+  const {x,y}=_annXY(e); _annPreview(x,y);
+}
+function _annMouseUp(e) {
+  if (!_annState.drawing) return;
+  _annState.drawing=false;
+  _annState.previewEl?.remove(); _annState.previewEl=null;
+  const {x,y}=_annXY(e);
+  const dx=x-_annState.sx, dy=y-_annState.sy;
+  if (Math.hypot(dx,dy)<0.02) return;
+  if (_annState.tool==='arrow') {
+    _annState.annotations.push({id:Date.now().toString(36),type:'arrow',x1:_annState.sx,y1:_annState.sy,x2:x,y2:y,color:_annState.color});
+  } else if (_annState.tool==='circle') {
+    _annState.annotations.push({id:Date.now().toString(36),type:'circle',cx:(_annState.sx+x)/2,cy:(_annState.sy+y)/2,rx:Math.abs(dx)/2,ry:Math.abs(dy)/2,color:_annState.color});
+  }
+  _annRedraw();
+}
+function _annPreview(x,y) {
+  _annState.previewEl?.remove();
+  const svg=document.getElementById('ann-svg');
+  const vb=svg.getAttribute('viewBox').split(' ').map(Number);
+  const W=vb[2], H=vb[3], color=_annState.color, sw=Math.max(W,H)*0.007;
+  const ns='http://www.w3.org/2000/svg';
+  let el;
+  if (_annState.tool==='arrow') {
+    el=document.createElementNS(ns,'line');
+    el.setAttribute('x1',_annState.sx*W);el.setAttribute('y1',_annState.sy*H);
+    el.setAttribute('x2',x*W);el.setAttribute('y2',y*H);
+    el.setAttribute('stroke',color);el.setAttribute('stroke-width',sw);
+    el.setAttribute('stroke-linecap','round');el.setAttribute('stroke-dasharray','6,3');
+  } else if (_annState.tool==='circle') {
+    el=document.createElementNS(ns,'ellipse');
+    el.setAttribute('cx',((_annState.sx+x)/2)*W);el.setAttribute('cy',((_annState.sy+y)/2)*H);
+    el.setAttribute('rx',Math.abs(x-_annState.sx)/2*W);el.setAttribute('ry',Math.abs(y-_annState.sy)/2*H);
+    el.setAttribute('stroke',color);el.setAttribute('stroke-width',sw);
+    el.setAttribute('fill','none');el.setAttribute('stroke-dasharray','6,3');
+  }
+  if (el) { svg.appendChild(el); _annState.previewEl=el; }
+}
+function _annRedraw() {
+  const svg=document.getElementById('ann-svg');
+  if (!svg) return;
+  const vb=svg.getAttribute('viewBox');
+  if (!vb) return;
+  const [,,W,H]=vb.split(' ').map(Number);
+  svg.innerHTML='';
+  _populateAnnSVG(svg,_annState.annotations,W,H);
+}
+function _annSetTool(tool) {
+  _annState.tool=tool;
+  document.querySelectorAll('.ann-tool-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('ann-btn-'+tool)?.classList.add('active');
+  const svg=document.getElementById('ann-svg');
+  if(svg) svg.style.cursor=tool==='text'?'text':'crosshair';
+}
+function _annSetColor(color) {
+  _annState.color=color;
+  document.querySelectorAll('.ann-color-btn').forEach(b=>b.classList.toggle('active',b.dataset.color===color));
+}
+function _annUndo() { if(_annState.annotations.length){_annState.annotations.pop();_annRedraw();} }
+function _annClear() {
+  const overlay=document.getElementById('ann-editor-overlay');
+  if (!overlay||overlay.style.display==='none') return;
+  if (!_annState.annotations.length) return;
+  if (confirm('모든 주석을 삭제하시겠습니까?')) { _annState.annotations=[]; _annRedraw(); }
+}
+function _annSave() {
+  _edPhotos[_annState.photoIdx].annotations=[..._annState.annotations];
+  document.getElementById('ann-editor-overlay').style.display='none';
+  document.body.style.overflow='';
+  _edToast('주석이 저장되었습니다.');
+  _edRenderPhotoPreview();
+}
+function _annCancel() {
+  const overlay=document.getElementById('ann-editor-overlay');
+  if (overlay) overlay.style.display='none';
+  if (document.getElementById('editor-overlay')?.classList.contains('open')) return;
+  document.body.style.overflow='';
 }
 
 // ── 토스트 ────────────────────────────────────────────────────
