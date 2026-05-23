@@ -31,6 +31,7 @@ let currentPhotoIndex = 0;
 let isAdmin = false;
 let _bookmarks = new Set(JSON.parse(localStorage.getItem('dental-bm') || '[]'));
 let _showBmOnly = false;
+let _gz = { s: 1, ox: 50, oy: 50, tx: 0, ty: 0 }; // gallery zoom state
 
 // ── 데이터 로드 ───────────────────────────────────────────────
 async function loadData() {
@@ -215,16 +216,20 @@ function renderGallery() {
           onerror="this.style.display='none'">`).join('')}
     </div>`;
   _placeAnnSVG(el.querySelector('.gallery-main'), p);
+  _gz = { s: 1, ox: 50, oy: 50, tx: 0, ty: 0 };
   _setupGallerySwipe();
+  _setupGalleryZoom();
 }
 
 function changePhoto(dir) {
   currentPhotoIndex = (currentPhotoIndex + dir + currentPhotos.length) % currentPhotos.length;
+  _resetGalleryZoom();
   updateGallery();
 }
 
 function gotoPhoto(i) {
   currentPhotoIndex = i;
+  _resetGalleryZoom();
   updateGallery();
 }
 
@@ -290,6 +295,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (e.key === 'ArrowRight') changePhoto(1);
     }
   });
+
+  window.addEventListener('scroll', () => {
+    const btn = document.getElementById('scroll-top-btn');
+    if (btn) btn.classList.toggle('visible', window.scrollY > 350);
+  }, { passive: true });
 
   firebase.auth().onAuthStateChanged(user => {
     isAdmin = !!user;
@@ -1202,9 +1212,82 @@ function _setupGallerySwipe() {
     _sy = e.touches[0].clientY;
   }, { passive: true });
   gm.addEventListener('touchend', e => {
+    if (_gz.s > 1) return; // 줌 상태에서는 스와이프 무시
     const dx = e.changedTouches[0].clientX - _sx;
     const dy = e.changedTouches[0].clientY - _sy;
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) changePhoto(dx < 0 ? 1 : -1);
+  }, { passive: true });
+}
+
+// ── 갤러리 핀치줌 ─────────────────────────────────────────────
+function _resetGalleryZoom() {
+  _gz = { s: 1, ox: 50, oy: 50, tx: 0, ty: 0 };
+  const img = document.getElementById('gallery-main-img');
+  if (!img) return;
+  img.style.transition = 'transform 0.2s ease';
+  img.style.transformOrigin = 'center center';
+  img.style.transform = '';
+  setTimeout(() => { const i = document.getElementById('gallery-main-img'); if (i) i.style.transition = ''; }, 220);
+}
+
+function _setupGalleryZoom() {
+  const gm = document.querySelector('.gallery-main');
+  const img = gm?.querySelector('img');
+  if (!gm || !img) return;
+
+  let lastS = 1, startD = 0, pan = false, panSX = 0, panSY = 0, lastTap = 0;
+
+  function d2(a, b) { return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY); }
+  function applyGz() {
+    img.style.transition = 'none';
+    img.style.transformOrigin = `${_gz.ox}% ${_gz.oy}%`;
+    img.style.transform = `scale(${_gz.s}) translate(${_gz.tx / _gz.s}px, ${_gz.ty / _gz.s}px)`;
+  }
+
+  gm.addEventListener('touchstart', e => {
+    const ts = Array.from(e.touches);
+    if (ts.length === 2) {
+      startD = d2(ts[0], ts[1]);
+      lastS = _gz.s;
+      pan = false;
+      const r = gm.getBoundingClientRect();
+      _gz.ox = ((ts[0].clientX + ts[1].clientX) / 2 - r.left) / r.width * 100;
+      _gz.oy = ((ts[0].clientY + ts[1].clientY) / 2 - r.top) / r.height * 100;
+    } else if (ts.length === 1) {
+      if (_gz.s > 1) { pan = true; panSX = ts[0].clientX - _gz.tx; panSY = ts[0].clientY - _gz.ty; }
+      const now = Date.now();
+      if (now - lastTap < 280) {
+        if (_gz.s > 1) { _resetGalleryZoom(); }
+        else {
+          _gz.ox = 50; _gz.oy = 50; _gz.tx = 0; _gz.ty = 0; _gz.s = 2.5;
+          img.style.transition = 'transform 0.2s ease'; applyGz();
+          setTimeout(() => { const i = document.getElementById('gallery-main-img'); if (i) i.style.transition = ''; }, 220);
+        }
+        lastTap = 0; return;
+      }
+      lastTap = now;
+    }
+  }, { passive: true });
+
+  gm.addEventListener('touchmove', e => {
+    const ts = Array.from(e.touches);
+    if (ts.length === 2) {
+      e.preventDefault();
+      _gz.s = Math.min(Math.max(lastS * (d2(ts[0], ts[1]) / startD), 1), 4);
+      applyGz();
+    } else if (ts.length === 1 && pan && _gz.s > 1) {
+      e.preventDefault();
+      _gz.tx = ts[0].clientX - panSX;
+      _gz.ty = ts[0].clientY - panSY;
+      applyGz();
+    }
+  }, { passive: false });
+
+  gm.addEventListener('touchend', e => {
+    if (e.touches.length === 0) {
+      pan = false;
+      if (_gz.s <= 1.05) _resetGalleryZoom();
+    }
   }, { passive: true });
 }
 
