@@ -1,4 +1,4 @@
-// ── Firebase 초기화 ───────────────────────────────────────────
+// ── Firebase 초기화 ─────────────────────────────────────────────
 firebase.initializeApp(firebaseConfig);
 const db   = firebase.firestore();
 const auth = firebase.auth();
@@ -30,7 +30,7 @@ let contentPhotos = [];
 let caseTags    = [];
 let contentTags = [];
 
-// ── Auth ──────────────────────────────────────────────────────
+// ── Auth ──────────────────────────────────────────────────────────
 auth.onAuthStateChanged(user => {
   if (user) {
     document.getElementById('login-screen').style.display  = 'none';
@@ -68,7 +68,7 @@ function doLogout() {
   auth.signOut();
 }
 
-// ── Navigation ────────────────────────────────────────────────
+// ── Navigation ─────────────────────────────────────────────────────────
 function switchPanel(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
@@ -77,7 +77,7 @@ function switchPanel(id) {
   window.scrollTo(0, 0);
 }
 
-// ── Toast ─────────────────────────────────────────────────────
+// ── Toast ─────────────────────────────────────────────────────────────
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
   t.textContent  = msg;
@@ -85,7 +85,7 @@ function showToast(msg, type = 'success') {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ── 케이스 목록 ───────────────────────────────────────────────
+// ── 케이스 목록 ─────────────────────────────────────────────────────
 async function loadCasesList() {
   const snap = await db.collection('cases').orderBy('date','desc').get();
   const el   = document.getElementById('cases-list-content');
@@ -101,14 +101,14 @@ async function loadCasesList() {
           <div class="item-row-meta">${c.date || ''} · 사진 ${(c.photos||[]).length}장</div>
         </div>
         <div class="item-row-actions">
-          <button class="btn btn-outline btn-sm" onclick="editCase('${d.id}')">편집</button>
-          <button class="btn btn-danger btn-sm"  onclick="deleteItem('cases','${d.id}')">삭제</button>
+          <button class="btn btn-outline btn-sm" onclick="editCase('${d.id}')"> 편집</button>
+          <button class="btn btn-danger btn-sm"  onclick="deleteItem('cases','${d.id}')"> 삭제</button>
         </div>
       </div>`;
   }).join('')}</div>`;
 }
 
-// ── 자료 목록 ─────────────────────────────────────────────────
+// ── 자료 목록 ─────────────────────────────────────────────────────────
 async function loadContentsList() {
   const snap = await db.collection('departmentContents').orderBy('date','desc').get();
   const el   = document.getElementById('contents-list-content');
@@ -124,14 +124,14 @@ async function loadContentsList() {
           <div class="item-row-meta">${c.date || ''} · 사진 ${(c.photos||[]).length}장</div>
         </div>
         <div class="item-row-actions">
-          <button class="btn btn-outline btn-sm" onclick="editContent('${d.id}')">편집</button>
-          <button class="btn btn-danger btn-sm"  onclick="deleteItem('departmentContents','${d.id}')">삭제</button>
+          <button class="btn btn-outline btn-sm" onclick="editContent('${d.id}')"> 편집</button>
+          <button class="btn btn-danger btn-sm"  onclick="deleteItem('departmentContents','${d.id}')"> 삭제</button>
         </div>
       </div>`;
   }).join('')}</div>`;
 }
 
-// ── JSON 파일 가져오기 ────────────────────────────────────────
+// ── JSON 파일 가져오기 ────────────────────────────────────────────
 function importFromJSONFile(event) {
   const errEl = document.getElementById('import-error');
   const type  = document.getElementById('import-type').value;
@@ -161,13 +161,13 @@ function importFromJSONFile(event) {
       switchPanel('content-add');
     }
 
-    showToast('폼에 가져왔습니다! 내용 확인 후 저장하세요.', 'success');
+    showToast('폼에 가져왜습니다! 내용 확인 후 저장하세요.', 'success');
     event.target.value = '';
   };
   reader.readAsText(file, 'UTF-8');
 }
 
-// ── 삭제 ─────────────────────────────────────────────────────
+// ── 삭제 ─────────────────────────────────────────────────────────────
 async function deleteItem(collection, id) {
   if (!confirm('정말 삭제하시겠습니까?')) return;
   await db.collection(collection).doc(id).delete();
@@ -176,7 +176,7 @@ async function deleteItem(collection, id) {
   else loadContentsList();
 }
 
-// ── 케이스 폼 렌더 ────────────────────────────────────────────
+// ── 케이스 폼 렌더 ──────────────────────────────────────────────────────
 function renderCaseForm(data = {}) {
   casePhotos = (data.photos || []).map(p => ({ url: p.url, caption: p.caption || '' }));
   caseTags   = data.tags ? [...data.tags] : [];
@@ -203,7 +203,7 @@ function renderContentForm(data = {}) {
   setupTextareaDrop('content');
 }
 
-// ── 서식 툴바 ─────────────────────────────────────────────────
+// ── 서식 툴바 ─────────────────────────────────────────────────────────────
 function applyFmt(type, id) {
   const ta    = document.getElementById(`${id}-description`);
   const start = ta.selectionStart;
@@ -269,7 +269,7 @@ function applyHighlight(color, id) {
   ta.focus();
 }
 
-// ── 텍스트 영역 드래그 이벤트 등록 ──────────────────────────
+// ── 텍스트 영역 드래그 이벤트 등록 ────────────────────────────────────────────
 function setupTextareaDrop(type) {
   const textarea = document.getElementById(`${type}-description`);
   if (!textarea) return;
@@ -347,17 +347,17 @@ function formHTML(type, d = {}) {
             <button type="button" class="tb-color" style="background:#ef4444" title="빨강"  onclick="applyColor('#ef4444','${type}')"></button>
             <button type="button" class="tb-color" style="background:#f97316" title="주황"  onclick="applyColor('#f97316','${type}')"></button>
             <button type="button" class="tb-color" style="background:#16a34a" title="초록"  onclick="applyColor('#16a34a','${type}')"></button>
-            <button type="button" class="tb-color" style="background:#2563eb" title="파랑"  onclick="applyColor('#2563eb','${type}')"></button>
+            <button type="button" class="tb-color" style="background:#2563eb" title="파란"  onclick="applyColor('#2563eb','${type}')"></button>
             <button type="button" class="tb-color" style="background:#7c3aed" title="보라"  onclick="applyColor('#7c3aed','${type}')"></button>
             <button type="button" class="tb-color" style="background:#64748b" title="회색"  onclick="applyColor('#64748b','${type}')"></button>
             <div class="tb-sep"></div>
             <span class="tb-label">형광펜</span>
-            <button type="button" class="tb-color tb-hl" style="background:#fef08a" title="노랑"  onclick="applyHighlight('#fef08a','${type}')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#fef08a" title="노란"  onclick="applyHighlight('#fef08a','${type}')"></button>
             <button type="button" class="tb-color tb-hl" style="background:#bbf7d0" title="초록"  onclick="applyHighlight('#bbf7d0','${type}')"></button>
-            <button type="button" class="tb-color tb-hl" style="background:#bae6fd" title="파랑"  onclick="applyHighlight('#bae6fd','${type}')"></button>
-            <button type="button" class="tb-color tb-hl" style="background:#fecdd3" title="분홍"  onclick="applyHighlight('#fecdd3','${type}')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#bae6fd" title="파란"  onclick="applyHighlight('#bae6fd','${type}')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#fecdd3" title="분홀"  onclick="applyHighlight('#fecdd3','${type}')"></button>
             <button type="button" class="tb-color tb-hl" style="background:#fed7aa" title="주황"  onclick="applyHighlight('#fed7aa','${type}')"></button>
-            <button type="button" class="tb-color tb-hl" style="background:#e9d5ff" title="���라"  onclick="applyHighlight('#e9d5ff','${type}')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#e9d5ff" title="보라"  onclick="applyHighlight('#e9d5ff','${type}')"></button>
           </div>
           <textarea id="${type}-description" rows="10"
             placeholder="케이스/자료 상세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
@@ -408,7 +408,7 @@ function formHTML(type, d = {}) {
 
     <!-- 저장 버튼 -->
     <div style="display:flex;gap:0.75rem;justify-content:flex-end">
-      <button class="btn btn-outline" onclick="cancelEdit('${type}')">취소</button>
+      <button class="btn btn-outline" onclick="cancelEdit('${type}')"> 취소</button>
       <button class="btn btn-primary" id="${type}-save-btn" onclick="saveItem('${type}')">
         ${type === 'case' ? (editingCaseId ? '케이스 저장' : '케이스 등록') : (editingContentId ? '자료 저장' : '자료 등록')}
       </button>
@@ -460,7 +460,7 @@ function renumberRefs(type) {
   });
 }
 
-// ── 태그 ──────────────────────────────────────────────────────
+// ── 태그 ──────────────────────────────────────────────────────────────────
 function handleTagInput(e, type) {
   if (e.key === 'Enter' || e.key === ',') {
     e.preventDefault();
@@ -487,7 +487,7 @@ function renderTagChips(type) {
       </span>`).join('');
 }
 
-// ── 사진 처리 ─────────────────────────────────────────────────
+// ── 사진 처리 ─────────────────────────────────────────────────────────────
 function handleFileSelect(e, type) {
   addFiles(Array.from(e.target.files), type);
   e.target.value = '';
@@ -531,7 +531,7 @@ function updateCaption(type, idx, val) {
   photos[idx].caption = val;
 }
 
-// ── 사진 Cloudinary 업로드 ────────────────────────────────────
+// ── 사진 Cloudinary 업로드 ────────────────────────────────────────────
 async function uploadPhotos(type) {
   const photos   = type === 'case' ? casePhotos : contentPhotos;
   const progWrap = document.getElementById(`${type}-progress`);
@@ -569,7 +569,7 @@ async function uploadPhotos(type) {
   return results;
 }
 
-// ── 레퍼런스 수집 ─────────────────────────────────────────────
+// ── 레퍼런스 수집 ─────────────────────────────────────────────────────────
 function collectRefs(type) {
   const blocks = document.querySelectorAll(`#${type}-refs-container .ref-block`);
   return Array.from(blocks).map((_, i) => {
@@ -588,7 +588,7 @@ function collectRefs(type) {
   }).filter(r => r.title || r.authors);
 }
 
-// ── 저장 ─────────────────────────────────────────────────────
+// ── 저장 ─────────────────────────────────────────────────────────────────
 async function saveItem(type) {
   const isCase  = type === 'case';
   const titleEl = document.getElementById(`${type}-title`);
@@ -635,7 +635,7 @@ async function saveItem(type) {
   }
 }
 
-// ── 편집 ─────────────────────────────────────────────────────
+// ── 편집 ─────────────────────────────────────────────────────────────────
 async function editCase(id) {
   const snap = await db.collection('cases').doc(id).get();
   editingCaseId = id;
@@ -655,13 +655,13 @@ function cancelEdit(type) {
   else                 { editingContentId = null; renderContentForm(); switchPanel('contents-list'); }
 }
 
-// ── 텍스트 영역 이미지 업로드 후 삽입 ───────────────────────
+// ── 텍스트 영역 이미지 업로드 후 삽입 ───────────────────────────────────────
 let _pendingImg = null;
 
 async function dropImageIntoText(textarea, file, insertPos) {
   if (insertPos == null) insertPos = textarea.value.length;
 
-  const placeholder = '![업로드 중...]()';
+  const placeholder = '![업로드 중...]()'
   const before = textarea.value.slice(0, insertPos);
   const after  = textarea.value.slice(insertPos);
   const sep    = (before.length > 0 && !before.endsWith('\n')) ? '\n' : '';
@@ -689,7 +689,7 @@ async function dropImageIntoText(textarea, file, insertPos) {
   }
 }
 
-// ── 크기 선택 팝업 ────────────────────────────────────────────
+// ── 크기 선택 팝업 ────────────────────────────────────────────────────────────────
 function showSizePicker(previewUrl) {
   closeSizePicker();
   const el = document.createElement('div');
@@ -739,7 +739,7 @@ function closeSizePicker() {
   if (el) el.remove();
 }
 
-// ── 인라인 이미지 업로드 ──────────────────────────────────────
+// ── 인라인 이미지 업로드 ──────────────────────────────────────────────────────────
 function handleInlineDrop(e) {
   e.preventDefault();
   document.getElementById('inline-upload-zone').classList.remove('dragover');
@@ -778,7 +778,7 @@ async function uploadInlineFile(file) {
 
     const url = data.secure_url;
     document.getElementById('inline-url-img').value     = `![이미지](${url})`;
-    document.getElementById('inline-url-caption').value = `![캡션을_여기에](${url})`;
+    document.getElementById('inline-url-caption').value = `![콕션을_여기에](${url})`;
     document.getElementById('inline-preview-img').src   = url;
     result.style.display = 'block';
     showToast('업로드 완료! URL을 복사하세요.', 'success');
