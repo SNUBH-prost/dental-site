@@ -751,13 +751,19 @@ main {
 
 .ref-abstract-text {
   margin-top: 0.65rem;
-  padding: 0.75rem 1rem;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.82rem;
   color: var(--text-muted);
   line-height: 1.7;
+  overflow: hidden;
+}
+.ref-abs-section { padding: 0.65rem 1rem; }
+.ref-abs-section + .ref-abs-section { border-top: 1px solid var(--border); }
+.ref-abs-label {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--primary); margin-bottom: 0.35rem;
 }
 
 /* ── Toolbar ── */
