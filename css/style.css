@@ -853,6 +853,14 @@ main {
 [data-theme="dark"] .drawer-close:hover              { background: #334155; }
 [data-theme="dark"] .hero                            { background: #1d4ed8; }
 
+/* ── Header actions group (theme toggle + hamburger) ── */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
 /* ── Theme toggle button ── */
 .theme-toggle {
   background: none;
@@ -918,8 +926,26 @@ main {
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .hero { padding: 1.75rem 1.25rem; }
-  .gallery-main { height: 240px; }
-  .modal-body { padding: 1.25rem 1.25rem 1.75rem; }
+  .hero h1 { font-size: 1.35rem; }
+  .gallery-main { height: 260px; }
+  .gallery-main img { max-height: 260px; }
+  .modal-body { padding: 1.1rem 1.1rem 1.75rem; }
+  .modal-title { font-size: 1.15rem; }
   .modal-description { max-width: 100%; }
-  main { padding: 1.5rem 1rem; }
+  main { padding: 1.25rem 0.85rem; }
+
+  /* toolbar: 검색 full-width → 북마크+필터 한 줄 */
+  .toolbar { gap: 0.5rem; }
+  .search-input { width: 100%; }
+  .bm-filter-btn { flex: 1; text-align: center; }
+  .filter-select  { flex: 1; }
+
+  /* 카드 그리드 1열 */
+  .card-grid { grid-template-columns: 1fr; }
+
+  /* 진료과 그리드 2열 고정 */
+  .dept-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* 모달 공유·닫기 버튼 */
+  .modal-share-btn { right: 2.6rem; }
 }
