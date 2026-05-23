@@ -47,6 +47,7 @@ async function loadData() {
   renderCases();
   renderDeptPages();
   _injectAdminControls();
+  _injectPageBottomBtns();
 }
 
 // ── Navigation ────────────────────────────────────────────────
@@ -298,7 +299,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.addEventListener('scroll', () => {
     const btn = document.getElementById('scroll-top-btn');
-    if (btn) btn.classList.toggle('visible', window.scrollY > 350);
+    if (btn) btn.classList.toggle('visible', window.scrollY > 150);
   }, { passive: true });
 
   firebase.auth().onAuthStateChanged(user => {
@@ -1151,6 +1152,17 @@ function _annCancel() {
   if (overlay) overlay.style.display='none';
   if (document.getElementById('editor-overlay')?.classList.contains('open')) return;
   document.body.style.overflow='';
+}
+
+// ── 페이지 하단 맨 위로 버튼 ─────────────────────────────────
+function _injectPageBottomBtns() {
+  document.querySelectorAll('.page').forEach(page => {
+    if (page.querySelector('.page-bottom-nav')) return;
+    const nav = document.createElement('div');
+    nav.className = 'page-bottom-nav';
+    nav.innerHTML = '<button onclick="window.scrollTo({top:0,behavior:\'smooth\'})">↑ 맨 위로</button>';
+    page.appendChild(nav);
+  });
 }
 
 // ── 다크 모드 ─────────────────────────────────────────────────
