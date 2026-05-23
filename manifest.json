@@ -1,0 +1,47 @@
+{
+  "name": "치과 임상 자료실",
+  "short_name": "치과자료실",
+  "description": "서울대학교병원 치과 임상 케이스 및 참고자료 모음",
+  "start_url": "/dental-site/",
+  "scope": "/dental-site/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#2563eb",
+  "background_color": "#0f172a",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/dental-site/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/dental-site/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/dental-site/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["medical", "education"],
+  "shortcuts": [
+    {
+      "name": "임상 케이스",
+      "short_name": "케이스",
+      "url": "/dental-site/#cases",
+      "description": "임상 케이스 보기"
+    },
+    {
+      "name": "참고문헌 검색",
+      "short_name": "문헌검색",
+      "url": "/dental-site/#refs",
+      "description": "PubMed 논문 검색"
+    }
+  ]
+}
