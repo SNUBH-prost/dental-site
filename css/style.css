@@ -474,6 +474,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .gallery-main img { max-height: 400px; max-width: 100%; object-fit: contain; }
@@ -919,6 +920,33 @@ main {
 .bm-filter-btn.active { border-color: #f59e0b; color: #d97706; background: #fffbeb; }
 [data-theme="dark"] .bm-filter-btn.active { background: rgba(245,158,11,0.1); }
 
+/* ── 맨 위로 버튼 ── */
+.scroll-top-btn {
+  position: fixed;
+  bottom: 1.75rem;
+  right: 1.5rem;
+  width: 42px;
+  height: 42px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+  z-index: 400;
+  opacity: 0;
+  transform: scale(0.7) translateY(10px);
+  transition: opacity 0.25s, transform 0.25s, background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.scroll-top-btn.visible { opacity: 1; transform: scale(1) translateY(0); pointer-events: auto; }
+.scroll-top-btn:hover { background: var(--primary-light); }
+
 /* ── Clickable tags ── */
 .tag { cursor: pointer; transition: background 0.12s, color 0.12s; }
 .tag:hover { background: var(--primary); color: #fff; }
@@ -958,4 +986,7 @@ main {
 
   /* 참고 논문 목록 모바일 */
   .reference-list li { font-size: 0.8rem; }
+
+  /* 맨 위로 버튼 모바일 */
+  .scroll-top-btn { bottom: 1.25rem; right: 1rem; width: 38px; height: 38px; font-size: 1rem; }
 }
