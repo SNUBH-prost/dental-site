@@ -213,15 +213,27 @@ function updateGallery() {
 }
 
 // ── References ─────────────────────────────────────────────────
+function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 function renderRefs(refs) {
   const el      = document.getElementById('modal-refs');
   const section = document.getElementById('refs-section');
   if (!refs.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
-  el.innerHTML = refs.map(r => {
-    const doiLink = r.doi ? `<a href="https://doi.org/${r.doi}" target="_blank">DOI</a>` : '';
-    return `<li><strong>${r.authors}</strong> (${r.year}). ${r.title}. <em>${r.journal}</em>${r.volume?', '+r.volume:''}${r.pages?', '+r.pages:''}. ${doiLink}</li>`;
+  el.innerHTML = refs.map((r, i) => {
+    const doiLink  = r.doi ? `<a href="https://doi.org/${r.doi}" target="_blank" class="ref-doi-link">DOI ↗</a>` : '';
+    const absBtn   = r.abstract ? `<button class="ref-abs-toggle" onclick="toggleRefAbs(this,'ref-abs-${i}')">초록 ▼</button>` : '';
+    const absBlock = r.abstract ? `<div class="ref-abstract-text" id="ref-abs-${i}" style="display:none">${_esc(r.abstract).replace(/\n/g,'<br>')}</div>` : '';
+    return `<li><div class="ref-main"><strong>${_esc(r.authors)}</strong> (${_esc(r.year)}). ${_esc(r.title)}. <em>${_esc(r.journal)}</em>${r.volume?', '+_esc(r.volume):''}${r.pages?', '+_esc(r.pages):''}. ${doiLink}${absBtn}</div>${absBlock}</li>`;
   }).join('');
+}
+
+function toggleRefAbs(btn, id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  btn.textContent  = open ? '초록 ▼' : '초록 ▲';
 }
 
 // ── Init ───────────────────────────────────────────────────────
@@ -455,7 +467,8 @@ function _edFormHTML(d = {}) {
 
 function _edRefBlockHTML(idx, r, ea) {
   if (!ea) ea = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const pagesVal = (r.volume ? r.volume + ', ' : '') + (r.pages || '');
+  const pagesVal   = (r.volume ? r.volume + ', ' : '') + (r.pages || '');
+  const absSaved   = r.abstract ? '<div class="ref-abstract-saved">초록 저장됨 ✓</div>' : '';
   return `
     <div class="ref-block" id="ed-ref-${idx}">
       <button class="btn btn-danger btn-sm ref-remove" onclick="_edRemoveRef(${idx})">✕</button>
@@ -464,8 +477,16 @@ function _edRefBlockHTML(idx, r, ea) {
           <input type="text" id="ed-ref-authors-${idx}" value="${ea(r.authors)}" placeholder="저자명"></div>
         <div class="form-group"><label>연도</label>
           <input type="text" id="ed-ref-year-${idx}" value="${ea(r.year)}" placeholder="2024"></div>
-        <div class="form-group" style="grid-column:1/-1"><label>논문 제목</label>
-          <input type="text" id="ed-ref-title-${idx}" value="${ea(r.title)}" placeholder="논문 제목"></div>
+        <div class="form-group" style="grid-column:1/-1">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem">
+            <label style="margin:0">논문 제목</label>
+            <button type="button" class="btn btn-outline btn-sm pubmed-search-btn" onclick="_edPubMedSearch(${idx})">🔍 PubMed 검색</button>
+          </div>
+          <input type="text" id="ed-ref-title-${idx}" value="${ea(r.title)}" placeholder="논문 제목">
+          <div class="pubmed-results" id="ed-ref-results-${idx}"></div>
+          <input type="hidden" id="ed-ref-abstract-${idx}" value="${ea(r.abstract)}">
+          ${absSaved}
+        </div>
         <div class="form-group"><label>저널명</label>
           <input type="text" id="ed-ref-journal-${idx}" value="${ea(r.journal)}" placeholder="저널명"></div>
         <div class="form-group"><label>권호/페이지</label>
@@ -528,7 +549,9 @@ function _edRemoveRef(idx) {
   document.querySelectorAll('#ed-refs-container .ref-block').forEach((block, i) => {
     block.id = `ed-ref-${i}`;
     block.querySelector('.ref-remove').setAttribute('onclick', `_edRemoveRef(${i})`);
-    ['authors','year','title','journal','pages','doi'].forEach(f => {
+    const pb = block.querySelector('.pubmed-search-btn');
+    if (pb) pb.setAttribute('onclick', `_edPubMedSearch(${i})`);
+    ['authors','year','title','journal','pages','doi','abstract','results'].forEach(f => {
       const el = block.querySelector(`[id*="-ref-${f}-"]`);
       if (el) el.id = `ed-ref-${f}-${i}`;
     });
@@ -543,9 +566,117 @@ function _edCollectRefs() {
       authors: g('authors'), year: g('year'), title: g('title'), journal: g('journal'),
       volume: dash > -1 ? pages.slice(0, dash) : '',
       pages:  dash > -1 ? pages.slice(dash + 2) : pages,
-      doi: g('doi')
+      doi: g('doi'),
+      abstract: g('abstract')
     };
   }).filter(r => r.title || r.authors);
+}
+
+// ── PubMed 검색 ──────────────────────────────────────────────
+const _PUBMED = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';
+let _edPubMedCache = {};
+
+async function _edPubMedSearch(idx) {
+  const titleEl = document.getElementById(`ed-ref-title-${idx}`);
+  const resultsEl = document.getElementById(`ed-ref-results-${idx}`);
+  const btn = document.querySelector(`#ed-ref-${idx} .pubmed-search-btn`);
+  const query = titleEl ? titleEl.value.trim() : '';
+  if (!query) { _edToast('논문 제목을 먼저 입력하세요.', 'error'); return; }
+
+  const origText = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '<span class="ed-spinner"></span> 검색 중...'; btn.disabled = true; }
+  if (resultsEl) resultsEl.innerHTML = '';
+
+  try {
+    const searchRes = await fetch(`${_PUBMED}esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=6&retmode=json`);
+    const searchData = await searchRes.json();
+    const ids = searchData.esearchresult.idlist || [];
+    if (!ids.length) { _edToast('검색 결과가 없습니다.', 'error'); return; }
+
+    const sumRes = await fetch(`${_PUBMED}esummary.fcgi?db=pubmed&id=${ids.join(',')}&retmode=json`);
+    const sumData = await sumRes.json();
+    const items = ids.map(id => sumData.result[id]).filter(Boolean);
+    _edPubMedCache[idx] = items;
+
+    if (!resultsEl) return;
+    resultsEl.innerHTML = items.map((item, i) => {
+      const authors = item.authors ? item.authors.slice(0,3).map(a=>a.name).join(', ') + (item.authors.length>3?' et al.':'') : '';
+      const year = (item.pubdate||'').slice(0,4);
+      const title = (item.title||'').replace(/<[^>]+>/g,'');
+      return `<div class="pubmed-result-item" onclick="_edSelectPubMed(${idx},${i})">
+        <div class="pr-title">${_esc(title)}</div>
+        <div class="pr-meta">${_esc(authors)} · ${_esc(item.source)} · ${year}</div>
+      </div>`;
+    }).join('');
+    resultsEl.style.display = 'block';
+
+    // 외부 클릭 시 닫기
+    const close = (e) => {
+      if (!resultsEl.contains(e.target) && e.target !== titleEl) {
+        resultsEl.style.display = 'none';
+        document.removeEventListener('click', close);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  } catch(e) {
+    _edToast('PubMed 검색 실패. 네트워크를 확인하세요.', 'error');
+  } finally {
+    if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+  }
+}
+
+async function _edSelectPubMed(idx, itemIdx) {
+  const item = (_edPubMedCache[idx] || [])[itemIdx];
+  if (!item) return;
+  const resultsEl = document.getElementById(`ed-ref-results-${idx}`);
+  if (resultsEl) resultsEl.style.display = 'none';
+
+  const set = (f, v) => { const el = document.getElementById(`ed-ref-${f}-${idx}`); if (el) el.value = v || ''; };
+
+  const title   = (item.title || '').replace(/<[^>]+>/g,'');
+  const authors = item.authors ? item.authors.map(a=>a.name).join(', ') : '';
+  const year    = (item.pubdate || '').slice(0, 4);
+  const vol     = item.volume ? `${item.volume}${item.issue?'('+item.issue+')':''}` : '';
+  const pages   = [vol, item.pages].filter(Boolean).join(', ');
+  let doi = '';
+  if (item.elocationid) { const m = item.elocationid.match(/10\.\S+/); if (m) doi = m[0]; }
+  if (!doi && item.articleids) {
+    const d = item.articleids.find(a => a.idtype === 'doi');
+    if (d) doi = d.value;
+  }
+
+  set('title', title); set('authors', authors); set('year', year);
+  set('journal', item.source); set('pages', pages); set('doi', doi);
+
+  // 초록 가져오기
+  _edToast('초록을 가져오는 중...');
+  try {
+    const fetchRes = await fetch(`${_PUBMED}efetch.fcgi?db=pubmed&id=${item.uid}&retmode=xml`);
+    const xml = await fetchRes.text();
+    const doc = new DOMParser().parseFromString(xml, 'text/xml');
+    const parts = Array.from(doc.querySelectorAll('AbstractText'));
+    const abstract = parts.map(el => {
+      const label = el.getAttribute('Label');
+      return label ? `[${label}] ${el.textContent}` : el.textContent;
+    }).join('\n\n');
+
+    set('abstract', abstract);
+
+    // "초록 저장됨" 표시 업데이트
+    const block = document.getElementById(`ed-ref-${idx}`);
+    if (block) {
+      let saved = block.querySelector('.ref-abstract-saved');
+      if (!saved) {
+        saved = document.createElement('div');
+        saved.className = 'ref-abstract-saved';
+        document.getElementById(`ed-ref-abstract-${idx}`).insertAdjacentElement('afterend', saved);
+      }
+      saved.textContent = abstract ? '초록 저장됨 ✓' : '';
+    }
+    _edToast(abstract ? '논문 정보 및 초록이 입력되었습니다 ✓' : '논문 정보가 입력되었습니다 ✓');
+  } catch(e) {
+    _edToast('논문 기본 정보가 입력되었습니다 ✓');
+  }
 }
 
 // ── 마크다운 툴바 ─────────────────────────────────────────────
