@@ -173,17 +173,13 @@ function closeModal() {
 
 function _copyShareLink() {
   const url = location.href;
-  navigator.clipboard?.writeText(url).then(() => _edToast('링크가 복사되었습니다!')).catch(() => {
-    const el = document.createElement('input');
-    el.value = url; document.body.appendChild(el); el.select();
-    document.execCommand('copy'); document.body.removeChild(el);
-    _edToast('링크가 복사되었습니다!');
-  }) ?? (() => {
-    const el = document.createElement('input');
-    el.value = url; document.body.appendChild(el); el.select();
-    document.execCommand('copy'); document.body.removeChild(el);
-    _edToast('링크가 복사되었습니다!');
-  })();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url)
+      .then(() => _edToast('링크가 복사되었습니다!'))
+      .catch(() => prompt('아래 링크를 복사하세요:', url));
+  } else {
+    prompt('아래 링크를 복사하세요:', url);
+  }
 }
 
 // ── Gallery ────────────────────────────────────────────────────
@@ -562,7 +558,7 @@ function _edRenderPhotoPreview() {
     <div class="photo-preview-item">
       <img src="${p.url}" alt="">
       <button class="photo-remove" onclick="_edRemovePhoto(${i})">✕</button>
-      <button class="photo-ann-btn" onclick="openAnnotationEditor(${i})" title="주석 편집">✏️${cnt > 0 ? ` <span class="ann-count">${cnt}</span>` : ''}</button>
+      <button class="photo-ann-btn" onclick="openAnnotationEditor(${i})" title="주석 편집">✏️${cnt > 0 ? `<span class="ann-count">${cnt}</span>` : ''}</button>
       <input class="caption-input" type="text" placeholder="사진 설명 (선택)"
         value="${p.caption}" oninput="_edPhotos[${i}].caption=this.value">
     </div>`;
@@ -1023,8 +1019,8 @@ function openAnnotationEditor(photoIdx) {
   document.querySelectorAll('.ann-color-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
   const img = document.getElementById('ann-img');
   img.src = _edPhotos[photoIdx].url;
-  const setup = () => { _annSetupSVGEvents(); _annRedraw(); };
-  if (img.complete&&img.naturalWidth) setup(); else img.onload=setup;
+  const setup = () => requestAnimationFrame(() => { _annSetupSVGEvents(); _annRedraw(); });
+  if (img.complete && img.naturalWidth) setup(); else img.onload = setup;
 }
 
 function _annSetupSVGEvents() {
@@ -1123,7 +1119,9 @@ function _annClear() {
 function _annSave() {
   _edPhotos[_annState.photoIdx].annotations=[..._annState.annotations];
   document.getElementById('ann-editor-overlay').style.display='none';
-  document.body.style.overflow='';
+  if (!document.getElementById('editor-overlay')?.classList.contains('open')) {
+    document.body.style.overflow='';
+  }
   _edToast('주석이 저장되었습니다.');
   _edRenderPhotoPreview();
 }
