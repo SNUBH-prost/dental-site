@@ -28,6 +28,7 @@ let allCases = [];
 let allContents = [];
 let currentPhotos = [];
 let currentPhotoIndex = 0;
+let isAdmin = false;
 
 // ── 데이터 로드 ───────────────────────────────────────────────
 async function loadData() {
@@ -42,6 +43,7 @@ async function loadData() {
   renderHome();
   renderCases();
   renderDeptPages();
+  _injectAdminControls();
 }
 
 // ── Navigation ────────────────────────────────────────────────
@@ -116,6 +118,11 @@ function cardHTML(item, type) {
     ? `<div class="card-thumb"><img src="${firstPhoto.url}" alt="" onerror="this.parentElement.innerHTML='<span>🦷</span>'"></div>`
     : `<div class="card-thumb"><span>🦷</span></div>`;
   const tags = (item.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+  const adminBtns = isAdmin ? `
+    <div class="card-admin-row" onclick="event.stopPropagation()">
+      <button class="card-admin-btn edit" onclick="openEditorFor('${item.id}','${type}')">✏️ 편집</button>
+      <button class="card-admin-btn del"  onclick="deleteCardItem('${item.id}','${type}')">🗑️ 삭제</button>
+    </div>` : '';
   return `
     <div class="card" onclick="openModal('${item.id}','${type}')">
       ${thumb}
@@ -128,6 +135,7 @@ function cardHTML(item, type) {
           ${item.photos ? `<span>사진 ${item.photos.length}장</span>` : ''}
         </div>
         ${tags ? `<div class="modal-tags" style="margin-top:0.5rem">${tags}</div>` : ''}
+        ${adminBtns}
       </div>
     </div>`;
 }
@@ -223,11 +231,517 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('modal-overlay').addEventListener('click', e => {
     if (e.target.id === 'modal-overlay') closeModal();
   });
+  document.getElementById('editor-overlay').addEventListener('click', e => {
+    if (e.target.id === 'editor-overlay') closeEditor();
+  });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') { closeModal(); closeEditor(); }
     if (document.getElementById('modal-overlay').classList.contains('open')) {
       if (e.key === 'ArrowLeft')  changePhoto(-1);
       if (e.key === 'ArrowRight') changePhoto(1);
     }
   });
+
+  firebase.auth().onAuthStateChanged(user => {
+    isAdmin = !!user;
+    _updateAdminBadge(user);
+    renderHome();
+    renderCases();
+    renderDeptPages();
+    _injectAdminControls();
+  });
 });
+
+// ════════════════════════════════════════════════════════════════
+// 관리자 인라인 에디터
+// ════════════════════════════════════════════════════════════════
+
+let _edId = null, _edType = null;
+let _edPhotos = [], _edTags = [];
+let _edPendingImg = null;
+
+// ── 관리자 배지 ──────────────────────────────────────────────
+function _updateAdminBadge(user) {
+  let badge = document.getElementById('admin-badge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'admin-badge';
+    document.body.appendChild(badge);
+  }
+  badge.innerHTML = user
+    ? `<div class="ab-on">관리자 모드 <button onclick="firebase.auth().signOut()">로그아웃</button></div>`
+    : '';
+}
+
+// ── 각과/케이스 페이지에 + 추가 버튼 삽입 ──────────────────
+function _injectAdminControls() {
+  document.querySelectorAll('.admin-inject').forEach(el => el.remove());
+  if (!isAdmin) return;
+
+  const casesHeader = document.querySelector('#page-cases .section-header');
+  if (casesHeader) {
+    const btn = document.createElement('button');
+    btn.className = 'admin-add-btn admin-inject';
+    btn.textContent = '+ 케이스 추가';
+    btn.onclick = () => openEditorNew('case');
+    casesHeader.appendChild(btn);
+  }
+
+  DEPARTMENTS.forEach(d => {
+    const header = document.querySelector(`#page-dept-${d.id} .section-header`);
+    if (!header) return;
+    const btn = document.createElement('button');
+    btn.className = 'admin-add-btn admin-inject';
+    btn.textContent = '+ 자료 추가';
+    btn.onclick = () => openEditorNew('content', d.id);
+    header.appendChild(btn);
+  });
+}
+
+// ── 삭제 ─────────────────────────────────────────────────────
+async function deleteCardItem(id, type) {
+  if (!confirm('정말 삭제하시겠습니까?')) return;
+  const col = type === 'case' ? 'cases' : 'departmentContents';
+  await db.collection(col).doc(id).delete();
+  await loadData();
+}
+
+// ── 에디터 열기 (기존 항목 편집) ────────────────────────────
+async function openEditorFor(id, type) {
+  const col = type === 'case' ? 'cases' : 'departmentContents';
+  const snap = await db.collection(col).doc(id).get();
+  if (!snap.exists) return;
+  _edId = id; _edType = type;
+  _renderEditorForm(snap.data());
+  document.getElementById('editor-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+// ── 에디터 열기 (새 항목) ────────────────────────────────────
+function openEditorNew(type, deptId = '') {
+  _edId = null; _edType = type;
+  _renderEditorForm(deptId ? { department: deptId } : {});
+  document.getElementById('editor-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+// ── 에디터 닫기 ──────────────────────────────────────────────
+function closeEditor() {
+  document.getElementById('editor-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  _edId = null; _edType = null; _edPhotos = []; _edTags = [];
+}
+
+// ── 폼 렌더 ──────────────────────────────────────────────────
+function _renderEditorForm(data = {}) {
+  _edPhotos = (data.photos || []).map(p => ({ url: p.url, caption: p.caption || '' }));
+  _edTags   = data.tags ? [...data.tags] : [];
+  document.getElementById('editor-form-title').textContent =
+    _edId
+      ? (_edType === 'case' ? '케이스 편집' : '자료 편집')
+      : (_edType === 'case' ? '새 임상 케이스' : '새 각과 자료');
+  document.getElementById('editor-form-content').innerHTML = _edFormHTML(data);
+  document.getElementById('ed-title').value       = data.title || '';
+  document.getElementById('ed-summary').value     = data.summary || '';
+  document.getElementById('ed-description').value = data.description || '';
+  _edRenderPhotoPreview();
+  _edRenderTagChips();
+  _edSetupTextareaDrop();
+}
+
+function _edFormHTML(d = {}) {
+  function ea(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  const deptOpts = DEPARTMENTS.map(dept =>
+    `<option value="${dept.id}"${d.department === dept.id ? ' selected' : ''}>${dept.name}</option>`
+  ).join('');
+  return `
+    <div class="form-card">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>제목 *</label>
+          <input type="text" id="ed-title" placeholder="제목">
+        </div>
+        <div class="form-group">
+          <label>진료과 *</label>
+          <select id="ed-dept">${deptOpts}</select>
+        </div>
+        <div class="form-group">
+          <label>날짜</label>
+          <input type="date" id="ed-date" value="${d.date || new Date().toISOString().split('T')[0]}">
+        </div>
+        <div class="form-group full">
+          <label>한 줄 요약</label>
+          <input type="text" id="ed-summary" placeholder="목록에 표시되는 짧은 설명">
+        </div>
+        <div class="form-group full">
+          <label>상세 설명</label>
+          <div class="editor-toolbar">
+            <button type="button" class="tb-btn" onclick="_edFmt('bold')"><b>B</b></button>
+            <button type="button" class="tb-btn" onclick="_edFmt('italic')"><i>I</i></button>
+            <button type="button" class="tb-btn" onclick="_edFmt('strike')"><s>S</s></button>
+            <div class="tb-sep"></div>
+            <button type="button" class="tb-btn" onclick="_edFmt('h1')">H1</button>
+            <button type="button" class="tb-btn" onclick="_edFmt('h2')">H2</button>
+            <button type="button" class="tb-btn" onclick="_edFmt('h3')">H3</button>
+            <div class="tb-sep"></div>
+            <button type="button" class="tb-btn" onclick="_edFmt('ul')">• 목록</button>
+            <button type="button" class="tb-btn" onclick="_edFmt('hr')">― 선</button>
+            <div class="tb-sep"></div>
+            <span class="tb-label">글자색</span>
+            <button type="button" class="tb-color" style="background:#ef4444" onclick="_edColor('#ef4444')"></button>
+            <button type="button" class="tb-color" style="background:#f97316" onclick="_edColor('#f97316')"></button>
+            <button type="button" class="tb-color" style="background:#16a34a" onclick="_edColor('#16a34a')"></button>
+            <button type="button" class="tb-color" style="background:#2563eb" onclick="_edColor('#2563eb')"></button>
+            <button type="button" class="tb-color" style="background:#7c3aed" onclick="_edColor('#7c3aed')"></button>
+            <button type="button" class="tb-color" style="background:#64748b" onclick="_edColor('#64748b')"></button>
+            <div class="tb-sep"></div>
+            <span class="tb-label">형광펜</span>
+            <button type="button" class="tb-color tb-hl" style="background:#fef08a" onclick="_edHl('#fef08a')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#bbf7d0" onclick="_edHl('#bbf7d0')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#bae6fd" onclick="_edHl('#bae6fd')"></button>
+            <button type="button" class="tb-color tb-hl" style="background:#fecdd3" onclick="_edHl('#fecdd3')"></button>
+          </div>
+          <textarea id="ed-description" rows="10"
+            placeholder="케이스/자료 상세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
+            style="min-height:200px;border-top:none;border-radius:0 0 8px 8px"></textarea>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem">이미지를 텍스트 영역으로 드래그하면 현재 커서 위치에 자동 삽입됩니다.</div>
+        </div>
+        <div class="form-group full">
+          <label>태그</label>
+          <div class="tag-input-wrap" onclick="document.getElementById('ed-tag-input').focus()">
+            <div id="ed-tag-chips"></div>
+            <input class="tag-input" id="ed-tag-input" placeholder="태그 입력 후 Enter"
+              onkeydown="_edTagInput(event)">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="section-label">사진 업로드</div>
+      <div class="upload-zone" id="ed-upload-zone"
+        onclick="document.getElementById('ed-file-input').click()"
+        ondragover="event.preventDefault();this.classList.add('dragover')"
+        ondragleave="this.classList.remove('dragover')"
+        ondrop="_edHandleDrop(event)">
+        <input type="file" id="ed-file-input" multiple accept="image/*" onchange="_edFileSelect(event)">
+        <div style="font-size:2rem;margin-bottom:0.5rem">📷</div>
+        <div>사진을 여기에 드래그하거나 클릭하여 선택</div>
+        <div style="font-size:0.8rem;margin-top:0.3rem;color:var(--text-muted)">여러 장 동시 선택 가능</div>
+      </div>
+      <div class="upload-progress" id="ed-progress">
+        <div class="upload-progress-bar" id="ed-progress-bar"></div>
+      </div>
+      <div class="photo-preview-list" id="ed-photo-preview"></div>
+    </div>
+
+    <div class="form-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+        <div class="section-label" style="margin:0">참고 논문</div>
+        <button class="btn btn-outline btn-sm" onclick="_edAddRef()">+ 논문 추가</button>
+      </div>
+      <div id="ed-refs-container">
+        ${(d.references||[]).map((r,i) => _edRefBlockHTML(i, r, ea)).join('')}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeEditor()">취소</button>
+      <button class="btn btn-primary" id="ed-save-btn" onclick="_edSave()">
+        ${_edId ? '저장' : '등록'}
+      </button>
+    </div>`;
+}
+
+function _edRefBlockHTML(idx, r, ea) {
+  if (!ea) ea = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const pagesVal = (r.volume ? r.volume + ', ' : '') + (r.pages || '');
+  return `
+    <div class="ref-block" id="ed-ref-${idx}">
+      <button class="btn btn-danger btn-sm ref-remove" onclick="_edRemoveRef(${idx})">✕</button>
+      <div class="ref-grid">
+        <div class="form-group"><label>저자</label>
+          <input type="text" id="ed-ref-authors-${idx}" value="${ea(r.authors)}" placeholder="저자명"></div>
+        <div class="form-group"><label>연도</label>
+          <input type="text" id="ed-ref-year-${idx}" value="${ea(r.year)}" placeholder="2024"></div>
+        <div class="form-group" style="grid-column:1/-1"><label>논문 제목</label>
+          <input type="text" id="ed-ref-title-${idx}" value="${ea(r.title)}" placeholder="논문 제목"></div>
+        <div class="form-group"><label>저널명</label>
+          <input type="text" id="ed-ref-journal-${idx}" value="${ea(r.journal)}" placeholder="저널명"></div>
+        <div class="form-group"><label>권호/페이지</label>
+          <input type="text" id="ed-ref-pages-${idx}" value="${ea(pagesVal)}" placeholder="73(1), 7-21"></div>
+        <div class="form-group"><label>DOI</label>
+          <input type="text" id="ed-ref-doi-${idx}" value="${ea(r.doi)}" placeholder="10.xxxx/xxxxx"></div>
+      </div>
+    </div>`;
+}
+
+// ── 태그 ──────────────────────────────────────────────────────
+function _edTagInput(e) {
+  if (e.key !== 'Enter' && e.key !== ',') return;
+  e.preventDefault();
+  const val = e.target.value.trim().replace(/,$/, '');
+  if (val && !_edTags.includes(val)) { _edTags.push(val); _edRenderTagChips(); }
+  e.target.value = '';
+}
+function _edRemoveTag(idx) { _edTags.splice(idx, 1); _edRenderTagChips(); }
+function _edRenderTagChips() {
+  document.getElementById('ed-tag-chips').innerHTML =
+    _edTags.map((t,i) => `
+      <span class="tag-chip">${t}
+        <button type="button" onclick="_edRemoveTag(${i})">✕</button>
+      </span>`).join('');
+}
+
+// ── 사진 ──────────────────────────────────────────────────────
+function _edFileSelect(e) { _edAddFiles(Array.from(e.target.files)); e.target.value = ''; }
+function _edHandleDrop(e) {
+  e.preventDefault();
+  document.getElementById('ed-upload-zone').classList.remove('dragover');
+  _edAddFiles(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')));
+}
+function _edAddFiles(files) {
+  files.forEach(f => _edPhotos.push({ url: URL.createObjectURL(f), caption: '', file: f }));
+  _edRenderPhotoPreview();
+}
+function _edRenderPhotoPreview() {
+  const el = document.getElementById('ed-photo-preview');
+  if (!el) return;
+  el.innerHTML = _edPhotos.map((p,i) => `
+    <div class="photo-preview-item">
+      <img src="${p.url}" alt="">
+      <button class="photo-remove" onclick="_edRemovePhoto(${i})">✕</button>
+      <input class="caption-input" type="text" placeholder="사진 설명 (선택)"
+        value="${p.caption}" oninput="_edPhotos[${i}].caption=this.value">
+    </div>`).join('');
+}
+function _edRemovePhoto(idx) { _edPhotos.splice(idx, 1); _edRenderPhotoPreview(); }
+
+// ── 참고 논문 ─────────────────────────────────────────────────
+function _edAddRef() {
+  const container = document.getElementById('ed-refs-container');
+  const idx = container.querySelectorAll('.ref-block').length;
+  container.insertAdjacentHTML('beforeend', _edRefBlockHTML(idx, {}));
+}
+function _edRemoveRef(idx) {
+  document.getElementById(`ed-ref-${idx}`).remove();
+  document.querySelectorAll('#ed-refs-container .ref-block').forEach((block, i) => {
+    block.id = `ed-ref-${i}`;
+    block.querySelector('.ref-remove').setAttribute('onclick', `_edRemoveRef(${i})`);
+    ['authors','year','title','journal','pages','doi'].forEach(f => {
+      const el = block.querySelector(`[id*="-ref-${f}-"]`);
+      if (el) el.id = `ed-ref-${f}-${i}`;
+    });
+  });
+}
+function _edCollectRefs() {
+  const blocks = document.querySelectorAll('#ed-refs-container .ref-block');
+  return Array.from(blocks).map((_,i) => {
+    const g = f => (document.getElementById(`ed-ref-${f}-${i}`) || {value:''}).value.trim();
+    const pages = g('pages'), dash = pages.indexOf(', ');
+    return {
+      authors: g('authors'), year: g('year'), title: g('title'), journal: g('journal'),
+      volume: dash > -1 ? pages.slice(0, dash) : '',
+      pages:  dash > -1 ? pages.slice(dash + 2) : pages,
+      doi: g('doi')
+    };
+  }).filter(r => r.title || r.authors);
+}
+
+// ── 마크다운 툴바 ─────────────────────────────────────────────
+function _edFmt(type) {
+  const ta = document.getElementById('ed-description');
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  const sel = ta.value.slice(s, e);
+  const before = ta.value.slice(0, s), after = ta.value.slice(e);
+  const maps = {
+    bold:   { wrap: ['**','**'], ph: '굵은 텍스트' },
+    italic: { wrap: ['*','*'],   ph: '기울임 텍스트' },
+    strike: { wrap: ['~~','~~'], ph: '취소선 텍스트' },
+    h1:     { line: '# ',        ph: '제목 1' },
+    h2:     { line: '## ',       ph: '제목 2' },
+    h3:     { line: '### ',      ph: '제목 3' },
+    ul:     { line: '- ',        ph: '목록 항목' },
+    hr:     { insert: '\n---\n' }
+  };
+  const r = maps[type];
+  let result, cursor;
+  if (r.insert) {
+    result = before + r.insert + after;
+    cursor = s + r.insert.length;
+  } else if (r.wrap) {
+    const text = sel || r.ph;
+    result = before + r.wrap[0] + text + r.wrap[1] + after;
+    cursor = s + r.wrap[0].length + text.length + r.wrap[1].length;
+  } else {
+    const nl = (before.length > 0 && !before.endsWith('\n')) ? '\n' : '';
+    const text = sel || r.ph;
+    const ins = nl + r.line + text + '\n';
+    result = before + ins + after;
+    cursor = s + ins.length;
+  }
+  ta.value = result; ta.setSelectionRange(cursor, cursor); ta.focus();
+}
+function _edColor(color) {
+  const ta = document.getElementById('ed-description');
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  const tag = `<span style="color:${color}">${ta.value.slice(s,e) || '텍스트'}</span>`;
+  ta.value = ta.value.slice(0,s) + tag + ta.value.slice(e);
+  ta.setSelectionRange(s + tag.length, s + tag.length); ta.focus();
+}
+function _edHl(color) {
+  const ta = document.getElementById('ed-description');
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  const tag = `<mark style="background:${color}">${ta.value.slice(s,e) || '텍스트'}</mark>`;
+  ta.value = ta.value.slice(0,s) + tag + ta.value.slice(e);
+  ta.setSelectionRange(s + tag.length, s + tag.length); ta.focus();
+}
+
+// ── 텍스트 영역 이미지 드래그 ────────────────────────────────
+function _edSetupTextareaDrop() {
+  const ta = document.getElementById('ed-description');
+  if (!ta) return;
+  let savedPos = 0;
+  ta.addEventListener('click',   () => { savedPos = ta.selectionStart; });
+  ta.addEventListener('keyup',   () => { savedPos = ta.selectionStart; });
+  ta.addEventListener('input',   () => { savedPos = ta.selectionStart; });
+  ta.addEventListener('dragover', e => { e.preventDefault(); ta.classList.add('drag-active'); });
+  ta.addEventListener('dragleave', () => { ta.classList.remove('drag-active'); });
+  ta.addEventListener('drop', e => {
+    e.preventDefault();
+    ta.classList.remove('drag-active');
+    const f = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+    if (f) _edDropImage(ta, f, savedPos);
+  });
+  ta.addEventListener('paste', e => {
+    const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
+    if (!item) return;
+    e.preventDefault();
+    _edDropImage(ta, item.getAsFile(), ta.selectionStart);
+  });
+}
+
+async function _edDropImage(ta, file, insertPos) {
+  const placeholder = '![업로드 중...]()';
+  const before = ta.value.slice(0, insertPos), after = ta.value.slice(insertPos);
+  const sep = (before.length > 0 && !before.endsWith('\n')) ? '\n' : '';
+  ta.value = before + sep + placeholder + '\n' + after;
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', cloudinaryConfig.uploadPreset);
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.secure_url) throw new Error('업로드 실패');
+    ta.value = ta.value.replace(sep + placeholder + '\n', '');
+    _edPendingImg = { ta, url: data.secure_url, insertPos };
+    _edShowSizePicker(data.secure_url);
+  } catch {
+    ta.value = ta.value.replace(sep + placeholder + '\n', '');
+    _edToast('이미지 업로드 실패', 'error');
+  }
+}
+
+function _edShowSizePicker(previewUrl) {
+  document.getElementById('ed-size-picker')?.remove();
+  const el = document.createElement('div');
+  el.id = 'ed-size-picker';
+  el.innerHTML = `
+    <div class="sp-preview"><img src="${previewUrl}" alt=""></div>
+    <div class="sp-label">이미지 크기 선택</div>
+    <div class="sp-btns">
+      <button onclick="_edInsertImg('sm')">◼<br>소<br><small>30%</small></button>
+      <button onclick="_edInsertImg('md')"><span style="font-size:1.2rem">◼</span><br>중<br><small>50%</small></button>
+      <button onclick="_edInsertImg('lg')"><span style="font-size:1.6rem">◼</span><br>대<br><small>75%</small></button>
+      <button onclick="_edInsertImg('')"><span style="font-size:2rem">◼</span><br>전체<br><small>100%</small></button>
+    </div>
+    <button class="sp-close" onclick="document.getElementById('ed-size-picker').remove()">✕</button>`;
+  document.body.appendChild(el);
+}
+
+function _edInsertImg(size) {
+  if (!_edPendingImg) return;
+  const { ta, url, insertPos } = _edPendingImg;
+  _edPendingImg = null;
+  document.getElementById('ed-size-picker')?.remove();
+  const md = size === '' ? `![](${url})` : `![${size}](${url})`;
+  const before = ta.value.slice(0, insertPos), after = ta.value.slice(insertPos);
+  const sep = (before.length > 0 && !before.endsWith('\n')) ? '\n' : '';
+  ta.value = before + sep + md + '\n' + after;
+  const pos = insertPos + sep.length + md.length + 1;
+  ta.setSelectionRange(pos, pos); ta.focus();
+  _edToast('삽입 완료!');
+}
+
+// ── Cloudinary 업로드 ─────────────────────────────────────────
+async function _edUploadPhotos() {
+  const progWrap = document.getElementById('ed-progress');
+  const progBar  = document.getElementById('ed-progress-bar');
+  const toUpload = _edPhotos.filter(p => p.file);
+  if (!toUpload.length) return _edPhotos.map(p => ({ url: p.url, caption: p.caption }));
+  progWrap.style.display = 'block';
+  let done = 0;
+  const results = [];
+  for (const photo of _edPhotos) {
+    if (!photo.file) { results.push({ url: photo.url, caption: photo.caption }); continue; }
+    const fd = new FormData();
+    fd.append('file', photo.file);
+    fd.append('upload_preset', cloudinaryConfig.uploadPreset);
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.secure_url) throw new Error(data.error?.message || '업로드 실패');
+    results.push({ url: data.secure_url, caption: photo.caption });
+    done++;
+    progBar.style.width = `${Math.round(done / toUpload.length * 100)}%`;
+  }
+  progWrap.style.display = 'none';
+  progBar.style.width = '0%';
+  return results;
+}
+
+// ── 저장 ─────────────────────────────────────────────────────
+async function _edSave() {
+  const title = document.getElementById('ed-title').value.trim();
+  if (!title) { _edToast('제목을 입력하세요.', 'error'); return; }
+  const btn = document.getElementById('ed-save-btn');
+  btn.innerHTML = '<span class="ed-spinner"></span> 저장 중...';
+  btn.disabled = true;
+  try {
+    const photos = await _edUploadPhotos();
+    const docData = {
+      title,
+      department:  document.getElementById('ed-dept').value,
+      date:        document.getElementById('ed-date').value,
+      summary:     document.getElementById('ed-summary').value.trim(),
+      description: document.getElementById('ed-description').value.trim(),
+      photos,
+      references:  _edCollectRefs(),
+      tags:        [..._edTags],
+      updatedAt:   firebase.firestore.FieldValue.serverTimestamp()
+    };
+    const col = _edType === 'case' ? 'cases' : 'departmentContents';
+    if (_edId) {
+      await db.collection(col).doc(_edId).update(docData);
+    } else {
+      docData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection(col).add(docData);
+    }
+    _edToast('저장되었습니다.');
+    closeEditor();
+    await loadData();
+  } catch(err) {
+    _edToast('저장 실패: ' + err.message, 'error');
+    btn.textContent = _edId ? '저장' : '등록';
+    btn.disabled = false;
+  }
+}
+
+// ── 토스트 ────────────────────────────────────────────────────
+function _edToast(msg, type = 'success') {
+  const t = document.getElementById('ed-toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'show' + (type === 'error' ? ' error' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = ''; }, 3000);
+}
