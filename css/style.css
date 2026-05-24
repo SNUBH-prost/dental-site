@@ -1019,6 +1019,9 @@ main {
   gap: 0.2rem;
 }
 .card-grid.list-view .card-admin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
   padding: 0.18rem 0.45rem;
   font-size: 0.7rem;
   line-height: 1;
@@ -1035,18 +1038,24 @@ main {
 .card-grid.list-view .btn-label { display: inline; }
 .card-grid.list-view .card-bm-btn {
   position: static;
+  top: auto; right: auto;
   transform: none;
   background: none;
   box-shadow: none;
-  width: 20px;
-  height: 20px;
-  font-size: 0.75rem;
+  border-radius: 4px;
+  padding: 0;
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  font-size: 0.72rem;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
+  align-self: center;
 }
+.card-grid.list-view .card-bm-btn:hover { transform: none; }
 
 /* ── 떠있는 맨 위로 버튼 ── */
 .scroll-top-btn {
