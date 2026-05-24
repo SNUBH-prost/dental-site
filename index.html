@@ -15,8 +15,8 @@
   <link rel="apple-touch-icon" href="/dental-site/icons/icon-192.png">
   <link rel="icon" type="image/svg+xml" href="/dental-site/icons/icon.svg">
 
-  <link rel="stylesheet" href="css/style.css?v=8">
-  <link rel="stylesheet" href="css/editor.css?v=8">
+  <link rel="stylesheet" href="css/style.css?v=9">
+  <link rel="stylesheet" href="css/editor.css?v=9">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
 <body>
@@ -30,16 +30,18 @@
       <a href="#" data-page="home" class="nav-link active" onclick="showPage('home')">홈</a>
       <a href="#" data-page="cases" class="nav-link" onclick="showPage('cases')">임상 케이스</a>
 
-      <!-- 진료과 드롭다운 -->
+      <!-- 부문별 드롭다운 -->
       <div class="nav-group" id="nav-group-dept">
         <button class="nav-group-btn" id="dept-btn" onclick="toggleDeptMenu(event)">
-          진료과 <span class="arrow">▾</span>
+          부문별 자료 <span class="arrow">▾</span>
         </button>
         <div class="nav-group-panel">
-          <a href="#" data-page="dept-fixed"   onclick="showPage('dept-fixed');closeDeptMenu()">🦷 고정성</a>
-          <a href="#" data-page="dept-implant" onclick="showPage('dept-implant');closeDeptMenu()">⚙️ 임플란트</a>
-          <a href="#" data-page="dept-rpd"     onclick="showPage('dept-rpd');closeDeptMenu()">🔩 RPD</a>
-          <a href="#" data-page="dept-cd"      onclick="showPage('dept-cd');closeDeptMenu()">😁 CD</a>
+          <a href="#" data-page="dept-fixed"     onclick="showPage('dept-fixed');closeDeptMenu()">🦷 고정성</a>
+          <a href="#" data-page="dept-implant"   onclick="showPage('dept-implant');closeDeptMenu()">⚙️ 임플란트</a>
+          <a href="#" data-page="dept-rpd"       onclick="showPage('dept-rpd');closeDeptMenu()">🔩 RPD</a>
+          <a href="#" data-page="dept-cd"        onclick="showPage('dept-cd');closeDeptMenu()">😁 CD</a>
+          <a href="#" data-page="dept-materials" onclick="showPage('dept-materials');closeDeptMenu()">🧪 재료</a>
+          <a href="#" data-page="dept-qna"       onclick="showPage('dept-qna');closeDeptMenu()">💬 Q&amp;A</a>
         </div>
       </div>
 
@@ -64,11 +66,13 @@
   <div class="drawer-nav">
     <a href="#" onclick="showPage('home');toggleMobileMenu()">🏠 홈</a>
     <a href="#" onclick="showPage('cases');toggleMobileMenu()">📋 임상 케이스</a>
-    <div class="drawer-section-label">진료과</div>
+    <div class="drawer-section-label">부문별 자료</div>
     <a href="#" onclick="showPage('dept-fixed');toggleMobileMenu()">🦷 고정성</a>
     <a href="#" onclick="showPage('dept-implant');toggleMobileMenu()">⚙️ 임플란트</a>
     <a href="#" onclick="showPage('dept-rpd');toggleMobileMenu()">🔩 RPD</a>
     <a href="#" onclick="showPage('dept-cd');toggleMobileMenu()">😁 CD</a>
+    <a href="#" onclick="showPage('dept-materials');toggleMobileMenu()">🧪 재료</a>
+    <a href="#" onclick="showPage('dept-qna');toggleMobileMenu()">💬 Q&amp;A</a>
     <div class="drawer-section-label">기타</div>
     <a href="admin.html">⚙ 관리</a>
   </div>
@@ -83,7 +87,7 @@
       <p>임상 케이스 및 각과별 참고 자료를 정리한 공유 플랫폼입니다.</p>
     </div>
     <div class="section-header">
-      <div class="section-title">진료과별 자료</div>
+      <div class="section-title">부문별 자료</div>
     </div>
     <div class="dept-grid" id="dept-grid-home"></div>
     <div class="section-header">
@@ -109,6 +113,8 @@
         <option value="implant">임플란트</option>
         <option value="rpd">RPD</option>
         <option value="cd">CD</option>
+        <option value="materials">재료</option>
+        <option value="qna">Q&amp;A</option>
       </select>
       <div class="view-toggle-group">
         <button id="view-grid-btn" class="view-toggle-btn active" onclick="setViewMode('grid')" title="카드 보기">
@@ -156,6 +162,24 @@
       <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('cd',this.value)">
     </div>
     <div class="card-grid" id="dept-content-cd"></div>
+  </div>
+
+  <!-- ── 재료 ── -->
+  <div id="page-dept-materials" class="page">
+    <div class="section-header"><div class="section-title">🧪 재료</div></div>
+    <div class="toolbar">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('materials',this.value)">
+    </div>
+    <div class="card-grid" id="dept-content-materials"></div>
+  </div>
+
+  <!-- ── Q&A ── -->
+  <div id="page-dept-qna" class="page">
+    <div class="section-header"><div class="section-title">💬 Q&amp;A</div></div>
+    <div class="toolbar">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('qna',this.value)">
+    </div>
+    <div class="card-grid" id="dept-content-qna"></div>
   </div>
 </main>
 
@@ -233,9 +257,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="js/firebase-config.js?v=8"></script>
-<script src="js/cloudinary-config.js?v=8"></script>
-<script src="js/app.js?v=8"></script>
+<script src="js/firebase-config.js?v=9"></script>
+<script src="js/cloudinary-config.js?v=9"></script>
+<script src="js/app.js?v=9"></script>
 <script>
 // ── 드롭다운 ──
 function toggleDeptMenu(e) {

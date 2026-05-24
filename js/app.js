@@ -17,7 +17,9 @@ const DEPARTMENTS = [
   { id: "fixed",   name: "고정성",   icon: "🦷" },
   { id: "implant", name: "임플란트", icon: "⚙️" },
   { id: "rpd",     name: "RPD",      icon: "🔩" },
-  { id: "cd",      name: "CD",       icon: "😁" }
+  { id: "cd",      name: "CD",       icon: "😁" },
+  { id: "materials", name: "재료",   icon: "🧪" },
+  { id: "qna",     name: "Q&A",      icon: "💬" }
 ];
 
 let allCases = [];
