@@ -9,8 +9,9 @@
   <title>관리자 패널 - 치과 임상 자료실</title>
   <script>(function(){
     var t=localStorage.getItem('dental-theme');
+    var urlDark=new URLSearchParams(location.search).get('dark')==='1';
     var sysDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
-    if(t==='dark'||(!t&&sysDark)){
+    if(urlDark||t==='dark'||(!t&&sysDark)){
       document.documentElement.setAttribute('data-theme','dark');
       var s=document.documentElement.style;
       s.setProperty('--bg','#111827');

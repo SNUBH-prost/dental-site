@@ -300,6 +300,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.theme-toggle').forEach(btn => {
     btn.textContent = _isDark ? '☀️' : '🌙';
   });
+  _updateAdminLinks(_isDark);
 
   // 뷰 모드 초기 버튼 상태
   document.getElementById('view-grid-btn')?.classList.toggle('active', _viewMode === 'grid');
@@ -1239,6 +1240,12 @@ function _injectPageBottomBtns() {
 }
 
 // ── 다크 모드 ─────────────────────────────────────────────────
+function _updateAdminLinks(dark) {
+  document.querySelectorAll('a[href*="admin.html"]').forEach(a => {
+    a.href = 'admin.html?v=1' + (dark ? '&dark=1' : '');
+  });
+}
+
 function toggleTheme() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const next = isDark ? 'light' : 'dark';
@@ -1247,6 +1254,7 @@ function toggleTheme() {
   document.querySelectorAll('.theme-toggle').forEach(btn => {
     btn.textContent = isDark ? '🌙' : '☀️';
   });
+  _updateAdminLinks(next === 'dark');
 }
 
 // ── 북마크 ────────────────────────────────────────────────────
