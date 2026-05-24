@@ -7,8 +7,8 @@ function _cld(url, t) {
   if (!url || !url.includes('/upload/')) return url;
   return url.replace('/upload/', `/upload/${t}/`);
 }
-const _cldGallery = u => _cld(u, 'w_1200,q_auto,f_auto');   // 갤러리 메인
-const _cldThumb   = u => _cld(u, 'w_160,h_120,c_fill,q_auto,f_auto'); // 썸네일
+const _cldGallery = u => u;                                            // 갤러리 원본 유지
+const _cldThumb   = u => _cld(u, 'w_160,h_120,c_fill,q_auto,f_auto'); // 썸네일만 최적화
 const _cldCard    = u => _cld(u, 'w_480,h_280,c_fill,q_auto,f_auto'); // 카드
 
 // ── marked 커스텀 렌더러 (이미지 크기) ───────────────────────
