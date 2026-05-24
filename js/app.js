@@ -37,7 +37,30 @@ let _isPopState = false;
 let _modalPushed = false;
 
 // ── 데이터 로드 ───────────────────────────────────────────────
+const _CACHE_KEY_CASES    = 'dental_cache_cases';
+const _CACHE_KEY_CONTENTS = 'dental_cache_contents';
+
+function _renderAll() {
+  renderHome();
+  renderCases();
+  renderDeptPages();
+  _injectAdminControls();
+  _injectPageBottomBtns();
+}
+
 async function loadData() {
+  // 캐시가 있으면 즉시 렌더 (체감 속도 향상)
+  try {
+    const cc = localStorage.getItem(_CACHE_KEY_CASES);
+    const ct = localStorage.getItem(_CACHE_KEY_CONTENTS);
+    if (cc && ct) {
+      allCases    = JSON.parse(cc);
+      allContents = JSON.parse(ct);
+      _renderAll();
+    }
+  } catch(e) {}
+
+  // Firestore에서 최신 데이터 받아 갱신
   const [casesSnap, contentsSnap] = await Promise.all([
     db.collection("cases").orderBy("date", "desc").get(),
     db.collection("departmentContents").orderBy("date", "desc").get()
@@ -46,11 +69,12 @@ async function loadData() {
   allCases    = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   allContents = contentsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-  renderHome();
-  renderCases();
-  renderDeptPages();
-  _injectAdminControls();
-  _injectPageBottomBtns();
+  try {
+    localStorage.setItem(_CACHE_KEY_CASES,    JSON.stringify(allCases));
+    localStorage.setItem(_CACHE_KEY_CONTENTS, JSON.stringify(allContents));
+  } catch(e) {}
+
+  _renderAll();
 }
 
 // ── Navigation ────────────────────────────────────────────────
@@ -1981,30 +2005,43 @@ function _renderPresSlide() {
   }
 }
 
-let _presLoading = false;
-
 function _presGo(dir) {
-  if (_presLoading) return;
   const next = _presIdx + dir;
   if (next < 0 || next >= _presSlides.length) return;
   const nextSlide = _presSlides[next];
+  const curSlide  = _presSlides[_presIdx];
 
-  if (nextSlide.type === 'photo') {
-    _presLoading = true;
-    const done = () => { _presLoading = false; _presIdx = next; _renderPresSlide(); };
-    const img = new Image();
-    img.onload = done;
-    img.onerror = done;
-    img.src = nextSlide.photo.url;
-    if (img.complete) { img.onload = img.onerror = null; done(); }
-  } else {
+  // 사진 → 사진: img.src만 교체해서 현재 이미지 유지하며 로드
+  if (nextSlide.type === 'photo' && curSlide.type === 'photo') {
     _presIdx = next;
-    _renderPresSlide();
+    _updatePresPhotoInPlace(nextSlide);
+    return;
   }
+  _presIdx = next;
+  _renderPresSlide();
+}
+
+function _updatePresPhotoInPlace(slide) {
+  const el  = document.getElementById('pres-slide');
+  const img = el?.querySelector('img');
+  if (!img) { _renderPresSlide(); return; }
+
+  img.src = slide.photo.url;
+  img.alt = _esc(slide.photo.caption || '');
+
+  // 캡션·번호·카운터만 즉시 갱신 (이미지 자체는 로드되면 자동 교체)
+  const captionEl = el.querySelector('.pres-caption');
+  if (captionEl) captionEl.textContent = slide.photo.caption || '';
+  const numEl = el.querySelector('.pres-photo-num');
+  if (numEl) numEl.textContent = `사진 ${slide.photoIdx} / ${slide.photoTotal}`;
+
+  document.getElementById('pres-counter').textContent = `${_presIdx + 1} / ${_presSlides.length}`;
+  document.getElementById('pres-prev').disabled = _presIdx === 0;
+  document.getElementById('pres-next').disabled = _presIdx === _presSlides.length - 1;
+  document.querySelectorAll('.pres-dot').forEach((d, i) => d.classList.toggle('active', i === _presIdx));
 }
 
 function _presJump(i) {
-  if (_presLoading) return;
   _presIdx = i;
   _renderPresSlide();
 }
