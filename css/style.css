@@ -381,7 +381,7 @@ main {
   background: var(--primary-pale);
 }
 
-.dept-card .icon { font-size: 1.8rem; margin-bottom: 0.4rem; }
+.dept-card .icon { font-size: 1.8rem; margin-bottom: 0.4rem; height: 2.4rem; display: flex; align-items: center; justify-content: center; }
 .dept-card .name { font-weight: 600; font-size: 0.9rem; color: var(--text); }
 .dept-card .count { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem; }
 
@@ -1003,7 +1003,7 @@ main {
 }
 .card-grid.list-view .card-summary { display: none; }
 .card-grid.list-view .modal-tags { display: none; }
-.card-grid.list-view .card-admin-row { flex-shrink: 0; }
+.card-grid.list-view .card-admin-row { flex-shrink: 0; margin-top: 0; }
 .card-grid.list-view .card-meta {
   font-size: 0.72rem;
   color: var(--text-muted);
