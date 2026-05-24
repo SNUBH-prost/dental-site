@@ -1981,14 +1981,30 @@ function _renderPresSlide() {
   }
 }
 
+let _presLoading = false;
+
 function _presGo(dir) {
+  if (_presLoading) return;
   const next = _presIdx + dir;
   if (next < 0 || next >= _presSlides.length) return;
-  _presIdx = next;
-  _renderPresSlide();
+  const nextSlide = _presSlides[next];
+
+  if (nextSlide.type === 'photo') {
+    _presLoading = true;
+    const done = () => { _presLoading = false; _presIdx = next; _renderPresSlide(); };
+    const img = new Image();
+    img.onload = done;
+    img.onerror = done;
+    img.src = nextSlide.photo.url;
+    if (img.complete) { img.onload = img.onerror = null; done(); }
+  } else {
+    _presIdx = next;
+    _renderPresSlide();
+  }
 }
 
 function _presJump(i) {
+  if (_presLoading) return;
   _presIdx = i;
   _renderPresSlide();
 }
