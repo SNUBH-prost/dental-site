@@ -140,8 +140,8 @@ function cardHTML(item, type) {
   const bmBtn = `<button class="card-bm-btn${isBm?' active':''}" onclick="event.stopPropagation();_toggleBookmark('${item.id}')" title="${isBm?'북마크 해제':'북마크'}">★</button>`;
   const adminBtns = isAdmin ? `
     <div class="card-admin-row" onclick="event.stopPropagation()">
-      <button class="card-admin-btn edit" onclick="openEditorFor('${item.id}','${type}')">✏️ 편집</button>
-      <button class="card-admin-btn del"  onclick="deleteCardItem('${item.id}','${type}')">🗑️ 삭제</button>
+      <button class="card-admin-btn edit" onclick="openEditorFor('${item.id}','${type}')">✏️<span class="btn-label"> 편집</span></button>
+      <button class="card-admin-btn del"  onclick="deleteCardItem('${item.id}','${type}')">🗑️<span class="btn-label"> 삭제</span></button>
     </div>` : '';
   return `
     <div class="card" onclick="openModal('${item.id}','${type}')">

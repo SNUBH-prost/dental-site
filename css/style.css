@@ -1003,7 +1003,9 @@ main {
 }
 .card-grid.list-view .card-summary { display: none; }
 .card-grid.list-view .modal-tags { display: none; }
-.card-grid.list-view .card-admin-row { flex-shrink: 0; margin-top: 0; }
+.card-grid.list-view .card-admin-row { flex-shrink: 0; margin-top: 0; gap: 0.3rem; }
+.card-grid.list-view .card-admin-btn { padding: 0.3rem 0.45rem; font-size: 1rem; line-height: 1; border-radius: 8px; }
+.card-grid.list-view .btn-label { display: none; }
 .card-grid.list-view .card-meta {
   font-size: 0.72rem;
   color: var(--text-muted);
