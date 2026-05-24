@@ -410,20 +410,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 let _edId = null, _edType = null;
 let _edPhotos = [], _edTags = [], _edTeeth = [];
+// _edTeeth: [{n: 16, type: 'implant'}, ...]
 
-function _renderToothChartHTML(sel, interactive) {
+const TOOTH_TYPES = [
+  { id: 'implant', label: '임플란트', color: '#2563eb' },
+  { id: 'crown',   label: '크라운',   color: '#f97316' },
+  { id: 'rr',      label: 'R.R',      color: '#9f1239' },
+  { id: 'bridge',  label: '브릿지',   color: '#7c3aed' },
+  { id: 'missing', label: '발치',     color: '#64748b' },
+  { id: 'caries',  label: '충치',     color: '#b45309' },
+];
+
+function _toothEntry(n) { return _edTeeth.find(t => t.n === n) || null; }
+
+function _renderToothChartHTML(teeth, interactive) {
   const rows = [
     { label:'상악', quads:[[18,17,16,15,14,13,12,11],[21,22,23,24,25,26,27,28]] },
     { label:'하악', quads:[[48,47,46,45,44,43,42,41],[31,32,33,34,35,36,37,38]] }
   ];
   const T = n => {
-    const on = (sel||[]).includes(n);
-    const ev = interactive ? `onclick="event.stopPropagation();_toggleTooth(${n})"` : '';
-    return `<div class="tc-tooth${on?' tc-sel':''}" data-t="${n}" ${ev}>${n}</div>`;
+    const entry = (teeth||[]).find(t => t.n === n);
+    const type  = entry ? TOOTH_TYPES.find(t => t.id === entry.type) : null;
+    const style = type ? `style="background:${type.color};color:#fff;border-color:${type.color}"` : '';
+    const cls   = entry ? ' tc-sel' : '';
+    const ev    = interactive ? `onclick="event.stopPropagation();_clickTooth(${n},this)"` : '';
+    return `<div class="tc-tooth${cls}" data-t="${n}" ${style} ${ev}>${n}</div>`;
   };
-  const badges = (sel||[]).length
-    ? `<div class="tc-badges">${[...(sel||[])].sort((a,b)=>a-b).map(n=>`<span class="tc-badge">${n}</span>`).join('')}</div>`
-    : '';
+  const sorted = [...(teeth||[])].sort((a,b)=>a.n-b.n);
+  const badges = sorted.length ? `<div class="tc-badges">${sorted.map(t => {
+    const type = TOOTH_TYPES.find(x => x.id === t.type);
+    return `<span class="tc-badge" style="background:${type?type.color+'22':''}; color:${type?type.color:'var(--primary)'}; border-color:${type?type.color+'66':'var(--primary-light)'}">${t.n}<span class="tc-badge-type">${type?type.label:''}</span></span>`;
+  }).join('')}</div>` : '';
   return `<div class="tc-wrap">${rows.map(r=>`
     <div class="tc-row">
       <span class="tc-jaw">${r.label}</span>
@@ -433,17 +450,51 @@ function _renderToothChartHTML(sel, interactive) {
     </div>`).join('')}${badges}</div>`;
 }
 
-function _toggleTooth(n) {
-  const i = _edTeeth.indexOf(n);
-  if (i >= 0) _edTeeth.splice(i, 1); else _edTeeth.push(n);
-  document.querySelectorAll(`.tc-tooth[data-t="${n}"]`).forEach(el =>
-    el.classList.toggle('tc-sel', _edTeeth.includes(n)));
+function _clickTooth(n, el) {
+  _closeTcPicker();
+  const existing = _toothEntry(n);
+  const picker = document.createElement('div');
+  picker.id = 'tc-picker';
+  picker.innerHTML = TOOTH_TYPES.map(t =>
+    `<button class="tcp-btn${existing&&existing.type===t.id?' tcp-active':''}"
+      style="--tc:${t.color}"
+      onclick="event.stopPropagation();_setToothType(${n},'${t.id}')">${t.label}</button>`
+  ).join('') +
+  (existing ? `<button class="tcp-btn tcp-remove" onclick="event.stopPropagation();_setToothType(${n},null)">✕ 제거</button>` : '');
+  const rect = el.getBoundingClientRect();
+  document.body.appendChild(picker);
+  const pw = picker.offsetWidth, ph = picker.offsetHeight;
+  let left = rect.left + rect.width/2 - pw/2;
+  let top  = rect.bottom + 6;
+  if (left < 4) left = 4;
+  if (left + pw > window.innerWidth - 4) left = window.innerWidth - pw - 4;
+  if (top + ph > window.innerHeight - 4) top = rect.top - ph - 6;
+  picker.style.left = left + 'px';
+  picker.style.top  = top  + 'px';
+  setTimeout(() => document.addEventListener('click', _closeTcPicker, {once:true}), 0);
+}
+
+function _closeTcPicker() {
+  const p = document.getElementById('tc-picker');
+  if (p) p.remove();
+}
+
+function _setToothType(n, typeId) {
+  _edTeeth = _edTeeth.filter(t => t.n !== n);
+  if (typeId) _edTeeth.push({ n, type: typeId });
+  document.getElementById('ed-tooth').innerHTML = _renderToothChartHTML(_edTeeth, true);
+}
+
+function _refreshTcBadges() {
   const wrap = document.querySelector('#ed-tooth .tc-wrap');
   if (!wrap) return;
   let b = wrap.querySelector('.tc-badges');
-  const sorted = [..._edTeeth].sort((a,b)=>a-b);
+  const sorted = [..._edTeeth].sort((a,x)=>a.n-x.n);
   if (!b && sorted.length) { b = document.createElement('div'); b.className='tc-badges'; wrap.appendChild(b); }
-  if (b) b.innerHTML = sorted.map(n=>`<span class="tc-badge">${n}</span>`).join('');
+  if (b) b.innerHTML = sorted.map(t => {
+    const type = TOOTH_TYPES.find(x=>x.id===t.type);
+    return `<span class="tc-badge">${t.n} ${type?type.label:''}</span>`;
+  }).join('');
 }
 let _edPendingImg = null;
 
@@ -523,7 +574,7 @@ function closeEditor() {
 function _renderEditorForm(data = {}) {
   _edPhotos = (data.photos || []).map(p => ({ url: p.url, caption: p.caption || '', annotations: p.annotations || [] }));
   _edTags   = data.tags  ? [...data.tags]  : [];
-  _edTeeth  = data.teeth ? [...data.teeth] : [];
+  _edTeeth  = (data.teeth || []).map(t => typeof t === 'number' ? {n:t, type:'implant'} : t);
   document.getElementById('editor-form-title').textContent =
     _edId
       ? (_edType === 'case' ? '케이스 편집' : '자료 편집')
