@@ -55,7 +55,9 @@ async function doLogin() {
   btn.disabled  = true;
   errEl.style.display = 'none';
   try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     await auth.signInWithEmailAndPassword(email, pw);
+    localStorage.setItem('admin-email', email);
   } catch(e) {
     errEl.textContent   = '로그인 실패: 이메일 또는 비밀번호를 확인하세요.';
     errEl.style.display = 'block';

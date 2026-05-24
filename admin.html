@@ -25,6 +25,12 @@
     <p id="login-error" style="color:#c0392b;font-size:0.82rem;margin-top:0.75rem;text-align:center;display:none;"></p>
   </div>
 </div>
+<script>
+  (function(){
+    const saved = localStorage.getItem('admin-email');
+    if (saved) document.getElementById('login-email').value = saved;
+  })();
+</script>
 
 <!-- ── 관리자 화면 ── -->
 <div id="admin-screen" style="display:none">
