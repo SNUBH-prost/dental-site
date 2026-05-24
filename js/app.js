@@ -72,7 +72,7 @@ function renderHome() {
   grid.innerHTML = DEPARTMENTS.map(d => {
     const count = allContents.filter(c => c.department === d.id).length;
     const iconHtml = d.iconImg
-      ? `<img src="${d.iconImg}" alt="${d.name}" style="width:2rem;height:2rem;object-fit:contain;">`
+      ? `<img src="${d.iconImg}" alt="${d.name}" style="width:2.8rem;height:2.8rem;object-fit:contain;">`
       : d.icon;
     return `
       <div class="dept-card" onclick="showPage('dept-${d.id}')">
