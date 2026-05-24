@@ -447,7 +447,14 @@ function refBlockHTML(type, idx, r = {}) {
         <div class="form-group"><label>연도</label>
           <input type="text" id="${type}-ref-year-${idx}" value="${escapeAttr(r.year)}" placeholder="2024"></div>
         <div class="form-group" style="grid-column:1/-1"><label>논문 제목</label>
-          <input type="text" id="${type}-ref-title-${idx}" value="${escapeAttr(r.title)}" placeholder="논문 제목"></div>
+          <div style="display:flex;gap:0.5rem;align-items:flex-start;flex-direction:column">
+            <div style="display:flex;gap:0.5rem;width:100%">
+              <input type="text" id="${type}-ref-title-${idx}" value="${escapeAttr(r.title)}" placeholder="논문 제목" style="flex:1">
+              <button type="button" class="btn btn-outline btn-sm" style="white-space:nowrap;flex-shrink:0" onclick="_adminPubMedSearch('${type}',${idx})">🔍 PubMed</button>
+            </div>
+            <div class="admin-pubmed-results" id="${type}-ref-results-${idx}" style="display:none;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:240px;overflow-y:auto;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.2)"></div>
+          </div>
+        </div>
         <div class="form-group"><label>저널명</label>
           <input type="text" id="${type}-ref-journal-${idx}" value="${escapeAttr(r.journal)}" placeholder="저널명"></div>
         <div class="form-group"><label>권호/페이지</label>
@@ -813,4 +820,81 @@ async function uploadInlineFile(file) {
 function copyInline(inputId) {
   const el = document.getElementById(inputId);
   navigator.clipboard.writeText(el.value).then(() => showToast('클립보드에 복사됐습니다!', 'success'));
+}
+
+// ── PubMed 검색 ──────────────────────────────────────────────────
+const _PUBMED = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';
+const _PM_PARAMS = '&tool=dental-site&email=admin@dental-site.app';
+let _adminPMCache = {};
+
+async function _adminPubMedSearch(type, idx) {
+  const titleEl = document.getElementById(`${type}-ref-title-${idx}`);
+  const resultsEl = document.getElementById(`${type}-ref-results-${idx}`);
+  const btn = event.currentTarget || event.target;
+  const query = titleEl ? titleEl.value.trim() : '';
+  if (!query) { showToast('논문 제목을 먼저 입력하세요.', 'error'); return; }
+
+  const origText = btn.innerHTML;
+  btn.innerHTML = '검색 중...'; btn.disabled = true;
+  if (resultsEl) resultsEl.innerHTML = '';
+
+  try {
+    const sr = await fetch(`${_PUBMED}esearch.fcgi?db=pubmed&retmax=6&retmode=json${_PM_PARAMS}&term=${encodeURIComponent(query)}`);
+    if (!sr.ok) throw new Error(`HTTP ${sr.status}`);
+    const sd = await sr.json();
+    const ids = (sd.esearchresult || {}).idlist || [];
+    if (!ids.length) { showToast('검색 결과가 없습니다.', 'error'); return; }
+
+    const sumr = await fetch(`${_PUBMED}esummary.fcgi?db=pubmed&retmode=json${_PM_PARAMS}&id=${ids.join(',')}`);
+    if (!sumr.ok) throw new Error(`HTTP ${sumr.status}`);
+    const sumd = await sumr.json();
+    const items = ids.map(id => (sumd.result || {})[id]).filter(Boolean);
+    _adminPMCache[`${type}-${idx}`] = items;
+
+    if (!resultsEl) return;
+    resultsEl.innerHTML = items.map((item, i) => {
+      const authors = item.authors ? item.authors.slice(0,3).map(a=>a.name).join(', ') + (item.authors.length>3?' et al.':'') : '';
+      const year = (item.pubdate||'').slice(0,4);
+      const title = (item.title||'').replace(/<[^>]+>/g,'');
+      return `<div onclick="_adminSelectPubMed('${type}',${idx},${i})" style="padding:0.7rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);transition:background 0.1s" onmouseover="this.style.background='var(--primary-pale)'" onmouseout="this.style.background=''">
+        <div style="font-size:0.84rem;font-weight:600;color:var(--text);margin-bottom:0.2rem;line-height:1.4">${title.substring(0,120)}${title.length>120?'…':''}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted)">${authors} · ${item.source} · ${year}</div>
+      </div>`;
+    }).join('');
+    resultsEl.style.display = 'block';
+
+    const close = e => {
+      if (!resultsEl.contains(e.target) && e.target !== titleEl) {
+        resultsEl.style.display = 'none';
+        document.removeEventListener('click', close);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  } catch(e) {
+    console.error('[PubMed]', e);
+    showToast('PubMed 검색 실패: ' + (e.message || '네트워크 오류'), 'error');
+  } finally {
+    btn.innerHTML = origText; btn.disabled = false;
+  }
+}
+
+async function _adminSelectPubMed(type, idx, itemIdx) {
+  const item = (_adminPMCache[`${type}-${idx}`] || [])[itemIdx];
+  if (!item) return;
+  const resultsEl = document.getElementById(`${type}-ref-results-${idx}`);
+  if (resultsEl) resultsEl.style.display = 'none';
+
+  const set = (f, v) => { const el = document.getElementById(`${type}-ref-${f}-${idx}`); if (el) el.value = v || ''; };
+  const title   = (item.title || '').replace(/<[^>]+>/g,'');
+  const authors = item.authors ? item.authors.map(a=>a.name).join(', ') : '';
+  const year    = (item.pubdate || '').slice(0, 4);
+  const vol     = item.volume ? `${item.volume}${item.issue?'('+item.issue+')':''}` : '';
+  const pages   = [vol, item.pages].filter(Boolean).join(', ');
+  let doi = '';
+  if (item.elocationid) { const m = item.elocationid.match(/10\.\S+/); if (m) doi = m[0]; }
+  if (!doi && item.articleids) { const d = item.articleids.find(a => a.idtype === 'doi'); if (d) doi = d.value; }
+
+  set('title', title); set('authors', authors); set('year', year);
+  set('journal', item.source); set('pages', pages); set('doi', doi);
+  showToast('논문 정보가 입력되었습니다 ✓');
 }
