@@ -296,8 +296,10 @@ function toggleRefAbs(btn, id) {
 
 // ── Init ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  const _ttBtn = document.getElementById('theme-toggle');
-  if (_ttBtn) _ttBtn.textContent = (localStorage.getItem('dental-theme')||'light') === 'dark' ? '☀️' : '🌙';
+  const _isDark = (localStorage.getItem('dental-theme')||'light') === 'dark';
+  document.querySelectorAll('.theme-toggle').forEach(btn => {
+    btn.textContent = _isDark ? '☀️' : '🌙';
+  });
 
   // 뷰 모드 초기 버튼 상태
   document.getElementById('view-grid-btn')?.classList.toggle('active', _viewMode === 'grid');
@@ -1242,8 +1244,9 @@ function toggleTheme() {
   const next = isDark ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('dental-theme', next);
-  const btn = document.getElementById('theme-toggle');
-  if (btn) btn.textContent = isDark ? '🌙' : '☀️';
+  document.querySelectorAll('.theme-toggle').forEach(btn => {
+    btn.textContent = isDark ? '🌙' : '☀️';
+  });
 }
 
 // ── 북마크 ────────────────────────────────────────────────────
