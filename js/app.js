@@ -405,7 +405,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (e.key === 'ArrowRight') _presGo(1);
       return;
     }
-    if (e.key === 'Escape') { closeModal(); closeEditor(); _annCancel(); }
+    if (e.key === 'Escape') { _closeSearch(); closeModal(); closeEditor(); _annCancel(); }
     if (document.getElementById('modal-overlay').classList.contains('open')) {
       if (e.key === 'ArrowLeft')  changePhoto(-1);
       if (e.key === 'ArrowRight') changePhoto(1);
