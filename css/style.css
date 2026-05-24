@@ -967,7 +967,7 @@ main {
   flex-direction: row;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.45rem 0.75rem;
+  padding: 0.28rem 0.5rem 0.28rem 0.75rem;
   border-radius: 0;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
