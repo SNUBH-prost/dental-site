@@ -1665,3 +1665,30 @@ main {
   flex-shrink: 0;
 }
 .pwa-dismiss-btn:hover { color: var(--text); }
+
+/* ── 치식 차팅 ── */
+.tc-wrap { display: inline-block; min-width: 0; }
+.tc-row { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
+.tc-jaw { font-size: 0.62rem; color: var(--text-muted); width: 1.8rem; flex-shrink: 0; text-align: right; }
+.tc-quad { display: flex; gap: 2px; }
+.tc-mid { width: 1px; background: var(--border); height: 22px; margin: 0 2px; flex-shrink: 0; }
+.tc-tooth {
+  width: 24px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 3px;
+  font-size: 0.6rem; font-weight: 500; color: var(--text-muted);
+  background: var(--surface); cursor: pointer;
+  transition: all 0.1s; user-select: none; line-height: 1;
+}
+.tc-tooth:hover { border-color: var(--primary); color: var(--primary); }
+.tc-tooth.tc-sel { background: var(--primary); color: #fff; border-color: var(--primary); }
+.tc-badges { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem; }
+.tc-badge {
+  padding: 0.1rem 0.35rem; border-radius: 4px;
+  background: var(--primary-pale); color: var(--primary);
+  font-size: 0.72rem; font-weight: 600;
+  border: 1px solid var(--primary-light);
+}
+#ed-tooth .tc-tooth { cursor: pointer; }
+#modal-teeth .tc-tooth { cursor: default; }
+#modal-teeth .tc-tooth:hover { border-color: var(--border); color: var(--text-muted); }

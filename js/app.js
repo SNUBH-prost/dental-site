@@ -182,6 +182,14 @@ function openModal(id, type) {
   ).join('');
 
   renderRefs(item.references || []);
+  const teethEl = document.getElementById('modal-teeth');
+  if (item.teeth && item.teeth.length) {
+    teethEl.innerHTML = _renderToothChartHTML(item.teeth, false);
+    teethEl.style.display = '';
+  } else {
+    teethEl.innerHTML = '';
+    teethEl.style.display = 'none';
+  }
   renderGallery();
 
   document.getElementById('modal-overlay').classList.add('open');
@@ -401,7 +409,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ════════════════════════════════════════════════════════════════
 
 let _edId = null, _edType = null;
-let _edPhotos = [], _edTags = [];
+let _edPhotos = [], _edTags = [], _edTeeth = [];
+
+function _renderToothChartHTML(sel, interactive) {
+  const rows = [
+    { label:'상악', quads:[[18,17,16,15,14,13,12,11],[21,22,23,24,25,26,27,28]] },
+    { label:'하악', quads:[[48,47,46,45,44,43,42,41],[31,32,33,34,35,36,37,38]] }
+  ];
+  const T = n => {
+    const on = (sel||[]).includes(n);
+    const ev = interactive ? `onclick="event.stopPropagation();_toggleTooth(${n})"` : '';
+    return `<div class="tc-tooth${on?' tc-sel':''}" data-t="${n}" ${ev}>${n}</div>`;
+  };
+  const badges = (sel||[]).length
+    ? `<div class="tc-badges">${[...(sel||[])].sort((a,b)=>a-b).map(n=>`<span class="tc-badge">${n}</span>`).join('')}</div>`
+    : '';
+  return `<div class="tc-wrap">${rows.map(r=>`
+    <div class="tc-row">
+      <span class="tc-jaw">${r.label}</span>
+      <div class="tc-quad">${r.quads[0].map(T).join('')}</div>
+      <div class="tc-mid"></div>
+      <div class="tc-quad">${r.quads[1].map(T).join('')}</div>
+    </div>`).join('')}${badges}</div>`;
+}
+
+function _toggleTooth(n) {
+  const i = _edTeeth.indexOf(n);
+  if (i >= 0) _edTeeth.splice(i, 1); else _edTeeth.push(n);
+  document.querySelectorAll(`.tc-tooth[data-t="${n}"]`).forEach(el =>
+    el.classList.toggle('tc-sel', _edTeeth.includes(n)));
+  const wrap = document.querySelector('#ed-tooth .tc-wrap');
+  if (!wrap) return;
+  let b = wrap.querySelector('.tc-badges');
+  const sorted = [..._edTeeth].sort((a,b)=>a-b);
+  if (!b && sorted.length) { b = document.createElement('div'); b.className='tc-badges'; wrap.appendChild(b); }
+  if (b) b.innerHTML = sorted.map(n=>`<span class="tc-badge">${n}</span>`).join('');
+}
 let _edPendingImg = null;
 
 // ── 관리자 배지 ──────────────────────────────────────────────
@@ -479,7 +522,8 @@ function closeEditor() {
 // ── 폼 렌더 ──────────────────────────────────────────────────
 function _renderEditorForm(data = {}) {
   _edPhotos = (data.photos || []).map(p => ({ url: p.url, caption: p.caption || '', annotations: p.annotations || [] }));
-  _edTags   = data.tags ? [...data.tags] : [];
+  _edTags   = data.tags  ? [...data.tags]  : [];
+  _edTeeth  = data.teeth ? [...data.teeth] : [];
   document.getElementById('editor-form-title').textContent =
     _edId
       ? (_edType === 'case' ? '케이스 편집' : '자료 편집')
@@ -557,6 +601,10 @@ function _edFormHTML(d = {}) {
             <input class="tag-input" id="ed-tag-input" placeholder="태그 입력 후 Enter"
               onkeydown="_edTagInput(event)">
           </div>
+        </div>
+        <div class="form-group full">
+          <label>치식 차팅 <span style="font-weight:400;font-size:0.72rem;color:var(--text-muted)">(클릭으로 선택)</span></label>
+          <div id="ed-tooth">${_renderToothChartHTML(_edTeeth, true)}</div>
         </div>
       </div>
     </div>
@@ -1024,6 +1072,7 @@ async function _edSave() {
       photos,
       references:  _edCollectRefs(),
       tags:        [..._edTags],
+      teeth:       [..._edTeeth],
       updatedAt:   firebase.firestore.FieldValue.serverTimestamp()
     };
     const col = _edType === 'case' ? 'cases' : 'departmentContents';
