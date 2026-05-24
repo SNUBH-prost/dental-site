@@ -1664,14 +1664,28 @@ function _filterByTag(tag) {
 // ── 갤러리 스와이프 ───────────────────────────────────────────
 function _setupGallerySwipe() {
   const gm = document.querySelector('.gallery-main');
-  if (!gm || currentPhotos.length <= 1) return;
+  if (!gm) return;
+
+  // 이전/다음 버튼: touchend로 즉시 반응 (click의 300ms 대기 없음)
+  const addNavTouch = (sel, dir) => {
+    const btn = gm.querySelector(sel);
+    if (!btn) return;
+    btn.addEventListener('touchend', e => {
+      e.preventDefault(); // 후속 click 이벤트 차단
+      changePhoto(dir);
+    }, { passive: false });
+  };
+  addNavTouch('.gallery-nav.prev', -1);
+  addNavTouch('.gallery-nav.next',  1);
+
+  if (currentPhotos.length <= 1) return;
   let _sx = 0, _sy = 0;
   gm.addEventListener('touchstart', e => {
     _sx = e.touches[0].clientX;
     _sy = e.touches[0].clientY;
   }, { passive: true });
   gm.addEventListener('touchend', e => {
-    if (_gz.s > 1) return; // 줌 상태에서는 스와이프 무시
+    if (_gz.s > 1) return;
     const dx = e.changedTouches[0].clientX - _sx;
     const dy = e.changedTouches[0].clientY - _sy;
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) changePhoto(dx < 0 ? 1 : -1);
@@ -1969,6 +1983,9 @@ function _openPresentation() {
       </div>`;
     document.body.appendChild(ov);
     _setupPresSwipe(ov);
+    // 발표 모드 버튼 즉시 반응 (touchend)
+    document.getElementById('pres-prev').addEventListener('touchend', e => { e.preventDefault(); _presGo(-1); }, { passive: false });
+    document.getElementById('pres-next').addEventListener('touchend', e => { e.preventDefault(); _presGo( 1); }, { passive: false });
   }
   _renderPresSlide();
   ov.classList.add('open');
