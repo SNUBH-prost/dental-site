@@ -2,6 +2,15 @@
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// ── Cloudinary URL 최적화 ─────────────────────────────────────
+function _cld(url, t) {
+  if (!url || !url.includes('/upload/')) return url;
+  return url.replace('/upload/', `/upload/${t}/`);
+}
+const _cldGallery = u => _cld(u, 'w_1200,q_auto,f_auto');   // 갤러리 메인
+const _cldThumb   = u => _cld(u, 'w_160,h_120,c_fill,q_auto,f_auto'); // 썸네일
+const _cldCard    = u => _cld(u, 'w_480,h_280,c_fill,q_auto,f_auto'); // 카드
+
 // ── marked 커스텀 렌더러 (이미지 크기) ───────────────────────
 (function setupMarked() {
   const renderer = new marked.Renderer();
@@ -155,7 +164,7 @@ function cardHTML(item, type) {
   const deptName = dept ? dept.name : '';
   const firstPhoto = item.photos && item.photos[0];
   const thumb = firstPhoto
-    ? `<div class="card-thumb"><img src="${firstPhoto.url}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span>🦷</span>'"></div>`
+    ? `<div class="card-thumb"><img src="${_cldCard(firstPhoto.url)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span>🦷</span>'"></div>`
     : `<div class="card-thumb"><span>🦷</span></div>`;
   const tags = (item.tags || []).map(t =>
     `<span class="tag" onclick="event.stopPropagation();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
@@ -275,7 +284,7 @@ function renderGallery() {
   const p = currentPhotos[currentPhotoIndex];
   el.innerHTML = `
     <div class="gallery-main">
-      <img id="gallery-main-img" src="${p.url}" alt="${p.caption||''}">
+      <img id="gallery-main-img" src="${_cldGallery(p.url)}" alt="${p.caption||''}" data-orig="${p.url}">
       <div class="gallery-caption" id="gallery-caption">${p.caption||''}</div>
       <div class="gallery-counter" id="gallery-counter">${currentPhotoIndex+1} / ${currentPhotos.length}</div>
       ${currentPhotos.length > 1 ? `
@@ -288,8 +297,8 @@ function renderGallery() {
     </div>
     <div class="gallery-thumbs">
       ${currentPhotos.map((ph,i)=>`
-        <img src="${ph.url}" alt="" class="${i===0?'active':''}" onclick="gotoPhoto(${i})"
-          onerror="this.style.display='none'">`).join('')}
+        <img src="${_cldThumb(ph.url)}" alt="" class="${i===0?'active':''}" onclick="gotoPhoto(${i})"
+          data-orig="${ph.url}" onerror="this.style.display='none'">`).join('')}
     </div>`;
   _placeAnnSVG(el.querySelector('.gallery-main'), p);
   _gz = { s: 1, ox: 50, oy: 50, tx: 0, ty: 0 };
@@ -311,13 +320,18 @@ function gotoPhoto(i) {
 
 function updateGallery() {
   const p = currentPhotos[currentPhotoIndex];
-  document.getElementById('gallery-main-img').src = p.url;
+  document.getElementById('gallery-main-img').src = _cldGallery(p.url);
   document.getElementById('gallery-caption').textContent = p.caption || '';
   document.getElementById('gallery-counter').textContent = `${currentPhotoIndex+1} / ${currentPhotos.length}`;
   document.querySelectorAll('.gallery-thumbs img').forEach((img,i) =>
     img.classList.toggle('active', i === currentPhotoIndex));
   const gm = document.querySelector('.gallery-main');
   if (gm) _placeAnnSVG(gm, p);
+  // 인접 사진 미리 로드
+  [-1, 1].forEach(d => {
+    const adj = currentPhotos[currentPhotoIndex + d];
+    if (adj) { const img = new Image(); img.src = _cldGallery(adj.url); }
+  });
 }
 
 // ── References ─────────────────────────────────────────────────
@@ -1838,7 +1852,7 @@ function _updateFsGallery() {
   const p = currentPhotos[currentPhotoIndex];
   const img = document.getElementById('fs-img');
   const ctr = document.getElementById('fs-counter');
-  if (img) img.src = p.url;
+  if (img) img.src = _cldGallery(p.url);
   if (ctr) ctr.textContent = `${currentPhotoIndex + 1} / ${currentPhotos.length}`;
 }
 
@@ -1984,7 +1998,7 @@ function _renderPresSlide() {
   } else if (slide.type === 'photo') {
     el.innerHTML = `
       <div class="pres-photo-wrap">
-        <img src="${slide.photo.url}" alt="${_esc(slide.photo.caption || '')}">
+        <img src="${_cldGallery(slide.photo.url)}" alt="${_esc(slide.photo.caption || '')}">
       </div>
       ${slide.photo.caption ? `<div class="pres-caption">${_esc(slide.photo.caption)}</div>` : ''}
       ${slide.photoTotal > 1 ? `<div class="pres-photo-num">사진 ${slide.photoIdx} / ${slide.photoTotal}</div>` : ''}`;
@@ -2026,7 +2040,7 @@ function _updatePresPhotoInPlace(slide) {
   const img = el?.querySelector('img');
   if (!img) { _renderPresSlide(); return; }
 
-  img.src = slide.photo.url;
+  img.src = _cldGallery(slide.photo.url);
   img.alt = _esc(slide.photo.caption || '');
 
   // 캡션·번호·카운터만 즉시 갱신 (이미지 자체는 로드되면 자동 교체)
