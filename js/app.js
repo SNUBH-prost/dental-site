@@ -1506,14 +1506,17 @@ function _updateFsGallery() {
 }
 
 function _setupFsSwipe(ov) {
-  let sx = 0, startedOnBtn = false;
+  let sx = 0, cancelled = false;
   ov.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1) return;
+    if (e.touches.length > 1) { cancelled = true; return; }
     sx = e.touches[0].clientX;
-    startedOnBtn = !!e.target.closest('.fs-nav, .fs-close');
+    cancelled = !!e.target.closest('.fs-nav, .fs-close');
+  }, { passive: true });
+  ov.addEventListener('touchmove', e => {
+    if (e.touches.length > 1) cancelled = true;
   }, { passive: true });
   ov.addEventListener('touchend', e => {
-    if (startedOnBtn) return;
+    if (cancelled) { cancelled = false; return; }
     const dx = e.changedTouches[0].clientX - sx;
     if (Math.abs(dx) > 60) _fsChangePhoto(dx < 0 ? 1 : -1);
   }, { passive: true });
