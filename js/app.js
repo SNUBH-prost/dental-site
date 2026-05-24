@@ -137,7 +137,7 @@ function cardHTML(item, type) {
     `<span class="tag" onclick="event.stopPropagation();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
   ).join('');
   const isBm = _bookmarks.has(item.id);
-  const bmBtn = `<button class="card-bm-btn${isBm?' active':''}" onclick="event.stopPropagation();_toggleBookmark('${item.id}')" title="${isBm?'북마크 해제':'북마크'}">★</button>`;
+  const bmBtn = `<button class="card-bm-btn${isBm?' active':''}" data-bm-id="${item.id}" onclick="event.stopPropagation();_toggleBookmark('${item.id}')" title="${isBm?'북마크 해제':'북마크'}">★</button>`;
   const adminBtns = isAdmin ? `
     <div class="card-admin-row" onclick="event.stopPropagation()">
       <button class="card-admin-btn edit" onclick="openEditorFor('${item.id}','${type}')">✏️<span class="btn-label"> 편집</span></button>
@@ -1552,15 +1552,21 @@ function toggleTheme() {
 
 // ── 북마크 ────────────────────────────────────────────────────
 function _toggleBookmark(id) {
-  if (_bookmarks.has(id)) _bookmarks.delete(id);
-  else _bookmarks.add(id);
+  const isNowBm = !_bookmarks.has(id);
+  if (isNowBm) _bookmarks.add(id); else _bookmarks.delete(id);
   localStorage.setItem('dental-bm', JSON.stringify([..._bookmarks]));
-  renderHome();
-  renderCases(
-    document.querySelector('#page-cases .search-input')?.value || '',
-    document.getElementById('case-dept-filter')?.value || ''
-  );
-  renderDeptPages();
+  // 해당 카드의 버튼만 업데이트
+  document.querySelectorAll(`.card-bm-btn[data-bm-id="${id}"]`).forEach(btn => {
+    btn.classList.toggle('active', isNowBm);
+    btn.title = isNowBm ? '북마크 해제' : '북마크';
+  });
+  // 북마크 필터 중일 때만 목록 재렌더
+  if (_showBmOnly) {
+    renderCases(
+      document.querySelector('#page-cases .search-input')?.value || '',
+      document.getElementById('case-dept-filter')?.value || ''
+    );
+  }
 }
 
 function setViewMode(mode) {
@@ -1568,10 +1574,7 @@ function setViewMode(mode) {
   localStorage.setItem('dental-view', mode);
   document.getElementById('view-grid-btn')?.classList.toggle('active', mode === 'grid');
   document.getElementById('view-list-btn')?.classList.toggle('active', mode === 'list');
-  renderCases(
-    document.querySelector('#page-cases .search-input')?.value || '',
-    document.getElementById('case-dept-filter')?.value || ''
-  );
+  document.getElementById('cases-grid')?.classList.toggle('list-view', mode === 'list');
 }
 
 function toggleBookmarkFilter() {
@@ -1726,7 +1729,12 @@ function _searchByTag(tag) {
   }, 200);
 }
 
+let _searchTimer;
 function _onSearchInput(q) {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => _doSearch(q), 180);
+}
+function _doSearch(q) {
   const tagSec = document.getElementById('search-tag-section');
   const resSec = document.getElementById('search-results-section');
   if (!q.trim()) {

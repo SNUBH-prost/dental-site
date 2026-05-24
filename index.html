@@ -24,7 +24,7 @@
   <link rel="apple-touch-icon" href="/dental-site/icons/icon-192.png">
   <link rel="icon" type="image/svg+xml" href="/dental-site/icons/icon.svg">
 
-  <link rel="stylesheet" href="css/style.css?v=48">
+  <link rel="stylesheet" href="css/style.css?v=49">
   <link rel="stylesheet" href="css/editor.css?v=24">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -46,9 +46,9 @@
         </button>
         <div class="nav-group-panel">
           <a href="javascript:void(0)" data-page="dept-fixed"     onclick="showPage('dept-fixed');closeDeptMenu()">🦷 고정성</a>
-          <a href="javascript:void(0)" data-page="dept-implant"   onclick="showPage('dept-implant');closeDeptMenu()"><img src="/dental-site/icons/icon-implant.svg" style="width:1.8em;height:1.8em;vertical-align:middle;margin-right:0.3em"> 임플란트</a>
-          <a href="javascript:void(0)" data-page="dept-rpd"       onclick="showPage('dept-rpd');closeDeptMenu()"><img src="/dental-site/icons/icon-rpd.svg" style="width:1.8em;height:1.8em;vertical-align:middle;margin-right:0.3em"> RPD</a>
-          <a href="javascript:void(0)" data-page="dept-cd"        onclick="showPage('dept-cd');closeDeptMenu()"><img src="/dental-site/icons/icon-cd.svg" style="width:1.8em;height:1.8em;vertical-align:middle;margin-right:0.3em"> CD</a>
+          <a href="javascript:void(0)" data-page="dept-implant"   onclick="showPage('dept-implant');closeDeptMenu()"><img src="/dental-site/icons/icon-implant.svg" class="nav-dept-icon"> 임플란트</a>
+          <a href="javascript:void(0)" data-page="dept-rpd"       onclick="showPage('dept-rpd');closeDeptMenu()"><img src="/dental-site/icons/icon-rpd.svg" class="nav-dept-icon"> RPD</a>
+          <a href="javascript:void(0)" data-page="dept-cd"        onclick="showPage('dept-cd');closeDeptMenu()"><img src="/dental-site/icons/icon-cd.svg" class="nav-dept-icon"> CD</a>
           <a href="javascript:void(0)" data-page="dept-materials" onclick="showPage('dept-materials');closeDeptMenu()">🧪 재료</a>
           <a href="javascript:void(0)" data-page="dept-qna"       onclick="showPage('dept-qna');closeDeptMenu()">💬 Q&amp;A</a>
         </div>
@@ -84,9 +84,9 @@
     <a href="javascript:void(0)" onclick="showPage('cases');toggleMobileMenu()"><span class="di">📋</span>임상 케이스</a>
     <div class="drawer-section-label">부문별 자료</div>
     <a href="javascript:void(0)" onclick="showPage('dept-fixed');toggleMobileMenu()"><span class="di">🦷</span>고정성</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-implant');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-implant.svg" style="width:1.5em;height:1.5em;display:block;"></span>임플란트</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-rpd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-rpd.svg" style="width:1.5em;height:1.5em;display:block;"></span>RPD</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-cd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-cd.svg" style="width:1.5em;height:1.5em;display:block;"></span>CD</a>
+    <a href="javascript:void(0)" onclick="showPage('dept-implant');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-implant.svg" class="drawer-dept-icon"></span>임플란트</a>
+    <a href="javascript:void(0)" onclick="showPage('dept-rpd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-rpd.svg" class="drawer-dept-icon"></span>RPD</a>
+    <a href="javascript:void(0)" onclick="showPage('dept-cd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-cd.svg" class="drawer-dept-icon"></span>CD</a>
     <a href="javascript:void(0)" onclick="showPage('dept-materials');toggleMobileMenu()"><span class="di">🧪</span>재료</a>
     <a href="javascript:void(0)" onclick="showPage('dept-qna');toggleMobileMenu()"><span class="di">💬</span>Q&amp;A</a>
     <div class="drawer-section-label">기타</div>
@@ -296,7 +296,7 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="js/firebase-config.js?v=21"></script>
 <script src="js/cloudinary-config.js?v=21"></script>
-<script src="js/app.js?v=37"></script>
+<script src="js/app.js?v=38"></script>
 <script>
 // ── 드롭다운 ──
 function toggleDeptMenu(e) {

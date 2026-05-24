@@ -178,6 +178,10 @@ header {
   color: var(--primary);
 }
 
+/* ── 부문 아이콘 (인라인 스타일 대체) ── */
+.nav-dept-icon { width: 1.8em; height: 1.8em; vertical-align: middle; margin-right: 0.3em; }
+.drawer-dept-icon { width: 1.5em; height: 1.5em; display: block; }
+
 /* ── Hamburger ── */
 .hamburger {
   display: none;
@@ -211,7 +215,7 @@ header {
 .mobile-drawer {
   position: fixed;
   top: 0; right: 0; bottom: 0;
-  width: 280px;
+  width: min(280px, 88vw);
   background: #fff;
   z-index: 500;
   transform: translateX(105%);
