@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>관리자 패널 - 치과 임상 자료실</title>
   <link rel="stylesheet" href="css/admin.css?v=3">
-  <style>#login-screen,#admin-screen{display:none}</style>
+  <style>
+    #login-screen,#admin-screen{display:none}
+    @media(max-width:680px){
+      .sidebar{display:grid!important;grid-template-columns:1fr 1fr!important;overflow:visible!important;white-space:normal!important;flex-direction:unset!important;}
+      .sidebar a{display:flex!important;align-items:center;justify-content:center;text-align:center;padding:.7rem .5rem;border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
+      .sidebar a:nth-child(even){border-right:none!important;}
+      .sidebar a:nth-last-child(1),.sidebar a:nth-last-child(2){border-bottom:none!important;}
+      .sidebar a:last-child:nth-child(odd){grid-column:1/-1!important;border-right:none!important;border-bottom:none!important;}
+    }
+  </style>
 </head>
 <body>
 

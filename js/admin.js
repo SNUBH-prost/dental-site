@@ -31,19 +31,39 @@ let caseTags    = [];
 let contentTags = [];
 
 // ── Auth ──────────────────────────────────────────────────────────
-auth.onAuthStateChanged(user => {
+function _showAdmin(user) {
   document.getElementById('auth-loading').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-screen').style.display = 'block';
+  document.getElementById('user-email-display').textContent = user.email;
+  loadCasesList(); loadContentsList(); renderCaseForm(); renderContentForm();
+}
+
+function _showLogin() {
+  document.getElementById('auth-loading').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('admin-screen').style.display = 'none';
+}
+
+auth.onAuthStateChanged(async user => {
   if (user) {
-    document.getElementById('login-screen').style.display  = 'none';
-    document.getElementById('admin-screen').style.display  = 'block';
-    document.getElementById('user-email-display').textContent = user.email;
-    loadCasesList();
-    loadContentsList();
-    renderCaseForm();
-    renderContentForm();
+    _showAdmin(user);
   } else {
-    document.getElementById('login-screen').style.display  = 'flex';
-    document.getElementById('admin-screen').style.display  = 'none';
+    // 저장된 자격증명으로 자동 로그인 시도
+    const savedEmail = localStorage.getItem('admin-email');
+    const savedPw    = localStorage.getItem('admin-pw');
+    if (savedEmail && savedPw) {
+      try {
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+        const cred = await auth.signInWithEmailAndPassword(savedEmail, savedPw);
+        _showAdmin(cred.user);
+      } catch(e) {
+        localStorage.removeItem('admin-pw');
+        _showLogin();
+      }
+    } else {
+      _showLogin();
+    }
   }
 });
 
@@ -59,6 +79,7 @@ async function doLogin() {
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     await auth.signInWithEmailAndPassword(email, pw);
     localStorage.setItem('admin-email', email);
+    localStorage.setItem('admin-pw', pw);
   } catch(e) {
     errEl.textContent   = '로그인 실패: 이메일 또는 비밀번호를 확인하세요.';
     errEl.style.display = 'block';
