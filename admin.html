@@ -9,10 +9,10 @@
     #login-screen,#admin-screen{display:none}
     @media(max-width:680px){
       .sidebar{display:grid!important;grid-template-columns:1fr 1fr!important;overflow:visible!important;white-space:normal!important;flex-direction:unset!important;}
-      .sidebar a{display:flex!important;align-items:center;justify-content:center;text-align:center;padding:.7rem .5rem;border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
+      .sidebar a{display:flex!important;align-items:center;justify-content:center;text-align:center;padding:.7rem .5rem;border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:none!important;}
+      .sidebar a:nth-child(1),.sidebar a:nth-child(2){border-top:none!important;}
       .sidebar a:nth-child(even){border-right:none!important;}
-      .sidebar a:nth-last-child(1){border-bottom:none!important;}
-      .sidebar a:last-child:nth-child(odd){grid-column:1/-1!important;border-right:none!important;border-bottom:none!important;}
+      .sidebar a:last-child{grid-column:1/-1!important;border-right:none!important;}
     }
   </style>
 </head>
