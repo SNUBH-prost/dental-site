@@ -67,14 +67,11 @@
 <div class="mobile-drawer" id="mobile-drawer">
   <div class="drawer-header">
     <span class="drawer-logo">치과<span>임상</span>자료실</span>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="다크 모드" style="background:none;border:none;cursor:pointer;font-size:1.3rem;padding:0.2rem 0.4rem;line-height:1;"><span class="theme-toggle-icon">🌙</span></button>
     <button class="drawer-close" onclick="toggleMobileMenu()">✕</button>
   </div>
   <div class="drawer-nav">
     <a href="#" onclick="showPage('home');toggleMobileMenu()"><span class="di">🏠</span>홈</a>
-    <button class="drawer-theme-row theme-toggle" onclick="toggleTheme()" aria-label="다크 모드">
-      <span class="di theme-toggle-icon">🌙</span>
-      <span class="drawer-theme-label">다크 모드</span>
-    </button>
     <a href="#" onclick="showPage('cases');toggleMobileMenu()"><span class="di">📋</span>임상 케이스</a>
     <div class="drawer-section-label">부문별 자료</div>
     <a href="#" onclick="showPage('dept-fixed');toggleMobileMenu()"><span class="di">🦷</span>고정성</a>
