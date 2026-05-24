@@ -62,11 +62,9 @@
 <body>
 
 <!-- ── 로딩 ── -->
-<div id="auth-loading" class="login-wrap">
-  <div style="text-align:center;color:#fff">
-    <div class="spinner" style="border-color:rgba(255,255,255,0.3);border-top-color:#fff;width:36px;height:36px;border-width:3px;margin:0 auto 1rem;"></div>
-    <div style="font-size:0.9rem;opacity:0.8">로딩 중…</div>
-  </div>
+<style>@keyframes pulse-icon{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.85)}}</style>
+<div id="auth-loading" class="login-wrap" style="background:#0f172a">
+  <div style="font-size:3rem;animation:pulse-icon 1.4s ease-in-out infinite">🦷</div>
 </div>
 
 <!-- ── 로그인 ── -->
