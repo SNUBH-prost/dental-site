@@ -440,10 +440,14 @@ function _renderToothChartHTML(teeth, interactive) {
     return `<div class="tc-tooth${cls}" data-t="${n}" ${style} ${ev}>${n}</div>`;
   };
   const sorted = [...(teeth||[])].sort((a,b)=>a.n-b.n);
-  const badges = sorted.length ? `<div class="tc-badges">${sorted.map(t => {
-    const type = TOOTH_TYPES.find(x => x.id === t.type);
-    return `<span class="tc-badge" style="background:${type?type.color+'22':''}; color:${type?type.color:'var(--primary)'}; border-color:${type?type.color+'66':'var(--primary-light)'}">${t.n}<span class="tc-badge-type">${type?type.label:''}</span></span>`;
-  }).join('')}</div>` : '';
+  let badges = '';
+  if (sorted.length) {
+    const groups = {};
+    sorted.forEach(t => { (groups[t.type] = groups[t.type] || []).push(t.n); });
+    badges = `<div class="tc-summary">${TOOTH_TYPES.filter(tp => groups[tp.id]).map(tp =>
+      `<span class="tc-sum-row"><span class="tc-sum-label" style="color:${tp.color}">${tp.label}</span><span class="tc-sum-nums">${groups[tp.id].join(', ')}</span></span>`
+    ).join('')}</div>`;
+  }
   return `<div class="tc-wrap">${rows.map(r=>`
     <div class="tc-row">
       <span class="tc-jaw">${r.label}</span>
