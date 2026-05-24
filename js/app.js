@@ -1505,18 +1505,23 @@ function _updateFsGallery() {
   if (ctr) ctr.textContent = `${currentPhotoIndex + 1} / ${currentPhotos.length}`;
 }
 
+function _fsIsZoomed() {
+  return window.visualViewport ? window.visualViewport.scale > 1.05 : false;
+}
+
 function _setupFsSwipe(ov) {
   let sx = 0, cancelled = false;
   ov.addEventListener('touchstart', e => {
-    if (e.touches.length > 1) { cancelled = true; return; }
+    if (e.touches.length > 1 || _fsIsZoomed()) { cancelled = true; return; }
     sx = e.touches[0].clientX;
     cancelled = !!e.target.closest('.fs-nav, .fs-close');
   }, { passive: true });
   ov.addEventListener('touchmove', e => {
-    if (e.touches.length > 1) cancelled = true;
+    if (e.touches.length > 1 || _fsIsZoomed()) cancelled = true;
   }, { passive: true });
   ov.addEventListener('touchend', e => {
     if (cancelled) { cancelled = false; return; }
+    if (_fsIsZoomed()) return;
     const dx = e.changedTouches[0].clientX - sx;
     if (Math.abs(dx) > 60) _fsChangePhoto(dx < 0 ? 1 : -1);
   }, { passive: true });
