@@ -990,6 +990,7 @@ main {
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
+  line-height: 1;
 }
 .card-grid.list-view .card-title {
   flex: 1;
@@ -999,6 +1000,7 @@ main {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1;
 }
 .card-grid.list-view .card-summary { display: none; }
 .card-grid.list-view .modal-tags { display: none; }
@@ -1041,6 +1043,10 @@ main {
   height: 20px;
   font-size: 0.75rem;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 /* ── 떠있는 맨 위로 버튼 ── */
