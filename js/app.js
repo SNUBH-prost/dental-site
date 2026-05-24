@@ -15,7 +15,7 @@ const db = firebase.firestore();
 
 const DEPARTMENTS = [
   { id: "fixed",     name: "고정성",   icon: "🦷" },
-  { id: "implant",   name: "임플란트", icon: "⚙️" },
+  { id: "implant",   name: "임플란트", iconImg: "/dental-site/icons/icon-implant.svg" },
   { id: "rpd",       name: "RPD",      iconImg: "/dental-site/icons/icon-rpd.svg" },
   { id: "cd",        name: "CD",       iconImg: "/dental-site/icons/icon-cd.svg" },
   { id: "materials", name: "재료",     icon: "🧪" },
