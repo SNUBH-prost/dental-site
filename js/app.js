@@ -1465,6 +1465,20 @@ function _onSearchInput(q) {
 }
 
 // ── 전체화면 갤러리 ─────────────────────────────────────────────
+let _fsScale = 1, _fsPanX = 0, _fsPanY = 0;
+
+function _resetFsZoom() {
+  _fsScale = 1; _fsPanX = 0; _fsPanY = 0;
+  const img = document.getElementById('fs-img');
+  if (img) img.style.transform = '';
+}
+
+function _applyFsTransform() {
+  const img = document.getElementById('fs-img');
+  if (!img) return;
+  img.style.transform = `translate(${_fsPanX}px,${_fsPanY}px) scale(${_fsScale})`;
+}
+
 function _openFsGallery() {
   let ov = document.getElementById('fs-gallery');
   if (!ov) {
@@ -1479,6 +1493,7 @@ function _openFsGallery() {
     document.body.appendChild(ov);
     _setupFsSwipe(ov);
   }
+  _resetFsZoom();
   _updateFsGallery();
   ov.classList.add('open');
   history.pushState({ page: _currentPage, fs: true }, '');
@@ -1492,6 +1507,7 @@ function _closeFsGallery() {
 }
 
 function _fsChangePhoto(dir) {
+  _resetFsZoom();
   currentPhotoIndex = (currentPhotoIndex + dir + currentPhotos.length) % currentPhotos.length;
   _updateFsGallery();
   updateGallery();
@@ -1505,23 +1521,65 @@ function _updateFsGallery() {
   if (ctr) ctr.textContent = `${currentPhotoIndex + 1} / ${currentPhotos.length}`;
 }
 
-function _fsIsZoomed() {
-  return window.visualViewport ? window.visualViewport.scale > 1.05 : false;
-}
-
 function _setupFsSwipe(ov) {
-  let sx = 0, cancelled = false;
+  let sx = 0, sy = 0, cancelled = false, pinchDist = 0, lastTap = 0;
+
+  function clamp() {
+    const maxX = Math.max(0, (_fsScale - 1) * ov.clientWidth  / 2);
+    const maxY = Math.max(0, (_fsScale - 1) * ov.clientHeight / 2);
+    _fsPanX = Math.max(-maxX, Math.min(maxX, _fsPanX));
+    _fsPanY = Math.max(-maxY, Math.min(maxY, _fsPanY));
+  }
+
   ov.addEventListener('touchstart', e => {
-    if (e.touches.length > 1 || _fsIsZoomed()) { cancelled = true; return; }
+    if (e.touches.length === 2) {
+      cancelled = true;
+      pinchDist = Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY
+      );
+      return;
+    }
+    if (e.touches.length > 2) { cancelled = true; return; }
     sx = e.touches[0].clientX;
-    cancelled = !!e.target.closest('.fs-nav, .fs-close');
+    sy = e.touches[0].clientY;
+    cancelled = _fsScale > 1 || !!e.target.closest('.fs-nav, .fs-close');
+    // 더블탭으로 줌 초기화
+    const now = Date.now();
+    if (now - lastTap < 280 && _fsScale > 1) _resetFsZoom();
+    lastTap = now;
   }, { passive: true });
+
   ov.addEventListener('touchmove', e => {
-    if (e.touches.length > 1 || _fsIsZoomed()) cancelled = true;
+    if (e.touches.length === 2) {
+      cancelled = true;
+      const d = Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY
+      );
+      _fsScale = Math.max(1, Math.min(6, _fsScale * (d / pinchDist)));
+      pinchDist = d;
+      clamp();
+      _applyFsTransform();
+      return;
+    }
+    if (_fsScale > 1 && e.touches.length === 1) {
+      _fsPanX += e.touches[0].clientX - sx;
+      _fsPanY += e.touches[0].clientY - sy;
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+      clamp();
+      _applyFsTransform();
+    }
   }, { passive: true });
+
   ov.addEventListener('touchend', e => {
+    if (e.touches.length > 0) {
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+      return;
+    }
     if (cancelled) { cancelled = false; return; }
-    if (_fsIsZoomed()) return;
     const dx = e.changedTouches[0].clientX - sx;
     if (Math.abs(dx) > 60) _fsChangePhoto(dx < 0 ? 1 : -1);
   }, { passive: true });

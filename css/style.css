@@ -1298,6 +1298,8 @@ main {
   display: none;
   align-items: center;
   justify-content: center;
+  touch-action: none;
+  overflow: hidden;
 }
 #fs-gallery.open { display: flex; }
 #fs-gallery #fs-img {
@@ -1305,6 +1307,8 @@ main {
   max-height: 100%;
   object-fit: contain;
   user-select: none;
+  transform-origin: center center;
+  will-change: transform;
 }
 .fs-close {
   position: absolute;
