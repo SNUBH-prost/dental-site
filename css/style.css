@@ -967,7 +967,8 @@ main {
   flex-direction: row;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.35rem 0.4rem 0.35rem 0.75rem;
+  padding: 0.38rem 0.4rem 0.38rem 2.2rem;
+  position: relative;
   border-radius: 0;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -1015,6 +1016,7 @@ main {
 .card-grid.list-view .card-admin-row {
   flex-shrink: 0;
   flex-direction: row;
+  align-items: center;
   margin-top: 0;
   gap: 0.2rem;
 }
@@ -1037,9 +1039,11 @@ main {
 .card-grid.list-view .card-admin-btn.del:hover  { background: #ef4444; color: #fff; }
 .card-grid.list-view .btn-label { display: inline; }
 .card-grid.list-view .card-bm-btn {
-  position: static;
-  top: auto; right: auto;
-  transform: none;
+  position: absolute;
+  left: 0.6rem;
+  top: 50%;
+  right: auto;
+  transform: translateY(-50%);
   background: none;
   box-shadow: none;
   border-radius: 4px;
@@ -1048,14 +1052,12 @@ main {
   width: 18px;
   height: 18px;
   font-size: 0.72rem;
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
-  align-self: center;
 }
-.card-grid.list-view .card-bm-btn:hover { transform: none; }
+.card-grid.list-view .card-bm-btn:hover { transform: translateY(-50%); }
 
 /* ── 떠있는 맨 위로 버튼 ── */
 .scroll-top-btn {
