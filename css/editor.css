@@ -148,6 +148,12 @@
   color: var(--text);
   width: 100%;
 }
+.editor-panel input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  line-height: 1.5;
+  height: 2.5rem;
+}
 .editor-panel input:focus,
 .editor-panel select:focus,
 .editor-panel textarea:focus { border-color: var(--primary-light); }

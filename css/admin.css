@@ -219,6 +219,12 @@ textarea {
   background: var(--surface);
   color: var(--text);
 }
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  line-height: 1.5;
+  height: 2.5rem;
+}
 
 input:focus, select:focus, textarea:focus { border-color: var(--primary-light); }
 
