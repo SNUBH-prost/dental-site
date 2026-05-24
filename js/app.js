@@ -411,10 +411,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 let _edId = null, _edType = null;
 let _edPhotos = [], _edTags = [], _edTeeth = [];
 // _edTeeth: [{n: 16, type: 'implant'}, ...]
+let _tcMultiSel = new Set(); // shift-선택 중인 치아 번호들
 
 const TOOTH_TYPES = [
   { id: 'implant', label: '임플란트', color: '#2563eb' },
   { id: 'crown',   label: '크라운',   color: '#f97316' },
+  { id: 'pontic',  label: 'Pontic',   color: '#059669' },
   { id: 'rr',      label: 'R.R',      color: '#9f1239' },
   { id: 'bridge',  label: '브릿지',   color: '#7c3aed' },
   { id: 'missing', label: '발치',     color: '#64748b' },
@@ -433,7 +435,7 @@ function _renderToothChartHTML(teeth, interactive) {
     const type  = entry ? TOOTH_TYPES.find(t => t.id === entry.type) : null;
     const style = type ? `style="background:${type.color};color:#fff;border-color:${type.color}"` : '';
     const cls   = entry ? ' tc-sel' : '';
-    const ev    = interactive ? `onclick="event.stopPropagation();_clickTooth(${n},this)"` : '';
+    const ev    = interactive ? `onclick="event.stopPropagation();_clickTooth(${n},this,event)"` : '';
     return `<div class="tc-tooth${cls}" data-t="${n}" ${style} ${ev}>${n}</div>`;
   };
   const sorted = [...(teeth||[])].sort((a,b)=>a.n-b.n);
@@ -450,7 +452,22 @@ function _renderToothChartHTML(teeth, interactive) {
     </div>`).join('')}${badges}</div>`;
 }
 
-function _clickTooth(n, el) {
+function _clickTooth(n, el, e) {
+  // Shift+클릭: 다중 선택 모드
+  if (e && e.shiftKey) {
+    _closeTcPicker();
+    if (_tcMultiSel.has(n)) { _tcMultiSel.delete(n); el.classList.remove('tc-multi'); }
+    else { _tcMultiSel.add(n); el.classList.add('tc-multi'); }
+    _updateMultiBar();
+    return;
+  }
+  // 다중 선택 중에 일반 클릭하면 해당 치아도 추가 후 팝업
+  if (_tcMultiSel.size > 0) {
+    if (!_tcMultiSel.has(n)) { _tcMultiSel.add(n); el.classList.add('tc-multi'); }
+    _showMultiPicker(el);
+    return;
+  }
+  // 단일 치아 팝업
   _closeTcPicker();
   const existing = _toothEntry(n);
   const picker = document.createElement('div');
@@ -461,8 +478,29 @@ function _clickTooth(n, el) {
       onclick="event.stopPropagation();_setToothType(${n},'${t.id}')">${t.label}</button>`
   ).join('') +
   (existing ? `<button class="tcp-btn tcp-remove" onclick="event.stopPropagation();_setToothType(${n},null)">✕ 제거</button>` : '');
-  const rect = el.getBoundingClientRect();
+  _positionPicker(picker, el);
+  setTimeout(() => document.addEventListener('click', _closeTcPicker, {once:true}), 0);
+}
+
+function _showMultiPicker(anchorEl) {
+  _closeTcPicker();
+  const cnt = _tcMultiSel.size;
+  const picker = document.createElement('div');
+  picker.id = 'tc-picker';
+  picker.innerHTML =
+    `<div class="tcp-label">${cnt}개 치아에 적용:</div>` +
+    TOOTH_TYPES.map(t =>
+      `<button class="tcp-btn" style="--tc:${t.color}"
+        onclick="event.stopPropagation();_applyMultiType('${t.id}')">${t.label}</button>`
+    ).join('') +
+    `<button class="tcp-btn tcp-remove" onclick="event.stopPropagation();_applyMultiType(null)">✕ 제거</button>`;
+  _positionPicker(picker, anchorEl);
+  setTimeout(() => document.addEventListener('click', _closeTcPicker, {once:true}), 0);
+}
+
+function _positionPicker(picker, el) {
   document.body.appendChild(picker);
+  const rect = el.getBoundingClientRect();
   const pw = picker.offsetWidth, ph = picker.offsetHeight;
   let left = rect.left + rect.width/2 - pw/2;
   let top  = rect.bottom + 6;
@@ -471,12 +509,45 @@ function _clickTooth(n, el) {
   if (top + ph > window.innerHeight - 4) top = rect.top - ph - 6;
   picker.style.left = left + 'px';
   picker.style.top  = top  + 'px';
-  setTimeout(() => document.addEventListener('click', _closeTcPicker, {once:true}), 0);
 }
 
 function _closeTcPicker() {
   const p = document.getElementById('tc-picker');
   if (p) p.remove();
+}
+
+function _applyMultiType(typeId) {
+  _tcMultiSel.forEach(n => {
+    _edTeeth = _edTeeth.filter(t => t.n !== n);
+    if (typeId) _edTeeth.push({ n, type: typeId });
+  });
+  _tcMultiSel.clear();
+  _closeTcPicker();
+  _updateMultiBar();
+  document.getElementById('ed-tooth').innerHTML = _renderToothChartHTML(_edTeeth, true);
+}
+
+function _updateMultiBar() {
+  const wrap = document.querySelector('#ed-tooth .tc-wrap');
+  if (!wrap) return;
+  let bar = document.getElementById('tc-multi-bar');
+  if (_tcMultiSel.size === 0) { if (bar) bar.remove(); return; }
+  if (!bar) { bar = document.createElement('div'); bar.id = 'tc-multi-bar'; wrap.appendChild(bar); }
+  bar.innerHTML =
+    `<span class="tcmb-label">⇧ ${_tcMultiSel.size}개 선택됨 —</span>` +
+    TOOTH_TYPES.map(t =>
+      `<button class="tcp-btn tcmb-btn" style="--tc:${t.color}"
+        onclick="_applyMultiType('${t.id}')">${t.label}</button>`
+    ).join('') +
+    `<button class="tcp-btn tcp-remove tcmb-btn" onclick="_applyMultiType(null)">✕ 제거</button>` +
+    `<button class="tcp-btn tcmb-cancel" onclick="_clearMultiSel()">취소</button>`;
+}
+
+function _clearMultiSel() {
+  _tcMultiSel.clear();
+  document.querySelectorAll('.tc-tooth.tc-multi').forEach(el => el.classList.remove('tc-multi'));
+  const bar = document.getElementById('tc-multi-bar');
+  if (bar) bar.remove();
 }
 
 function _setToothType(n, typeId) {

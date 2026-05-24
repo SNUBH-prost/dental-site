@@ -1710,3 +1710,19 @@ main {
 .tcp-btn:hover, .tcp-btn.tcp-active { background: var(--tc, var(--primary)); color: #fff; }
 .tcp-remove { --tc: #ef4444; }
 .tc-badge-type { font-weight: 400; margin-left: 0.2rem; font-size: 0.65rem; opacity: 0.85; }
+
+/* ── 치식 다중선택 ── */
+.tc-tooth.tc-multi {
+  border: 2px dashed var(--primary) !important;
+  color: var(--primary) !important;
+  background: var(--primary-pale) !important;
+}
+#tc-multi-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem;
+  margin-top: 0.5rem; padding: 0.4rem 0.5rem;
+  background: var(--primary-pale); border: 1.5px solid var(--primary-light);
+  border-radius: 8px;
+}
+.tcmb-label { font-size: 0.72rem; font-weight: 600; color: var(--primary); flex-shrink: 0; }
+.tcmb-cancel { --tc: var(--text-muted) !important; border-color: var(--border) !important; color: var(--text-muted) !important; }
+.tcp-label { width: 100%; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); padding-bottom: 0.2rem; }
