@@ -8,10 +8,12 @@
   <meta http-equiv="Expires" content="0">
   <title>관리자 패널 - 치과 임상 자료실</title>
   <script>(function(){
-    var t=localStorage.getItem('dental-theme');
     var urlDark=new URLSearchParams(location.search).get('dark')==='1';
+    var stored=localStorage.getItem('admin-theme')||localStorage.getItem('dental-theme');
     var sysDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
-    if(urlDark||t==='dark'||(!t&&sysDark)){
+    var isDark=urlDark||(stored==='dark')||(!stored&&sysDark);
+    if(isDark){
+      localStorage.setItem('admin-theme','dark');
       document.documentElement.setAttribute('data-theme','dark');
       var s=document.documentElement.style;
       s.setProperty('--bg','#111827');
@@ -24,6 +26,8 @@
       s.setProperty('--accent','#34d399');
       s.setProperty('--danger','#f87171');
       s.setProperty('--shadow','0 2px 12px rgba(0,0,0,0.4)');
+    } else {
+      localStorage.setItem('admin-theme','light');
     }
   })()</script>
   <link rel="stylesheet" href="css/admin.css?v=4">
