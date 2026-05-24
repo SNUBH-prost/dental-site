@@ -319,6 +319,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fsOv = document.getElementById('fs-gallery');
     const fsOpen = fsOv && fsOv.classList.contains('open');
 
+    // 검색 오버레이 열린 상태에서 뒤로가기 → 검색 닫기
+    const searchOv = document.getElementById('search-overlay');
+    if (searchOv && searchOv.classList.contains('open')) {
+      searchOv.classList.remove('open');
+      document.body.style.overflow = '';
+      document.getElementById('search-overlay-input').value = '';
+      document.getElementById('search-results-section').style.display = 'none';
+      document.getElementById('search-tag-section').style.display = '';
+      return;
+    }
+
     // 전체화면 열린 상태에서 뒤로가기 → 전체화면만 닫기
     if (fsOpen) {
       fsOv.classList.remove('open');
@@ -1371,7 +1382,74 @@ function _setupGalleryZoom() {
   }, { passive: true });
 }
 
-// ── 전체화면 갤러리 ────────────────────────────────────────────
+// ── 검색 오버레이 ─────────────────────────────────────────────
+function _openSearch() {
+  const ov = document.getElementById('search-overlay');
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('search-overlay-input')?.focus(), 80);
+  _renderTagCloud();
+  history.pushState({ page: _currentPage, search: true }, '');
+}
+
+function _closeSearch() {
+  const ov = document.getElementById('search-overlay');
+  if (!ov.classList.contains('open')) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+  document.getElementById('search-overlay-input').value = '';
+  document.getElementById('search-results-section').style.display = 'none';
+  document.getElementById('search-tag-section').style.display = '';
+  history.back();
+}
+
+function _renderTagCloud() {
+  const all = [...allCases, ...allContents];
+  const freq = {};
+  all.forEach(item => (item.tags || []).forEach(t => { freq[t] = (freq[t] || 0) + 1; }));
+  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
+  document.getElementById('search-tag-cloud').innerHTML = sorted.map(([t]) =>
+    `<button class="search-tag-chip" onclick="_searchByTag('${_esc(t).replace(/'/g,"\\'")}')">🏷 ${_esc(t)}</button>`
+  ).join('');
+}
+
+function _searchByTag(tag) {
+  _closeSearch();
+  setTimeout(() => {
+    showPage('cases');
+    const inp = document.querySelector('#page-cases .search-input');
+    if (inp) { inp.value = tag; renderCases(tag, ''); }
+  }, 200);
+}
+
+function _onSearchInput(q) {
+  const tagSec = document.getElementById('search-tag-section');
+  const resSec = document.getElementById('search-results-section');
+  if (!q.trim()) {
+    resSec.style.display = 'none';
+    tagSec.style.display = '';
+    return;
+  }
+  tagSec.style.display = 'none';
+  resSec.style.display = '';
+  const all = [
+    ...allCases.map(c => ({ ...c, _type: 'case' })),
+    ...allContents.map(c => ({ ...c, _type: 'content' }))
+  ];
+  const results = all.filter(c =>
+    c.title.includes(q) || (c.summary||'').includes(q) || (c.tags||[]).some(t => t.includes(q))
+  ).slice(0, 20);
+  const dept = id => DEPARTMENTS.find(d => d.id === id);
+  document.getElementById('search-results-list').innerHTML = results.length
+    ? results.map(c => `
+        <div class="search-result-item" onclick="_closeSearch();setTimeout(()=>openModal('${c.id}','${c._type}'),200)">
+          <div class="search-result-title">${_esc(c.title)}</div>
+          <div class="search-result-meta">${dept(c.department)?.name || ''} · ${c.date || ''}</div>
+        </div>`).join('')
+    : '<div class="search-empty">검색 결과가 없습니다.</div>';
+}
+
+// ── 전체화면 갤러리 ─────────────────────────────────────────────
 function _openFsGallery() {
   let ov = document.getElementById('fs-gallery');
   if (!ov) {
