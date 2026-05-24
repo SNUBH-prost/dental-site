@@ -633,7 +633,6 @@ textarea.drag-active {
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
-  .sidebar-title { display: none; }
   .sidebar a {
     display: flex;
     align-items: center;
