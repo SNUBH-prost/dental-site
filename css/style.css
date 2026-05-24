@@ -988,19 +988,21 @@ main {
 }
 .card-grid.list-view .card-dept {
   grid-column: 1; grid-row: 1;
-  font-size: 0.72rem;
+  font-size: 0.65rem;
   color: var(--primary);
   font-weight: 600;
   white-space: nowrap;
+  line-height: 1.2;
 }
 .card-grid.list-view .card-title {
   grid-column: 2; grid-row: 1;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 500;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
 .card-grid.list-view .card-summary { display: none; }
 .card-grid.list-view .modal-tags { display: none; }
@@ -1013,20 +1015,21 @@ main {
 .card-grid.list-view .btn-label { display: none; }
 .card-grid.list-view .card-meta {
   grid-column: 1 / 3; grid-row: 2;
-  font-size: 0.72rem;
+  font-size: 0.65rem;
   color: var(--text-muted);
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   white-space: nowrap;
+  line-height: 1.2;
 }
 .card-grid.list-view .card-bm-btn {
   position: static;
   transform: none;
   background: none;
   box-shadow: none;
-  width: 28px;
-  height: 28px;
-  font-size: 0.9rem;
+  width: 20px;
+  height: 20px;
+  font-size: 0.75rem;
   flex-shrink: 0;
 }
 
