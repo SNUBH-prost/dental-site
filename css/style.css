@@ -285,6 +285,14 @@ header {
   transition: background 0.12s, color 0.12s;
 }
 .drawer-nav a:hover { background: var(--primary-pale); color: var(--primary); }
+.drawer-nav a .di {
+  width: 2em;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15em;
+}
 
 .drawer-section-label {
   font-size: 0.7rem;
