@@ -1,21 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 80">
-  <!-- Abutment top (flat rectangle) -->
-  <rect x="18" y="4" width="28" height="10" rx="3" fill="#2d6a6a"/>
+  <!-- Abutment top -->
+  <rect x="18" y="4" width="28" height="10" rx="3" fill="#8a9ba8"/>
 
-  <!-- Implant body (tapered cylinder) -->
-  <path d="M18 14 L46 14 L42 62 Q32 68 22 62 Z" fill="#2d6a6a"/>
+  <!-- Implant body -->
+  <path d="M18 14 L46 14 L42 62 Q32 68 22 62 Z" fill="#9eadb8"/>
 
-  <!-- Thread lines (diagonal stripes) -->
+  <!-- Thread lines -->
   <clipPath id="body-clip">
     <path d="M18 14 L46 14 L42 62 Q32 68 22 62 Z"/>
   </clipPath>
-  <g clip-path="url(#body-clip)" fill="none" stroke="white" stroke-width="3.5" opacity="0.55">
+  <g clip-path="url(#body-clip)" fill="none" stroke="white" stroke-width="3.5" opacity="0.5">
     <line x1="10" y1="22" x2="54" y2="28"/>
     <line x1="10" y1="33" x2="54" y2="39"/>
     <line x1="10" y1="44" x2="54" y2="50"/>
     <line x1="10" y1="55" x2="54" y2="61"/>
   </g>
 
-  <!-- Tip rounded cap -->
-  <ellipse cx="32" cy="62" rx="10" ry="5" fill="#1f4f4f"/>
+  <!-- Highlight (metallic sheen) -->
+  <clipPath id="body-clip2">
+    <path d="M18 14 L46 14 L42 62 Q32 68 22 62 Z"/>
+  </clipPath>
+  <rect x="19" y="14" width="8" height="50" fill="white" opacity="0.15" clip-path="url(#body-clip2)"/>
+
+  <!-- Tip -->
+  <ellipse cx="32" cy="62" rx="10" ry="5" fill="#7a8e99"/>
 </svg>
