@@ -1106,9 +1106,8 @@ main {
   /* 진료과 그리드 2열 고정 */
   .dept-grid { grid-template-columns: repeat(2, 1fr); }
 
-  /* 모달 공유·닫기 버튼 */
-  .modal-share-btn { right: 2.6rem; }
-  .modal-pres-btn  { right: 5.5rem; }
+  /* 모달 버튼 */
+  .modal-pres-btn { left: 0.75rem; top: 0.75rem; }
 
   /* 참고 논문 목록 모바일 */
   .reference-list li { font-size: 0.8rem; }
@@ -1273,7 +1272,7 @@ main {
 /* ── 전체화면 갤러리 버튼 ── */
 .gallery-fs-btn {
   position: absolute;
-  top: 0.6rem;
+  bottom: 0.6rem;
   right: 0.6rem;
   background: rgba(0,0,0,0.45);
   border: none;
@@ -1289,6 +1288,26 @@ main {
   transition: background 0.15s;
 }
 .gallery-fs-btn:hover { background: rgba(0,0,0,0.7); }
+
+.gallery-share-btn {
+  position: absolute;
+  bottom: 0.6rem;
+  left: 0.6rem;
+  background: rgba(0,0,0,0.45);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  width: 34px;
+  height: 34px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.gallery-share-btn:hover { background: rgba(0,0,0,0.7); }
 
 /* ── 전체화면 오버레이 ── */
 #fs-gallery {
@@ -1364,7 +1383,7 @@ main {
 .modal-pres-btn {
   position: absolute;
   top: 0.9rem;
-  right: 5.5rem;
+  left: 0.9rem;
   background: rgba(37,99,235,0.75);
   color: #fff;
   border: none;

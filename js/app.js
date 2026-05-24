@@ -230,6 +230,7 @@ function renderGallery() {
       ${currentPhotos.length > 1 ? `
         <button class="gallery-nav prev" onclick="changePhoto(-1)">&#8249;</button>
         <button class="gallery-nav next" onclick="changePhoto(1)">&#8250;</button>` : ''}
+      <button class="gallery-share-btn" onclick="_copyShareLink()" title="링크 복사">🔗</button>
       <button class="gallery-fs-btn" onclick="_openFsGallery()" title="전체화면">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h4v1.5H2.5V4H1V1zm10 0h4v3h-1.5V2.5H11V1zM1 12h1.5v1.5H4V15H1v-3zm10.5 1.5H13V12h1.5v3H11v-1.5z"/></svg>
       </button>
