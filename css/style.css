@@ -1146,6 +1146,7 @@ main {
 
   /* 모달 버튼 */
   .modal-pres-btn { left: 0.75rem; top: 0.75rem; }
+  .modal-focus-btn { right: 2.6rem; top: 0.75rem; }
 
   /* 참고 논문 목록 모바일 */
   .reference-list li { font-size: 0.8rem; }
@@ -1434,6 +1435,40 @@ main {
   z-index: 10;
 }
 .modal-pres-btn:hover { background: rgba(37,99,235,1); }
+
+/* ── 집중 모드 버튼 ── */
+.modal-focus-btn {
+  position: absolute;
+  top: 0.9rem;
+  right: 2.8rem;
+  background: rgba(15,23,42,0.35);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+}
+.modal-focus-btn:hover { background: rgba(15,23,42,0.65); }
+
+/* ── 집중 모드 ── */
+body.focus-mode header { display: none; }
+body.focus-mode .modal-overlay {
+  padding: 0;
+  align-items: stretch;
+}
+body.focus-mode .modal {
+  max-width: 100%;
+  border-radius: 0;
+  border: none;
+  min-height: 100dvh;
+}
 
 /* ── 발표 모드 ── */
 #pres-overlay {

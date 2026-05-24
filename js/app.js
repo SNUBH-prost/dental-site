@@ -192,6 +192,15 @@ function openModal(id, type) {
   }
   renderGallery();
 
+  // OG 메타 동적 업데이트 (공유 시 미리보기)
+  const ogImg = (item.photos && item.photos[0]) ? item.photos[0].url
+    : 'https://snubh-prost.github.io/dental-site/icons/icon-192.png';
+  document.getElementById('og-title').setAttribute('content', item.title + ' — 치과 임상 자료실');
+  document.getElementById('og-desc').setAttribute('content', item.summary || item.description?.slice(0,100) || '');
+  document.getElementById('og-image').setAttribute('content', ogImg);
+  document.getElementById('og-url').setAttribute('content', location.href);
+  document.title = item.title + ' — 치과 임상 자료실';
+
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
   if (!_isPopState) {
@@ -200,9 +209,19 @@ function openModal(id, type) {
   }
 }
 
+function _toggleFocusMode() {
+  const on = document.body.classList.toggle('focus-mode');
+  document.getElementById('modal-focus-btn').textContent = on ? '⤡' : '⤢';
+}
+
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
+  document.body.classList.remove('focus-mode');
+  document.getElementById('modal-focus-btn').textContent = '⤢';
   document.body.style.overflow = '';
+  document.title = '치과 임상 자료실';
+  document.getElementById('og-title').setAttribute('content', '치과 임상 자료실');
+  document.getElementById('og-image').setAttribute('content', 'https://snubh-prost.github.io/dental-site/icons/icon-192.png');
   if (_modalPushed) {
     _modalPushed = false;
     history.back();
@@ -390,6 +409,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (document.getElementById('modal-overlay').classList.contains('open')) {
       if (e.key === 'ArrowLeft')  changePhoto(-1);
       if (e.key === 'ArrowRight') changePhoto(1);
+    }
+    const tag = document.activeElement.tagName;
+    if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA') {
+      e.preventDefault();
+      _openSearch();
     }
   });
 
