@@ -14,12 +14,12 @@ const db = firebase.firestore();
 })();
 
 const DEPARTMENTS = [
-  { id: "fixed",   name: "고정성",   icon: "🦷" },
-  { id: "implant", name: "임플란트", icon: "⚙️" },
-  { id: "rpd",     name: "RPD",      icon: "🔩" },
-  { id: "cd",      name: "CD",       icon: "😁" },
-  { id: "materials", name: "재료",   icon: "🧪" },
-  { id: "qna",     name: "Q&A",      icon: "💬" }
+  { id: "fixed",     name: "고정성",   icon: "🦷" },
+  { id: "implant",   name: "임플란트", icon: "⚙️" },
+  { id: "rpd",       name: "RPD",      iconImg: "/dental-site/icons/icon-rpd.svg" },
+  { id: "cd",        name: "CD",       iconImg: "/dental-site/icons/icon-cd.svg" },
+  { id: "materials", name: "재료",     icon: "🧪" },
+  { id: "qna",       name: "Q&A",      icon: "💬" }
 ];
 
 let allCases = [];
@@ -71,9 +71,12 @@ function renderHome() {
   const grid = document.getElementById('dept-grid-home');
   grid.innerHTML = DEPARTMENTS.map(d => {
     const count = allContents.filter(c => c.department === d.id).length;
+    const iconHtml = d.iconImg
+      ? `<img src="${d.iconImg}" alt="${d.name}" style="width:2rem;height:2rem;object-fit:contain;">`
+      : d.icon;
     return `
       <div class="dept-card" onclick="showPage('dept-${d.id}')">
-        <div class="icon">${d.icon}</div>
+        <div class="icon">${iconHtml}</div>
         <div class="name">${d.name}</div>
         <div class="count">자료 ${count}건</div>
       </div>`;

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Metal framework bar -->
+  <path d="M8 32 Q8 14 32 14 Q56 14 56 32" fill="none" stroke="#9e9e9e" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Left clasp -->
+  <path d="M8 32 C8 38 12 42 16 40 C20 38 20 32 16 30" fill="none" stroke="#9e9e9e" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Right clasp -->
+  <path d="M56 32 C56 38 52 42 48 40 C44 38 44 32 48 30" fill="none" stroke="#9e9e9e" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Partial gum base (center only) -->
+  <path d="M20 42 C20 34 26 30 32 30 C38 30 44 34 44 42 Z" fill="#f28b82"/>
+  <!-- 2 central teeth only -->
+  <rect x="23" y="32" width="8"  height="13" rx="2.5" fill="#fff" stroke="#e0e0e0" stroke-width="1"/>
+  <rect x="33" y="32" width="8"  height="13" rx="2.5" fill="#fff" stroke="#e0e0e0" stroke-width="1"/>
+  <line x1="31" y1="32" x2="31" y2="45" stroke="#e0e0e0" stroke-width="0.5"/>
+</svg>
