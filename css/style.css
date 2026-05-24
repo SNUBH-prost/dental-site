@@ -998,11 +998,9 @@ main {
   font-size: 0.88rem;
   font-weight: 500;
   color: var(--text);
-  white-space: normal;
+  white-space: nowrap;
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
 }
 .card-grid.list-view .card-summary { display: none; }
 .card-grid.list-view .modal-tags { display: none; }
