@@ -361,10 +361,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  window.addEventListener('scroll', () => {
-    const btn = document.getElementById('scroll-top-btn');
-    if (btn) btn.classList.toggle('visible', window.scrollY > 150);
-  }, { passive: true });
 
   firebase.auth().onAuthStateChanged(user => {
     isAdmin = !!user;
