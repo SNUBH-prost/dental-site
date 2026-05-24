@@ -966,8 +966,8 @@ main {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.35rem 0.9rem;
+  gap: 0.5rem;
+  padding: 0.22rem 0.9rem;
   border-radius: 0;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -1009,7 +1009,7 @@ main {
   align-self: center;
   margin-top: 0; gap: 0.3rem;
 }
-.card-grid.list-view .card-admin-btn { padding: 0.3rem 0.45rem; font-size: 1rem; line-height: 1; border-radius: 8px; }
+.card-grid.list-view .card-admin-btn { padding: 0.15rem 0.3rem; font-size: 0.85rem; line-height: 1; border-radius: 6px; }
 .card-grid.list-view .btn-label { display: none; }
 .card-grid.list-view .card-meta {
   grid-column: 1 / 3; grid-row: 2;
