@@ -1009,7 +1009,8 @@ main {
 .card-grid.list-view .card-admin-row {
   grid-column: 3; grid-row: 1 / 3;
   align-self: center;
-  margin-top: 0; gap: 0.3rem;
+  flex-direction: column;
+  margin-top: 0; gap: 0.25rem;
 }
 .card-grid.list-view .card-admin-btn { padding: 0.15rem 0.3rem; font-size: 0.85rem; line-height: 1; border-radius: 6px; }
 .card-grid.list-view .btn-label { display: none; }
