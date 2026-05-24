@@ -299,6 +299,16 @@ document.addEventListener('click', function(e) {
   if (!e.target.closest('#nav-group-dept')) closeDeptMenu();
 });
 
+// 드롭다운 항목 클릭 → 페이지 이동 (이벤트 위임)
+document.getElementById('nav-group-dept').addEventListener('click', function(e) {
+  const link = e.target.closest('a[data-page]');
+  if (!link) return;
+  e.preventDefault();
+  e.stopPropagation();
+  closeDeptMenu();
+  showPage(link.dataset.page);
+});
+
 // ── 모바일 드로어 ──
 function toggleMobileMenu() {
   const isOpen = document.getElementById('mobile-drawer').classList.contains('open');
@@ -308,6 +318,7 @@ function toggleMobileMenu() {
   document.body.style.overflow = isOpen ? '' : 'hidden';
 }
 
+
 // ── 진료과 버튼 active 표시 ──
 const _origShowPage = showPage;
 showPage = function(pageId) {
@@ -316,6 +327,14 @@ showPage = function(pageId) {
   const btn = document.getElementById('dept-btn');
   if (btn) btn.classList.toggle('active', isDept);
 };
+
+// 상단 nav 직접 링크 (홈, 임상 케이스) 이벤트 위임
+document.getElementById('main-nav').addEventListener('click', function(e) {
+  const link = e.target.closest('a[data-page]');
+  if (!link || link.closest('.nav-group-panel')) return; // 드롭다운은 별도 처리
+  e.preventDefault();
+  showPage(link.dataset.page);
+});
 </script>
 
 <script>
