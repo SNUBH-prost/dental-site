@@ -26,6 +26,7 @@ let allCases = [];
 let allContents = [];
 let currentPhotos = [];
 let currentPhotoIndex = 0;
+let _currentModalItem = null;
 let isAdmin = false;
 let _bookmarks = new Set(JSON.parse(localStorage.getItem('dental-bm') || '[]'));
 let _showBmOnly = false;
@@ -166,6 +167,7 @@ function openModal(id, type) {
     ? allCases.find(c => c.id === id)
     : allContents.find(c => c.id === id);
   if (!item) return;
+  _currentModalItem = { item, type };
 
   const dept = DEPARTMENTS.find(d => d.id === item.department);
   currentPhotos = item.photos || [];
@@ -368,6 +370,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target.id === 'editor-overlay') closeEditor();
   });
   document.addEventListener('keydown', e => {
+    const presOpen = document.getElementById('pres-overlay')?.classList.contains('open');
+    if (presOpen) {
+      if (e.key === 'Escape') _closePresentation();
+      if (e.key === 'ArrowLeft')  _presGo(-1);
+      if (e.key === 'ArrowRight') _presGo(1);
+      return;
+    }
     if (e.key === 'Escape') { closeModal(); closeEditor(); _annCancel(); }
     if (document.getElementById('modal-overlay').classList.contains('open')) {
       if (e.key === 'ArrowLeft')  changePhoto(-1);
@@ -1582,6 +1591,132 @@ function _setupFsSwipe(ov) {
     if (cancelled) { cancelled = false; return; }
     const dx = e.changedTouches[0].clientX - sx;
     if (Math.abs(dx) > 60) _fsChangePhoto(dx < 0 ? 1 : -1);
+  }, { passive: true });
+}
+
+// ── 발표 모드 ─────────────────────────────────────────────────
+let _presSlides = [], _presIdx = 0;
+
+function _openPresentation() {
+  if (!_currentModalItem) return;
+  const { item } = _currentModalItem;
+  _presSlides = _buildPresSlides(item);
+  _presIdx = 0;
+
+  let ov = document.getElementById('pres-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'pres-overlay';
+    ov.innerHTML = `
+      <div class="pres-header">
+        <button class="pres-close-btn" onclick="_closePresentation()">✕ 나가기</button>
+        <span id="pres-counter" class="pres-counter-txt"></span>
+      </div>
+      <div class="pres-slide-area" id="pres-slide"></div>
+      <div class="pres-footer">
+        <button class="pres-nav-btn" id="pres-prev" onclick="_presGo(-1)">&#8249;</button>
+        <div class="pres-dots" id="pres-dots"></div>
+        <button class="pres-nav-btn" id="pres-next" onclick="_presGo(1)">&#8250;</button>
+      </div>`;
+    document.body.appendChild(ov);
+    _setupPresSwipe(ov);
+  }
+  _renderPresSlide();
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _buildPresSlides(item) {
+  const dept = DEPARTMENTS.find(d => d.id === item.department);
+  const slides = [{ type: 'cover', item, dept }];
+  (item.photos || []).forEach((p, i) =>
+    slides.push({ type: 'photo', photo: p, photoIdx: i + 1, photoTotal: (item.photos||[]).length })
+  );
+  if (item.description?.trim()) slides.push({ type: 'desc', text: item.description });
+  const refs = (item.references || []).filter(r => r.title);
+  if (refs.length) slides.push({ type: 'refs', refs });
+  return slides;
+}
+
+function _renderPresSlide() {
+  const slide = _presSlides[_presIdx];
+  const el    = document.getElementById('pres-slide');
+  if (!el || !slide) return;
+
+  document.getElementById('pres-counter').textContent = `${_presIdx + 1} / ${_presSlides.length}`;
+  document.getElementById('pres-prev').disabled = _presIdx === 0;
+  document.getElementById('pres-next').disabled = _presIdx === _presSlides.length - 1;
+
+  const dotsEl = document.getElementById('pres-dots');
+  if (_presSlides.length <= 14) {
+    dotsEl.innerHTML = _presSlides.map((_, i) =>
+      `<span class="pres-dot${i === _presIdx ? ' active' : ''}" onclick="_presJump(${i})"></span>`
+    ).join('');
+  } else {
+    dotsEl.innerHTML = '';
+  }
+
+  el.className = 'pres-slide-area pres-type-' + slide.type;
+  el.style.animation = 'none';
+  requestAnimationFrame(() => { el.style.animation = ''; });
+
+  if (slide.type === 'cover') {
+    const tags = (slide.item.tags || []).map(t =>
+      `<span class="pres-tag">${_esc(t)}</span>`).join('');
+    el.innerHTML = `
+      <div class="pres-cover-dept">${slide.dept ? slide.dept.name : ''}</div>
+      <h1 class="pres-cover-title">${_esc(slide.item.title)}</h1>
+      <div class="pres-cover-date">${slide.item.date || ''}</div>
+      ${slide.item.summary ? `<p class="pres-cover-summary">${_esc(slide.item.summary)}</p>` : ''}
+      ${tags ? `<div class="pres-cover-tags">${tags}</div>` : ''}`;
+  } else if (slide.type === 'photo') {
+    el.innerHTML = `
+      <div class="pres-photo-wrap">
+        <img src="${slide.photo.url}" alt="${_esc(slide.photo.caption || '')}">
+      </div>
+      ${slide.photo.caption ? `<div class="pres-caption">${_esc(slide.photo.caption)}</div>` : ''}
+      ${slide.photoTotal > 1 ? `<div class="pres-photo-num">사진 ${slide.photoIdx} / ${slide.photoTotal}</div>` : ''}`;
+  } else if (slide.type === 'desc') {
+    el.innerHTML = `<div class="pres-desc-inner">${marked.parse(slide.text)}</div>`;
+  } else if (slide.type === 'refs') {
+    el.innerHTML = `
+      <div class="pres-section-label">참고 논문</div>
+      <ol class="pres-refs-list">${slide.refs.map(r => `
+        <li>
+          ${r.authors ? `<span class="pres-ref-authors">${_esc(r.authors)}</span> ` : ''}
+          ${r.year ? `(${r.year}). ` : ''}
+          <span class="pres-ref-title">${_esc(r.title)}</span>
+          ${r.journal ? ` <em>${_esc(r.journal)}</em>` : ''}
+          ${r.doi ? ` <a href="https://doi.org/${r.doi}" target="_blank" class="pres-doi">DOI ↗</a>` : ''}
+        </li>`).join('')}
+      </ol>`;
+  }
+}
+
+function _presGo(dir) {
+  const next = _presIdx + dir;
+  if (next < 0 || next >= _presSlides.length) return;
+  _presIdx = next;
+  _renderPresSlide();
+}
+
+function _presJump(i) {
+  _presIdx = i;
+  _renderPresSlide();
+}
+
+function _closePresentation() {
+  document.getElementById('pres-overlay')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function _setupPresSwipe(ov) {
+  let sx = 0;
+  ov.addEventListener('touchstart', e => { if (e.touches.length === 1) sx = e.touches[0].clientX; }, { passive: true });
+  ov.addEventListener('touchend', e => {
+    if (e.touches.length > 0) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) > 55) _presGo(dx < 0 ? 1 : -1);
   }, { passive: true });
 }
 
