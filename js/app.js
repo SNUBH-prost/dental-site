@@ -34,6 +34,7 @@ const DEPARTMENTS = [
 let allCases = [];
 let allContents = [];
 let currentPhotos = [];
+let _photoPreloadCache = []; // GC 방지용 참조 보관
 let currentPhotoIndex = 0;
 let _currentModalItem = null;
 let isAdmin = false;
@@ -205,8 +206,12 @@ function openModal(id, type) {
   const dept = DEPARTMENTS.find(d => d.id === item.department);
   currentPhotos = item.photos || [];
   currentPhotoIndex = 0;
-  // 케이스 열자마자 모든 사진 백그라운드 프리로드
-  currentPhotos.forEach(p => { const i = new Image(); i.src = p.url; });
+  // 모든 사진 프리로드 — 배열에 저장해서 GC로 중단되지 않게
+  _photoPreloadCache = currentPhotos.map(p => {
+    const img = new Image();
+    img.src = p.url;
+    return img;
+  });
 
   document.getElementById('modal-dept').textContent  = dept ? dept.name : '';
   document.getElementById('modal-title').textContent = item.title;
