@@ -967,7 +967,7 @@ main {
   flex-direction: row;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.22rem 0.9rem;
+  padding: 0.4rem 0.9rem;
   border-radius: 0;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
@@ -979,49 +979,55 @@ main {
 .card-grid.list-view .card-body {
   flex: 1;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto;
   grid-template-rows: auto auto;
-  column-gap: 0.45rem;
-  row-gap: 0.05rem;
+  column-gap: 0.6rem;
+  row-gap: 0.15rem;
   min-width: 0;
   align-items: center;
 }
-.card-grid.list-view .card-dept {
-  grid-column: 1; grid-row: 1;
-  font-size: 0.65rem;
-  color: var(--primary);
-  font-weight: 600;
-  white-space: nowrap;
-  line-height: 1.2;
-}
+.card-grid.list-view .card-dept { display: none; }
 .card-grid.list-view .card-title {
-  grid-column: 2; grid-row: 1;
-  font-size: 0.82rem;
-  font-weight: 500;
+  grid-column: 1; grid-row: 1;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 .card-grid.list-view .card-summary { display: none; }
 .card-grid.list-view .modal-tags { display: none; }
 .card-grid.list-view .card-admin-row {
-  grid-column: 3; grid-row: 1 / 3;
+  grid-column: 2; grid-row: 1 / 3;
   align-self: center;
-  flex-direction: column;
-  margin-top: 0; gap: 0.25rem;
+  flex-direction: row;
+  margin-top: 0;
+  gap: 0.2rem;
 }
-.card-grid.list-view .card-admin-btn { padding: 0.15rem 0.3rem; font-size: 0.85rem; line-height: 1; border-radius: 6px; }
+.card-grid.list-view .card-admin-btn {
+  padding: 0.2rem 0.25rem;
+  font-size: 0.9rem;
+  line-height: 1;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+.card-grid.list-view .card-admin-btn:hover { opacity: 1; background: var(--border); }
+.card-grid.list-view .card-admin-btn.edit { color: var(--primary); }
+.card-grid.list-view .card-admin-btn.del  { color: #ef4444; }
 .card-grid.list-view .btn-label { display: none; }
 .card-grid.list-view .card-meta {
-  grid-column: 1 / 3; grid-row: 2;
-  font-size: 0.65rem;
+  grid-column: 1; grid-row: 2;
+  font-size: 0.72rem;
   color: var(--text-muted);
   display: flex;
   gap: 0.4rem;
   white-space: nowrap;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 .card-grid.list-view .card-bm-btn {
   position: static;
