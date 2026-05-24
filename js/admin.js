@@ -32,6 +32,7 @@ let contentTags = [];
 
 // ── Auth ──────────────────────────────────────────────────────────
 auth.onAuthStateChanged(user => {
+  document.getElementById('auth-loading').style.display = 'none';
   if (user) {
     document.getElementById('login-screen').style.display  = 'none';
     document.getElementById('admin-screen').style.display  = 'block';

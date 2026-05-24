@@ -4,9 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>관리자 패널 - 치과 임상 자료실</title>
-  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/admin.css?v=2">
+  <style>#login-screen,#admin-screen{display:none}</style>
 </head>
 <body>
+
+<!-- ── 로딩 ── -->
+<div id="auth-loading" class="login-wrap">
+  <div style="text-align:center;color:#fff">
+    <div class="spinner" style="border-color:rgba(255,255,255,0.3);border-top-color:#fff;width:36px;height:36px;border-width:3px;margin:0 auto 1rem;"></div>
+    <div style="font-size:0.9rem;opacity:0.8">로딩 중…</div>
+  </div>
+</div>
 
 <!-- ── 로그인 ── -->
 <div id="login-screen" class="login-wrap">
