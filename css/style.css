@@ -513,6 +513,7 @@ main {
   cursor: pointer;
   border-radius: 6px;
   transition: background 0.15s;
+  touch-action: manipulation;
 }
 
 .gallery-nav:hover { background: rgba(255,255,255,0.25); }
@@ -542,6 +543,7 @@ main {
   object-fit: cover;
   border-radius: 4px;
   cursor: pointer;
+  touch-action: manipulation;
   opacity: 0.55;
   transition: opacity 0.15s;
   flex-shrink: 0;
@@ -1635,6 +1637,7 @@ body.focus-mode .modal {
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: manipulation;
   transition: background 0.15s;
   line-height: 1;
   flex-shrink: 0;
