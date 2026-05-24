@@ -205,6 +205,8 @@ function openModal(id, type) {
   const dept = DEPARTMENTS.find(d => d.id === item.department);
   currentPhotos = item.photos || [];
   currentPhotoIndex = 0;
+  // 케이스 열자마자 모든 사진 백그라운드 프리로드
+  currentPhotos.forEach(p => { const i = new Image(); i.src = p.url; });
 
   document.getElementById('modal-dept').textContent  = dept ? dept.name : '';
   document.getElementById('modal-title').textContent = item.title;
