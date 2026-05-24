@@ -715,15 +715,18 @@ async function _edPubMedSearch(idx) {
   if (btn) { btn.innerHTML = '<span class="ed-spinner"></span> 검색 중...'; btn.disabled = true; }
   if (resultsEl) resultsEl.innerHTML = '';
 
+  const _pmParams = '&tool=dental-site&email=admin@dental-site.app';
   try {
-    const searchRes = await fetch(`${_PUBMED}esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmax=6&retmode=json`);
+    const searchRes = await fetch(`${_PUBMED}esearch.fcgi?db=pubmed&retmax=6&retmode=json${_pmParams}&term=${encodeURIComponent(query)}`);
+    if (!searchRes.ok) throw new Error(`HTTP ${searchRes.status}`);
     const searchData = await searchRes.json();
-    const ids = searchData.esearchresult.idlist || [];
+    const ids = (searchData.esearchresult || {}).idlist || [];
     if (!ids.length) { _edToast('검색 결과가 없습니다.', 'error'); return; }
 
-    const sumRes = await fetch(`${_PUBMED}esummary.fcgi?db=pubmed&id=${ids.join(',')}&retmode=json`);
+    const sumRes = await fetch(`${_PUBMED}esummary.fcgi?db=pubmed&retmode=json${_pmParams}&id=${ids.join(',')}`);
+    if (!sumRes.ok) throw new Error(`HTTP ${sumRes.status}`);
     const sumData = await sumRes.json();
-    const items = ids.map(id => sumData.result[id]).filter(Boolean);
+    const items = ids.map(id => (sumData.result || {})[id]).filter(Boolean);
     _edPubMedCache[idx] = items;
 
     if (!resultsEl) return;
@@ -746,7 +749,8 @@ async function _edPubMedSearch(idx) {
     };
     setTimeout(() => document.addEventListener('click', close), 0);
   } catch(e) {
-    _edToast('PubMed 검색 실패. 네트워크를 확인하세요.', 'error');
+    console.error('[PubMed]', e);
+    _edToast('PubMed 검색 실패: ' + (e.message || '네트워크 오류'), 'error');
   } finally {
     if (btn) { btn.innerHTML = origText; btn.disabled = false; }
   }
@@ -778,7 +782,7 @@ async function _edSelectPubMed(idx, itemIdx) {
   // 초록 가져오기 → 한국어 번역
   _edToast('초록을 가져오는 중...');
   try {
-    const fetchRes = await fetch(`${_PUBMED}efetch.fcgi?db=pubmed&id=${item.uid}&retmode=xml`);
+    const fetchRes = await fetch(`${_PUBMED}efetch.fcgi?db=pubmed&retmode=xml&tool=dental-site&email=admin@dental-site.app&id=${item.uid}`);
     const xml = await fetchRes.text();
     const doc = new DOMParser().parseFromString(xml, 'text/xml');
     const parts = Array.from(doc.querySelectorAll('AbstractText'));
