@@ -636,3 +636,48 @@
   line-height: 1.5;
   white-space: nowrap;
 }
+
+/* ── 다크 모드 ── */
+[data-theme="dark"] .editor-panel { background: #1f2937; }
+
+[data-theme="dark"] .editor-panel .form-card { background: #111827; border-color: #374151; }
+[data-theme="dark"] .editor-panel input[type="text"],
+[data-theme="dark"] .editor-panel input[type="date"],
+[data-theme="dark"] .editor-panel select,
+[data-theme="dark"] .editor-panel textarea { background: #111827; color: #f9fafb; border-color: #374151; }
+[data-theme="dark"] .editor-panel .editor-toolbar { background: #1f2937; border-color: #374151; }
+[data-theme="dark"] .editor-panel .tb-btn { color: #f9fafb; background: #374151; border-color: #4b5563; }
+[data-theme="dark"] .editor-panel .tb-btn:hover { background: #4b5563; border-color: #6b7280; }
+[data-theme="dark"] .editor-panel .ref-block { background: #111827; border-color: #374151; }
+[data-theme="dark"] .editor-panel .tag-input-wrap { background: #111827; border-color: #374151; }
+[data-theme="dark"] .editor-panel .upload-zone { border-color: #374151; color: #9ca3af; }
+[data-theme="dark"] .editor-panel .section-label { color: #9ca3af; }
+[data-theme="dark"] #ed-size-picker { background: #1f2937; border-color: #374151; }
+[data-theme="dark"] #ed-size-picker .sp-preview { background: #111827; }
+[data-theme="dark"] #ed-size-picker .sp-btns button { background: #374151; color: #f9fafb; border-color: #4b5563; }
+[data-theme="dark"] #ed-size-picker .sp-btns button:hover { border-color: var(--primary); background: #1e3a5f; color: var(--primary); }
+[data-theme="dark"] #ed-size-picker .sp-close:hover { background: #374151; }
+[data-theme="dark"] .pubmed-results { background: #1f2937; border-color: #374151; }
+[data-theme="dark"] .pubmed-result-item:hover { background: #1e3a5f; }
+[data-theme="dark"] .pr-title { color: #f9fafb; }
+[data-theme="dark"] .pr-meta { color: #9ca3af; }
+
+@media (prefers-color-scheme: dark) {
+  .editor-panel { background: #1f2937; }
+  .editor-panel .form-card { background: #111827; border-color: #374151; }
+  .editor-panel input[type="text"],
+  .editor-panel input[type="date"],
+  .editor-panel select,
+  .editor-panel textarea { background: #111827; color: #f9fafb; border-color: #374151; }
+  .editor-panel .editor-toolbar { background: #1f2937; border-color: #374151; }
+  .editor-panel .tb-btn { color: #f9fafb; background: #374151; border-color: #4b5563; }
+  .editor-panel .tb-btn:hover { background: #4b5563; border-color: #6b7280; }
+  .editor-panel .ref-block { background: #111827; border-color: #374151; }
+  .editor-panel .tag-input-wrap { background: #111827; border-color: #374151; }
+  .editor-panel .upload-zone { border-color: #374151; color: #9ca3af; }
+  #ed-size-picker { background: #1f2937; border-color: #374151; }
+  #ed-size-picker .sp-preview { background: #111827; }
+  #ed-size-picker .sp-btns button { background: #374151; color: #f9fafb; border-color: #4b5563; }
+  .pubmed-results { background: #1f2937; border-color: #374151; }
+  .pubmed-result-item:hover { background: #1e3a5f; }
+}
