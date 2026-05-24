@@ -412,6 +412,7 @@ let _edId = null, _edType = null;
 let _edPhotos = [], _edTags = [], _edTeeth = [];
 // _edTeeth: [{n: 16, type: 'implant'}, ...]
 let _tcMultiSel = new Set(); // shift-선택 중인 치아 번호들
+let _tcDragging = false, _tcDragMoved = false;
 
 const TOOTH_TYPES = [
   { id: 'implant', label: '임플란트', color: '#2563eb' },
@@ -452,7 +453,72 @@ function _renderToothChartHTML(teeth, interactive) {
     </div>`).join('')}${badges}</div>`;
 }
 
+function _setupTcDrag() {
+  const wrap = document.getElementById('ed-tooth');
+  if (!wrap || wrap._dragSetup) return;
+  wrap._dragSetup = true;
+
+  function toothFromEl(el) {
+    const t = el && el.closest ? el.closest('.tc-tooth') : null;
+    return t ? +t.dataset.t : null;
+  }
+  function addToSel(n) {
+    if (!n) return;
+    const el = wrap.querySelector(`.tc-tooth[data-t="${n}"]`);
+    if (!_tcMultiSel.has(n)) { _tcMultiSel.add(n); if (el) el.classList.add('tc-multi'); }
+  }
+
+  wrap.addEventListener('mousedown', e => {
+    const n = toothFromEl(e.target);
+    if (!n) return;
+    e.preventDefault();
+    _tcDragging = true;
+    _tcDragMoved = false;
+  });
+
+  wrap.addEventListener('mouseover', e => {
+    if (!_tcDragging) return;
+    const n = toothFromEl(e.target);
+    if (!n) return;
+    _tcDragMoved = true;
+    _closeTcPicker();
+    addToSel(n);
+    _updateMultiBar();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (_tcDragging) {
+      _tcDragging = false;
+      if (_tcDragMoved && _tcMultiSel.size > 0) _updateMultiBar();
+    }
+  });
+
+  // Touch support
+  wrap.addEventListener('touchstart', e => {
+    const n = toothFromEl(e.target);
+    if (!n) return;
+    _tcDragging = true;
+    _tcDragMoved = false;
+  }, { passive: true });
+
+  wrap.addEventListener('touchmove', e => {
+    if (!_tcDragging) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const n = toothFromEl(el);
+    if (!n) return;
+    _tcDragMoved = true;
+    _closeTcPicker();
+    addToSel(n);
+    _updateMultiBar();
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => { _tcDragging = false; });
+}
+
 function _clickTooth(n, el, e) {
+  // 드래그 직후 click 이벤트 무시
+  if (_tcDragMoved) { _tcDragMoved = false; return; }
   // Shift+클릭: 다중 선택 모드
   if (e && e.shiftKey) {
     _closeTcPicker();
@@ -523,8 +589,9 @@ function _applyMultiType(typeId) {
   });
   _tcMultiSel.clear();
   _closeTcPicker();
-  _updateMultiBar();
   document.getElementById('ed-tooth').innerHTML = _renderToothChartHTML(_edTeeth, true);
+  _setupTcDrag();
+  _updateMultiBar();
 }
 
 function _updateMultiBar() {
@@ -554,6 +621,7 @@ function _setToothType(n, typeId) {
   _edTeeth = _edTeeth.filter(t => t.n !== n);
   if (typeId) _edTeeth.push({ n, type: typeId });
   document.getElementById('ed-tooth').innerHTML = _renderToothChartHTML(_edTeeth, true);
+  _setupTcDrag();
 }
 
 function _refreshTcBadges() {
@@ -657,6 +725,7 @@ function _renderEditorForm(data = {}) {
   _edRenderPhotoPreview();
   _edRenderTagChips();
   _edSetupTextareaDrop();
+  _setupTcDrag();
 }
 
 function _edFormHTML(d = {}) {
