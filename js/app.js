@@ -206,11 +206,13 @@ function openModal(id, type) {
   const dept = DEPARTMENTS.find(d => d.id === item.department);
   currentPhotos = item.photos || [];
   currentPhotoIndex = 0;
-  // 모든 사진 프리로드 — 배열에 저장해서 GC로 중단되지 않게
+  // 두 단계 프리로드: ① 빠른 프리뷰(즉시 표시용) ② 원본(품질)
   _photoPreloadCache = currentPhotos.map(p => {
-    const img = new Image();
-    img.src = p.url;
-    return img;
+    const preview = new Image();
+    preview.src = _cld(p.url, 'w_1200,q_auto,f_auto');
+    const orig = new Image();
+    orig.src = p.url;
+    return { preview, orig, url: p.url };
   });
 
   document.getElementById('modal-dept').textContent  = dept ? dept.name : '';
@@ -326,19 +328,33 @@ function gotoPhoto(i) {
 }
 
 function updateGallery() {
-  const p = currentPhotos[currentPhotoIndex];
-  document.getElementById('gallery-main-img').src = _cldGallery(p.url);
+  const p   = currentPhotos[currentPhotoIndex];
+  const idx = currentPhotoIndex;
+  const mainImg = document.getElementById('gallery-main-img');
+  const cache   = _photoPreloadCache[idx];
+
+  if (cache?.orig.complete && cache.orig.naturalWidth) {
+    // 원본 이미 다운로드 완료 → 바로 표시
+    mainImg.src = p.url;
+  } else {
+    // 프리뷰 즉시 표시 (이미 캐시됐거나 빠르게 로드됨)
+    if (cache?.preview.complete && cache.preview.naturalWidth) {
+      mainImg.src = cache.preview.src;
+    } else if (cache?.preview.src) {
+      mainImg.src = cache.preview.src; // 로딩 중이어도 설정 (브라우저가 표시해줌)
+    }
+    // 원본 로드 완료 시 교체
+    if (cache) {
+      cache.orig.onload = () => { if (currentPhotoIndex === idx) mainImg.src = p.url; };
+    }
+  }
+
   document.getElementById('gallery-caption').textContent = p.caption || '';
   document.getElementById('gallery-counter').textContent = `${currentPhotoIndex+1} / ${currentPhotos.length}`;
   document.querySelectorAll('.gallery-thumbs img').forEach((img,i) =>
     img.classList.toggle('active', i === currentPhotoIndex));
   const gm = document.querySelector('.gallery-main');
   if (gm) _placeAnnSVG(gm, p);
-  // 인접 사진 미리 로드
-  [-1, 1].forEach(d => {
-    const adj = currentPhotos[currentPhotoIndex + d];
-    if (adj) { const img = new Image(); img.src = _cldGallery(adj.url); }
-  });
 }
 
 // ── References ─────────────────────────────────────────────────
