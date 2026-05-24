@@ -71,6 +71,10 @@
   </div>
   <div class="drawer-nav">
     <a href="#" onclick="showPage('home');toggleMobileMenu()"><span class="di">🏠</span>홈</a>
+    <button class="drawer-theme-row theme-toggle" onclick="toggleTheme()" aria-label="다크 모드">
+      <span class="di theme-toggle-icon">🌙</span>
+      <span class="drawer-theme-label">다크 모드</span>
+    </button>
     <a href="#" onclick="showPage('cases');toggleMobileMenu()"><span class="di">📋</span>임상 케이스</a>
     <div class="drawer-section-label">부문별 자료</div>
     <a href="#" onclick="showPage('dept-fixed');toggleMobileMenu()"><span class="di">🦷</span>고정성</a>
@@ -81,10 +85,6 @@
     <a href="#" onclick="showPage('dept-qna');toggleMobileMenu()"><span class="di">💬</span>Q&amp;A</a>
     <div class="drawer-section-label">기타</div>
     <a href="admin.html?v=1"><span class="di">⚙</span>관리</a>
-    <button class="drawer-theme-row theme-toggle" onclick="toggleTheme()" aria-label="다크 모드">
-      <span class="di theme-toggle-icon">🌙</span>
-      <span class="drawer-theme-label">다크 모드</span>
-    </button>
   </div>
 </div>
 <div class="drawer-overlay" id="drawer-overlay" onclick="toggleMobileMenu()"></div>
