@@ -1671,19 +1671,24 @@ main {
 .tc-row { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
 .tc-jaw { font-size: 0.62rem; color: var(--text-muted); width: 1.8rem; flex-shrink: 0; text-align: right; }
 .tc-quad { display: flex; gap: 2px; }
-.tc-mid { width: 1px; background: var(--border); height: 18px; margin: 0 2px; flex-shrink: 0; }
+.tc-mid { width: 1px; background: var(--border); height: 22px; margin: 0 2px; flex-shrink: 0; }
 .tc-tooth {
-  width: 18px; height: 18px;
-  border: 1.5px solid var(--border); border-radius: 3px;
+  width: 24px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 3px;
+  font-size: 0.6rem; font-weight: 500; color: var(--text-muted);
   background: var(--surface); cursor: pointer;
-  transition: all 0.1s; user-select: none;
+  transition: all 0.1s; user-select: none; line-height: 1;
 }
-.tc-tooth:hover { border-color: var(--primary); background: var(--primary-pale); }
-.tc-tooth.tc-sel { background: var(--primary); border-color: var(--primary); }
-.tc-summary { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.15rem; }
-.tc-sum-row { display: flex; align-items: baseline; gap: 0.3rem; font-size: 0.72rem; }
-.tc-sum-label { font-weight: 700; min-width: 4rem; }
-.tc-sum-nums { color: var(--text); }
+.tc-tooth:hover { border-color: var(--primary); color: var(--primary); }
+.tc-tooth.tc-sel { background: var(--primary); color: #fff; border-color: var(--primary); }
+.tc-badges { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.5rem; }
+.tc-badge {
+  padding: 0.1rem 0.35rem; border-radius: 4px;
+  background: var(--primary-pale); color: var(--primary);
+  font-size: 0.72rem; font-weight: 600;
+  border: 1px solid var(--primary-light);
+}
 #ed-tooth .tc-tooth { cursor: pointer; }
 #modal-teeth .tc-tooth { cursor: default; }
 #modal-teeth .tc-tooth:hover { border-color: var(--border); color: var(--text-muted); }
@@ -1709,6 +1714,7 @@ main {
 /* ── 치식 다중선택 ── */
 .tc-tooth.tc-multi {
   border: 2px dashed var(--primary) !important;
+  color: var(--primary) !important;
   background: var(--primary-pale) !important;
 }
 #tc-multi-bar {
