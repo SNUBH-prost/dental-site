@@ -24,6 +24,13 @@
   <link rel="apple-touch-icon" href="/dental-site/icons/icon-192.png">
   <link rel="icon" type="image/svg+xml" href="/dental-site/icons/icon.svg">
 
+  <!-- 성능: CDN 사전 연결 -->
+  <link rel="preconnect" href="https://www.gstatic.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://firestore.googleapis.com">
+  <link rel="dns-prefetch" href="https://www.gstatic.com">
+  <link rel="dns-prefetch" href="https://firestore.googleapis.com">
+
   <link rel="stylesheet" href="css/style.css?v=49">
   <link rel="stylesheet" href="css/editor.css?v=24">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
@@ -290,70 +297,65 @@
 </div>
 
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="js/firebase-config.js?v=21"></script>
-<script src="js/cloudinary-config.js?v=21"></script>
-<script src="js/app.js?v=40"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script defer src="js/firebase-config.js?v=21"></script>
+<script defer src="js/cloudinary-config.js?v=21"></script>
+<script defer src="js/app.js?v=41"></script>
 <script>
-// ── 드롭다운 ──
-function toggleDeptMenu(e) {
-  e.stopPropagation();
-  document.getElementById('nav-group-dept').classList.toggle('open');
-}
-function closeDeptMenu() {
-  document.getElementById('nav-group-dept').classList.remove('open');
-}
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('#nav-group-dept')) closeDeptMenu();
-});
-
-// 드롭다운 항목 클릭 → 페이지 이동 (이벤트 위임)
-document.getElementById('nav-group-dept').addEventListener('click', function(e) {
-  const link = e.target.closest('a[data-page]');
-  if (!link) return;
-  e.preventDefault();
-  e.stopPropagation();
-  closeDeptMenu();
-  showPage(link.dataset.page);
-});
-
-// ── 모바일 드로어 ──
-function toggleMobileMenu() {
-  const isOpen = document.getElementById('mobile-drawer').classList.contains('open');
-  document.getElementById('mobile-drawer').classList.toggle('open');
-  document.getElementById('drawer-overlay').classList.toggle('open');
-  document.getElementById('hamburger').classList.toggle('active');
-  document.body.style.overflow = isOpen ? '' : 'hidden';
-}
-
-
-// ── 진료과 버튼 active 표시 ──
-const _origShowPage = showPage;
-showPage = function(pageId) {
-  _origShowPage(pageId);
-  const isDept = pageId.startsWith('dept-');
-  const btn = document.getElementById('dept-btn');
-  if (btn) btn.classList.toggle('active', isDept);
-};
-
-// 상단 nav 직접 링크 (홈, 임상 케이스) 이벤트 위임
-document.getElementById('main-nav').addEventListener('click', function(e) {
-  const link = e.target.closest('a[data-page]');
-  if (!link || link.closest('.nav-group-panel')) return; // 드롭다운은 별도 처리
-  e.preventDefault();
-  showPage(link.dataset.page);
-});
-</script>
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/dental-site/sw.js').catch(() => {});
+// defer 스크립트 실행 후(DOMContentLoaded) 초기화
+document.addEventListener('DOMContentLoaded', function() {
+  // ── 드롭다운 ──
+  window.toggleDeptMenu = function(e) {
+    e.stopPropagation();
+    document.getElementById('nav-group-dept').classList.toggle('open');
+  };
+  window.closeDeptMenu = function() {
+    document.getElementById('nav-group-dept').classList.remove('open');
+  };
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#nav-group-dept')) window.closeDeptMenu();
   });
-}
+  document.getElementById('nav-group-dept').addEventListener('click', function(e) {
+    const link = e.target.closest('a[data-page]');
+    if (!link) return;
+    e.preventDefault();
+    e.stopPropagation();
+    window.closeDeptMenu();
+    showPage(link.dataset.page);
+  });
+
+  // ── 모바일 드로어 ──
+  window.toggleMobileMenu = function() {
+    const isOpen = document.getElementById('mobile-drawer').classList.contains('open');
+    document.getElementById('mobile-drawer').classList.toggle('open');
+    document.getElementById('drawer-overlay').classList.toggle('open');
+    document.getElementById('hamburger').classList.toggle('active');
+    document.body.style.overflow = isOpen ? '' : 'hidden';
+  };
+
+  // ── 진료과 버튼 active 표시 ──
+  const _origShowPage = showPage;
+  window.showPage = function(pageId) {
+    _origShowPage(pageId);
+    document.getElementById('dept-btn')?.classList.toggle('active', pageId.startsWith('dept-'));
+  };
+
+  // 상단 nav 직접 링크 이벤트 위임
+  document.getElementById('main-nav').addEventListener('click', function(e) {
+    const link = e.target.closest('a[data-page]');
+    if (!link || link.closest('.nav-group-panel')) return;
+    e.preventDefault();
+    showPage(link.dataset.page);
+  });
+
+  // Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/dental-site/sw.js').catch(() => {});
+  }
+});
 </script>
 </body>
 </html>

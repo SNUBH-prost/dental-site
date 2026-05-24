@@ -155,7 +155,7 @@ function cardHTML(item, type) {
   const deptName = dept ? dept.name : '';
   const firstPhoto = item.photos && item.photos[0];
   const thumb = firstPhoto
-    ? `<div class="card-thumb"><img src="${firstPhoto.url}" alt="" onerror="this.parentElement.innerHTML='<span>🦷</span>'"></div>`
+    ? `<div class="card-thumb"><img src="${firstPhoto.url}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span>🦷</span>'"></div>`
     : `<div class="card-thumb"><span>🦷</span></div>`;
   const tags = (item.tags || []).map(t =>
     `<span class="tag" onclick="event.stopPropagation();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
