@@ -468,20 +468,27 @@ function _setupTcDrag() {
     if (!_tcMultiSel.has(n)) { _tcMultiSel.add(n); if (el) el.classList.add('tc-multi'); }
   }
 
+  let _dragStartN = null;
+
   wrap.addEventListener('mousedown', e => {
     const n = toothFromEl(e.target);
     if (!n) return;
     e.preventDefault();
     _tcDragging = true;
     _tcDragMoved = false;
+    _dragStartN = n;
   });
 
   wrap.addEventListener('mouseover', e => {
     if (!_tcDragging) return;
     const n = toothFromEl(e.target);
     if (!n) return;
-    _tcDragMoved = true;
-    _closeTcPicker();
+    if (!_tcDragMoved) {
+      // 첫 이동 시 시작 치아도 포함
+      _tcDragMoved = true;
+      _closeTcPicker();
+      addToSel(_dragStartN);
+    }
     addToSel(n);
     _updateMultiBar();
   });
@@ -499,6 +506,7 @@ function _setupTcDrag() {
     if (!n) return;
     _tcDragging = true;
     _tcDragMoved = false;
+    _dragStartN = n;
   }, { passive: true });
 
   wrap.addEventListener('touchmove', e => {
@@ -507,8 +515,11 @@ function _setupTcDrag() {
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     const n = toothFromEl(el);
     if (!n) return;
-    _tcDragMoved = true;
-    _closeTcPicker();
+    if (!_tcDragMoved) {
+      _tcDragMoved = true;
+      _closeTcPicker();
+      addToSel(_dragStartN);
+    }
     addToSel(n);
     _updateMultiBar();
   }, { passive: true });
