@@ -388,6 +388,45 @@
   outline: 2px dashed var(--primary);
 }
 
+/* ── Split 미리보기 ── */
+.ed-split {
+  display: flex;
+  align-items: stretch;
+}
+.ed-split textarea {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+}
+.ed-preview-pane {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 0 8px 0;
+  padding: 0.85rem 1rem;
+  overflow-y: auto;
+  background: var(--surface);
+  font-size: 0.88rem;
+  line-height: 1.8;
+  min-height: 200px;
+  max-height: 520px;
+}
+.editor-panel .tb-btn.active {
+  background: var(--primary-pale);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+[data-theme="dark"] .ed-preview-pane {
+  background: #1f2937;
+  border-color: #374151;
+}
+@media (max-width: 600px) {
+  .ed-split-active { flex-direction: column; }
+  .ed-split-active textarea { border-radius: 0 !important; border-bottom: none; }
+  .ed-preview-pane { border-left: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; }
+}
+
 /* 이미지 크기 선택 팝업 */
 #ed-size-picker {
   position: fixed;

@@ -967,10 +967,16 @@ function _edFormHTML(d = {}) {
             <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('danger')" title="위험 박스" style="color:#7f1d1d">🚫 위험</button>
             <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('dl')" title="항목 목록">📋 항목</button>
             <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('details')" title="접이식 섹션">▶ 접기</button>
+            <div class="tb-sep"></div>
+            <button type="button" class="tb-btn" id="ed-preview-toggle" onclick="_edTogglePreview()" title="미리보기">👁 미리보기</button>
           </div>
-          <textarea id="ed-description" rows="10"
-            placeholder="케이스/자료 새세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
-            style="min-height:200px;border-top:none;border-radius:0 0 8px 8px"></textarea>
+          <div class="ed-split" id="ed-split">
+            <textarea id="ed-description" rows="10"
+              placeholder="케이스/자료 상세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
+              style="min-height:200px;border-top:none;border-radius:0 0 0 8px"
+              oninput="_edUpdatePreview()"></textarea>
+            <div class="ed-preview-pane modal-description" id="ed-preview-pane" style="display:none"></div>
+          </div>
           <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem">이미지를 텍스트 영역으로 드래그하면 현재 커서 위치에 자동 삽입됩니다.</div>
         </div>
         <div class="form-group full">
@@ -1329,6 +1335,27 @@ function _edHl(color) {
   const tag = `<mark style="background:${color}">${ta.value.slice(s,e) || '텍스트'}</mark>`;
   ta.value = ta.value.slice(0,s) + tag + ta.value.slice(e);
   ta.setSelectionRange(s + tag.length, s + tag.length); ta.focus();
+}
+
+function _edTogglePreview() {
+  const pane  = document.getElementById('ed-preview-pane');
+  const ta    = document.getElementById('ed-description');
+  const split = document.getElementById('ed-split');
+  const btn   = document.getElementById('ed-preview-toggle');
+  const on    = pane.style.display === 'none';
+  pane.style.display = on ? '' : 'none';
+  split.classList.toggle('ed-split-active', on);
+  ta.style.borderRadius = on ? '0' : '0 0 0 8px';
+  btn.classList.toggle('active', on);
+  if (on) _edUpdatePreview();
+}
+
+function _edUpdatePreview() {
+  const pane = document.getElementById('ed-preview-pane');
+  if (!pane || pane.style.display === 'none') return;
+  const val = document.getElementById('ed-description').value;
+  pane.innerHTML = marked.parse(val || '<span style="color:#94a3b8">미리보기가 여기에 표시됩니다.</span>');
+  _renderMath(pane);
 }
 
 function _edSnippet(type) {
