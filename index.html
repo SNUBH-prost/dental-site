@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>치과 임상 자료실</title>
 
+  <!-- OG / 소셜 공유 -->
+  <meta property="og:type"        content="website">
+  <meta property="og:site_name"   content="치과 임상 자료실">
+  <meta property="og:title"       id="og-title"       content="치과 임상 자료실">
+  <meta property="og:description" id="og-desc"        content="임상 케이스 및 각과별 참고 자료 공유 플랫폼">
+  <meta property="og:image"       id="og-image"       content="https://res.cloudinary.com/dg7aas4ky/image/upload/v1779695202/Gemini_Generated_Image_1rqxwu1rqxwu1rqx_bvsjst">
+  <meta property="og:url"         id="og-url"         content="https://snubh-prost.github.io/dental-site/">
+  <meta name="twitter:card" content="summary_large_image">
+
   <!-- PWA -->
   <link rel="manifest" href="/dental-site/manifest.json">
   <meta name="theme-color" content="#2563eb">
@@ -15,8 +24,15 @@
   <link rel="apple-touch-icon" href="/dental-site/icons/icon-192.png">
   <link rel="icon" type="image/svg+xml" href="/dental-site/icons/icon.svg">
 
-  <link rel="stylesheet" href="css/style.css?v=21">
-  <link rel="stylesheet" href="css/editor.css?v=22">
+  <!-- 성능: CDN 사전 연결 -->
+  <link rel="preconnect" href="https://www.gstatic.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://firestore.googleapis.com">
+  <link rel="dns-prefetch" href="https://www.gstatic.com">
+  <link rel="dns-prefetch" href="https://firestore.googleapis.com">
+
+  <link rel="stylesheet" href="css/style.css?v=57">
+  <link rel="stylesheet" href="css/editor.css?v=26">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
 <body>
@@ -37,9 +53,9 @@
         </button>
         <div class="nav-group-panel">
           <a href="javascript:void(0)" data-page="dept-fixed"     onclick="showPage('dept-fixed');closeDeptMenu()">🦷 고정성</a>
-          <a href="javascript:void(0)" data-page="dept-implant"   onclick="showPage('dept-implant');closeDeptMenu()"><img src="/dental-site/icons/icon-implant.svg" style="width:1.8em;height:1.8em;vertical-align:middle;margin-right:0.3em"> 임플란트</a>
-          <a href="javascript:void(0)" data-page="dept-rpd"       onclick="showPage('dept-rpd');closeDeptMenu()"><img src="/dental-site/icons/icon-rpd.svg" style="width:1.8em;height:1.8em;vertical-align:middle;margin-right:0.3em"> RPD</a>
-          <a href="javascript:void(0)" data-page="dept-cd"        onclick="showPage('dept-cd');closeDeptMenu()"><img src="/dental-site/icons/icon-cd.svg" style="width:1.8em;height:1.8em;vertical-align:middle;margin-right:0.3em"> CD</a>
+          <a href="javascript:void(0)" data-page="dept-implant"   onclick="showPage('dept-implant');closeDeptMenu()"><img src="/dental-site/icons/icon-implant.svg" class="nav-dept-icon"> 임플란트</a>
+          <a href="javascript:void(0)" data-page="dept-rpd"       onclick="showPage('dept-rpd');closeDeptMenu()"><img src="/dental-site/icons/icon-rpd.svg" class="nav-dept-icon"> RPD</a>
+          <a href="javascript:void(0)" data-page="dept-cd"        onclick="showPage('dept-cd');closeDeptMenu()"><img src="/dental-site/icons/icon-cd.svg" class="nav-dept-icon"> CD</a>
           <a href="javascript:void(0)" data-page="dept-materials" onclick="showPage('dept-materials');closeDeptMenu()">🧪 재료</a>
           <a href="javascript:void(0)" data-page="dept-qna"       onclick="showPage('dept-qna');closeDeptMenu()">💬 Q&amp;A</a>
         </div>
@@ -75,9 +91,9 @@
     <a href="javascript:void(0)" onclick="showPage('cases');toggleMobileMenu()"><span class="di">📋</span>임상 케이스</a>
     <div class="drawer-section-label">부문별 자료</div>
     <a href="javascript:void(0)" onclick="showPage('dept-fixed');toggleMobileMenu()"><span class="di">🦷</span>고정성</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-implant');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-implant.svg" style="width:1.5em;height:1.5em;display:block;"></span>임플란트</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-rpd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-rpd.svg" style="width:1.5em;height:1.5em;display:block;"></span>RPD</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-cd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-cd.svg" style="width:1.5em;height:1.5em;display:block;"></span>CD</a>
+    <a href="javascript:void(0)" onclick="showPage('dept-implant');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-implant.svg" class="drawer-dept-icon"></span>임플란트</a>
+    <a href="javascript:void(0)" onclick="showPage('dept-rpd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-rpd.svg" class="drawer-dept-icon"></span>RPD</a>
+    <a href="javascript:void(0)" onclick="showPage('dept-cd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-cd.svg" class="drawer-dept-icon"></span>CD</a>
     <a href="javascript:void(0)" onclick="showPage('dept-materials');toggleMobileMenu()"><span class="di">🧪</span>재료</a>
     <a href="javascript:void(0)" onclick="showPage('dept-qna');toggleMobileMenu()"><span class="di">💬</span>Q&amp;A</a>
     <div class="drawer-section-label">기타</div>
@@ -120,7 +136,7 @@
     <div class="dept-grid" id="dept-grid-home"></div>
     <div class="section-header">
       <div class="section-title">최근 임상 케이스</div>
-      <a href="javascript:void(0)" onclick="showPage('cases')" style="font-size:0.85rem;color:var(--primary-light);">전체 보기 →</a>
+      <a href="javascript:void(0)" onclick="showPage('cases')" style="font-size:0.85rem;color:var(--primary-light);">전체 보기</a>
     </div>
     <div class="card-grid" id="recent-cases"></div>
   </div>
@@ -132,7 +148,7 @@
     </div>
     <div class="toolbar">
       <input class="search-input" type="text" placeholder="케이스 검색..."
-        oninput="renderCases(this.value, document.getElementById('case-dept-filter').value)">
+        oninput="_renderCasesDebounced(this.value, document.getElementById('case-dept-filter').value)">
       <button id="bm-filter-btn" class="bm-filter-btn" onclick="toggleBookmarkFilter()">★ 북마크</button>
       <select class="filter-select" id="case-dept-filter"
         onchange="renderCases(document.querySelector('#page-cases .search-input').value, this.value)">
@@ -160,7 +176,7 @@
   <div id="page-dept-fixed" class="page">
     <div class="section-header"><div class="section-title">🦷 고정성</div></div>
     <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('fixed',this.value)">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('fixed',this.value)">
     </div>
     <div class="card-grid" id="dept-content-fixed"></div>
   </div>
@@ -169,7 +185,7 @@
   <div id="page-dept-implant" class="page">
     <div class="section-header"><div class="section-title"><img src="/dental-site/icons/icon-implant.svg" style="width:1.2em;height:1.2em;vertical-align:middle;margin-right:0.3em"> 임플란트</div></div>
     <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('implant',this.value)">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('implant',this.value)">
     </div>
     <div class="card-grid" id="dept-content-implant"></div>
   </div>
@@ -178,7 +194,7 @@
   <div id="page-dept-rpd" class="page">
     <div class="section-header"><div class="section-title"><img src="/dental-site/icons/icon-rpd.svg" style="width:1.2em;height:1.2em;vertical-align:middle;margin-right:0.3em"> RPD</div></div>
     <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('rpd',this.value)">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('rpd',this.value)">
     </div>
     <div class="card-grid" id="dept-content-rpd"></div>
   </div>
@@ -187,7 +203,7 @@
   <div id="page-dept-cd" class="page">
     <div class="section-header"><div class="section-title"><img src="/dental-site/icons/icon-cd.svg" style="width:1.2em;height:1.2em;vertical-align:middle;margin-right:0.3em"> CD</div></div>
     <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('cd',this.value)">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('cd',this.value)">
     </div>
     <div class="card-grid" id="dept-content-cd"></div>
   </div>
@@ -196,7 +212,7 @@
   <div id="page-dept-materials" class="page">
     <div class="section-header"><div class="section-title">🧪 재료</div></div>
     <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('materials',this.value)">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('materials',this.value)">
     </div>
     <div class="card-grid" id="dept-content-materials"></div>
   </div>
@@ -205,7 +221,7 @@
   <div id="page-dept-qna" class="page">
     <div class="section-header"><div class="section-title">💬 Q&amp;A</div></div>
     <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="filterDept('qna',this.value)">
+      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('qna',this.value)">
     </div>
     <div class="card-grid" id="dept-content-qna"></div>
   </div>
@@ -215,12 +231,14 @@
 <div id="modal-overlay" class="modal-overlay">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">✕</button>
-    <button class="modal-share-btn" onclick="_copyShareLink()" title="링크 복사">🔗</button>
+    <button class="modal-pres-btn" onclick="_openPresentation()" title="발표 모드">▶ 발표</button>
+    <button class="modal-focus-btn" id="modal-focus-btn" onclick="_toggleFocusMode()" title="집중 모드">⤢</button>
     <div id="gallery-section"></div>
     <div class="modal-body">
       <div class="modal-dept-tag" id="modal-dept"></div>
       <div class="modal-title" id="modal-title"></div>
       <div class="modal-date"   id="modal-date"></div>
+      <div id="modal-teeth" style="display:none;margin-bottom:1rem"></div>
       <div class="modal-section-label">설명</div>
       <div class="modal-description" id="modal-description"></div>
       <div class="modal-tags" id="modal-tags"></div>
@@ -229,11 +247,15 @@
         <ul class="reference-list" id="modal-refs"></ul>
       </div>
       <div class="page-bottom-nav">
+        <button onclick="printCase()">🖨 PDF 저장</button>
         <button onclick="document.getElementById('modal-overlay').scrollTo({top:0,behavior:'smooth'})">↑ 맨 위로</button>
       </div>
     </div>
   </div>
 </div>
+
+<!-- ── 인쇄 영역 ── -->
+<div id="print-area"></div>
 
 <!-- ── 인라인 에디터 ── -->
 <div id="editor-overlay" class="editor-overlay">
@@ -279,51 +301,68 @@
 </div>
 
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="js/firebase-config.js?v=21"></script>
-<script src="js/cloudinary-config.js?v=21"></script>
-<script src="js/app.js?v=22"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/marked@4/marked.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
+<script defer src="js/firebase-config.js?v=21"></script>
+<script defer src="js/cloudinary-config.js?v=21"></script>
+<script defer src="js/app.js?v=58"></script>
 <script>
-// ── 드롭다운 ──
-function toggleDeptMenu(e) {
-  e.stopPropagation();
-  document.getElementById('nav-group-dept').classList.toggle('open');
-}
-function closeDeptMenu() {
-  document.getElementById('nav-group-dept').classList.remove('open');
-}
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('#nav-group-dept')) closeDeptMenu();
-});
-
-// ── 모바일 드로어 ──
-function toggleMobileMenu() {
-  const isOpen = document.getElementById('mobile-drawer').classList.contains('open');
-  document.getElementById('mobile-drawer').classList.toggle('open');
-  document.getElementById('drawer-overlay').classList.toggle('open');
-  document.getElementById('hamburger').classList.toggle('active');
-  document.body.style.overflow = isOpen ? '' : 'hidden';
-}
-
-// ── 진료과 버튼 active 표시 ──
-const _origShowPage = showPage;
-showPage = function(pageId) {
-  _origShowPage(pageId);
-  const isDept = pageId.startsWith('dept-');
-  const btn = document.getElementById('dept-btn');
-  if (btn) btn.classList.toggle('active', isDept);
-};
-</script>
-
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/dental-site/sw.js').catch(() => {});
+// defer 스크립트 실행 후(DOMContentLoaded) 초기화
+document.addEventListener('DOMContentLoaded', function() {
+  // ── 드롭다운 ──
+  window.toggleDeptMenu = function(e) {
+    e.stopPropagation();
+    document.getElementById('nav-group-dept').classList.toggle('open');
+  };
+  window.closeDeptMenu = function() {
+    document.getElementById('nav-group-dept').classList.remove('open');
+  };
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#nav-group-dept')) window.closeDeptMenu();
   });
-}
+  document.getElementById('nav-group-dept').addEventListener('click', function(e) {
+    const link = e.target.closest('a[data-page]');
+    if (!link) return;
+    e.preventDefault();
+    e.stopPropagation();
+    window.closeDeptMenu();
+    showPage(link.dataset.page);
+  });
+
+  // ── 모바일 드로어 ──
+  window.toggleMobileMenu = function() {
+    const isOpen = document.getElementById('mobile-drawer').classList.contains('open');
+    document.getElementById('mobile-drawer').classList.toggle('open');
+    document.getElementById('drawer-overlay').classList.toggle('open');
+    document.getElementById('hamburger').classList.toggle('active');
+    document.body.style.overflow = isOpen ? '' : 'hidden';
+  };
+
+  // ── 진료과 버튼 active 표시 ──
+  const _origShowPage = showPage;
+  window.showPage = function(pageId) {
+    _origShowPage(pageId);
+    document.getElementById('dept-btn')?.classList.toggle('active', pageId.startsWith('dept-'));
+  };
+
+  // 상단 nav 직접 링크 이벤트 위임
+  document.getElementById('main-nav').addEventListener('click', function(e) {
+    const link = e.target.closest('a[data-page]');
+    if (!link || link.closest('.nav-group-panel')) return;
+    e.preventDefault();
+    showPage(link.dataset.page);
+  });
+
+  // Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/dental-site/sw.js').catch(() => {});
+  }
+});
 </script>
 </body>
 </html>

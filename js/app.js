@@ -2,13 +2,42 @@
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// ── Cloudinary URL 최적화 ─────────────────────────────────────
+function _cld(url, t) {
+  if (!url || !url.includes('/upload/')) return url;
+  return url.replace('/upload/', `/upload/${t}/`);
+}
+const _cldGallery = u => u;                                            // 갤러리 원본 유지
+const _cldThumb   = u => _cld(u, 'w_160,h_120,c_fill,q_auto,f_auto'); // 썸네일만 최적화
+const _cldCard    = u => _cld(u, 'w_480,h_280,c_fill,q_auto,f_auto'); // 카드
+
+// ── KaTeX 수식 렌더링 ─────────────────────────────────────────
+function _renderMath(el) {
+  if (!el || typeof renderMathInElement === 'undefined') return;
+  renderMathInElement(el, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true  },
+      { left: '$',  right: '$',  display: false },
+    ],
+    throwOnError: false,
+    output: 'html',
+  });
+}
+
 // ── marked 커스텀 렌더러 (이미지 크기) ───────────────────────
 (function setupMarked() {
   const renderer = new marked.Renderer();
   const sizeMap  = { sm: '30%', md: '50%', lg: '75%' };
-  renderer.image = (href, title, text) => {
-    const w = sizeMap[text] || '100%';
-    return `<img src="${href}" alt="${title || ''}" style="width:${w};display:block;border-radius:8px;margin:0.75rem 0;border:1px solid #e2e8f0;max-width:100%">`;
+  // marked v5+ 는 객체 인수, v4 이하는 (href, title, text) 개별 인수
+  renderer.image = function(hrefOrToken, title, text) {
+    let href, alt;
+    if (hrefOrToken && typeof hrefOrToken === 'object') {
+      href = hrefOrToken.href; alt = hrefOrToken.text;
+    } else {
+      href = hrefOrToken; alt = text;
+    }
+    const w = sizeMap[alt] || '100%';
+    return `<img src="${href}" alt="${alt || ''}" style="width:${w};display:block;border-radius:8px;margin:0.75rem 0;border:1px solid #e2e8f0;max-width:100%">`;
   };
   marked.setOptions({ renderer, breaks: true });
 })();
@@ -25,7 +54,9 @@ const DEPARTMENTS = [
 let allCases = [];
 let allContents = [];
 let currentPhotos = [];
+let _photoPreloadCache = []; // GC 방지 + decode() 선디코딩
 let currentPhotoIndex = 0;
+let _currentModalItem = null;
 let isAdmin = false;
 let _bookmarks = new Set(JSON.parse(localStorage.getItem('dental-bm') || '[]'));
 let _showBmOnly = false;
@@ -36,7 +67,40 @@ let _isPopState = false;
 let _modalPushed = false;
 
 // ── 데이터 로드 ───────────────────────────────────────────────
+const _CACHE_KEY_CASES    = 'dental_cache_cases';
+const _CACHE_KEY_CONTENTS = 'dental_cache_contents';
+const _CACHE_KEY_TS       = 'dental_cache_ts';
+const _CACHE_TTL          = 3 * 60 * 1000; // 3분
+
+// 간단한 debounce 유틸
+function _debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+function _renderAll() {
+  renderHome();
+  renderCases();
+  renderDeptPages();
+  _injectAdminControls();
+  _injectPageBottomBtns();
+}
+
 async function loadData() {
+  const now = Date.now();
+  try {
+    const cc = localStorage.getItem(_CACHE_KEY_CASES);
+    const ct = localStorage.getItem(_CACHE_KEY_CONTENTS);
+    const ts = parseInt(localStorage.getItem(_CACHE_KEY_TS) || '0');
+    if (cc && ct) {
+      allCases    = JSON.parse(cc);
+      allContents = JSON.parse(ct);
+      _renderAll();
+      // 캐시가 TTL 이내이면 Firebase 호출 생략
+      if (now - ts < _CACHE_TTL) return;
+    }
+  } catch(e) {}
+
   const [casesSnap, contentsSnap] = await Promise.all([
     db.collection("cases").orderBy("date", "desc").get(),
     db.collection("departmentContents").orderBy("date", "desc").get()
@@ -45,11 +109,13 @@ async function loadData() {
   allCases    = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   allContents = contentsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-  renderHome();
-  renderCases();
-  renderDeptPages();
-  _injectAdminControls();
-  _injectPageBottomBtns();
+  try {
+    localStorage.setItem(_CACHE_KEY_CASES,    JSON.stringify(allCases));
+    localStorage.setItem(_CACHE_KEY_CONTENTS, JSON.stringify(allContents));
+    localStorage.setItem(_CACHE_KEY_TS,       String(now));
+  } catch(e) {}
+
+  _renderAll();
 }
 
 // ── Navigation ────────────────────────────────────────────────
@@ -123,6 +189,8 @@ function filterDept(deptId, filter = '') {
   container.innerHTML = items.length ? items.map(c => cardHTML(c, 'content')).join('') :
     '<div class="empty">검색 결과가 없습니다.</div>';
 }
+const _filterDeptDebounced  = _debounce(filterDept,  200);
+const _renderCasesDebounced = _debounce(renderCases, 200);
 
 // ── Card HTML ──────────────────────────────────────────────────
 function cardHTML(item, type) {
@@ -130,17 +198,17 @@ function cardHTML(item, type) {
   const deptName = dept ? dept.name : '';
   const firstPhoto = item.photos && item.photos[0];
   const thumb = firstPhoto
-    ? `<div class="card-thumb"><img src="${firstPhoto.url}" alt="" onerror="this.parentElement.innerHTML='<span>🦷</span>'"></div>`
+    ? `<div class="card-thumb"><img src="${_cldCard(firstPhoto.url)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span>🦷</span>'"></div>`
     : `<div class="card-thumb"><span>🦷</span></div>`;
   const tags = (item.tags || []).map(t =>
     `<span class="tag" onclick="event.stopPropagation();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
   ).join('');
   const isBm = _bookmarks.has(item.id);
-  const bmBtn = `<button class="card-bm-btn${isBm?' active':''}" onclick="event.stopPropagation();_toggleBookmark('${item.id}')" title="${isBm?'북마크 해제':'북마크'}">★</button>`;
+  const bmBtn = `<button class="card-bm-btn${isBm?' active':''}" data-bm-id="${item.id}" onclick="event.stopPropagation();_toggleBookmark('${item.id}')" title="${isBm?'북마크 해제':'북마크'}">★</button>`;
   const adminBtns = isAdmin ? `
     <div class="card-admin-row" onclick="event.stopPropagation()">
-      <button class="card-admin-btn edit" onclick="openEditorFor('${item.id}','${type}')">✏️ 편집</button>
-      <button class="card-admin-btn del"  onclick="deleteCardItem('${item.id}','${type}')">🗑️ 삭제</button>
+      <button class="card-admin-btn edit" onclick="openEditorFor('${item.id}','${type}')">✏️<span class="btn-label"> 편집</span></button>
+      <button class="card-admin-btn del"  onclick="deleteCardItem('${item.id}','${type}')">🗑️<span class="btn-label"> 삭제</span></button>
     </div>` : '';
   return `
     <div class="card" onclick="openModal('${item.id}','${type}')">
@@ -166,20 +234,27 @@ function openModal(id, type) {
     ? allCases.find(c => c.id === id)
     : allContents.find(c => c.id === id);
   if (!item) return;
+  _currentModalItem = { item, type };
 
   const dept = DEPARTMENTS.find(d => d.id === item.department);
   currentPhotos = item.photos || [];
   currentPhotoIndex = 0;
+  // 사진 프리로드 (네트워크만, decode 없이)
+  _photoPreloadCache = currentPhotos.map(p => {
+    const preview = new Image();
+    preview.src = _cld(p.url, 'w_1200,q_auto,f_auto');
+    const orig = new Image();
+    orig.src = p.url;
+    return { preview, orig, url: p.url };
+  });
 
+  // 즉시: 제목·갤러리만 표시하고 모달 오픈 (첫 페인트 최우선)
   document.getElementById('modal-dept').textContent  = dept ? dept.name : '';
   document.getElementById('modal-title').textContent = item.title;
   document.getElementById('modal-date').textContent  = item.date || '';
-  document.getElementById('modal-description').innerHTML = marked.parse(item.description || '');
-  document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>
-    `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
-  ).join('');
-
-  renderRefs(item.references || []);
+  document.getElementById('modal-description').innerHTML = '';
+  document.getElementById('modal-tags').innerHTML = '';
+  document.getElementById('modal-teeth').style.display = 'none';
   renderGallery();
 
   document.getElementById('modal-overlay').classList.add('open');
@@ -188,11 +263,53 @@ function openModal(id, type) {
     _modalPushed = true;
     history.pushState({ page: _currentPage, modal: { id, type } }, '', '#' + type + '-' + id);
   }
+
+  // 첫 페인트 후: markdown·refs·치식 등 무거운 작업 처리
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const descEl = document.getElementById('modal-description');
+    descEl.innerHTML = marked.parse(item.description || '');
+    // KaTeX는 무거우므로 idle 타임에 처리 (모달 오픈 애니메이션 보호)
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(() => _renderMath(descEl), { timeout: 1500 });
+    } else {
+      setTimeout(() => _renderMath(descEl), 0);
+    }
+    document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>
+      `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
+    ).join('');
+    renderRefs(item.references || []);
+    const teethEl = document.getElementById('modal-teeth');
+    if (item.teeth && item.teeth.length) {
+      teethEl.innerHTML = _renderToothChartHTML(item.teeth, false);
+      teethEl.style.display = '';
+    } else {
+      teethEl.innerHTML = '';
+    }
+    const ogImg = (item.photos && item.photos[0]) ? item.photos[0].url
+      : 'https://snubh-prost.github.io/dental-site/icons/icon-192.png';
+    document.getElementById('og-title').setAttribute('content', item.title + ' — 치과 임상 자료실');
+    document.getElementById('og-desc').setAttribute('content', item.summary || item.description?.slice(0,100) || '');
+    document.getElementById('og-image').setAttribute('content', ogImg);
+    document.getElementById('og-url').setAttribute('content', location.href);
+    document.title = item.title + ' — 치과 임상 자료실';
+  }));
+}
+
+function _toggleFocusMode() {
+  const on = document.body.classList.toggle('focus-mode');
+  document.getElementById('modal-focus-btn').textContent = on ? '⤡' : '⤢';
 }
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
+  document.body.classList.remove('focus-mode');
+  document.getElementById('modal-focus-btn').textContent = '⤢';
   document.body.style.overflow = '';
+  // 프리로드 이미지 참조 해제 (메모리 회수)
+  _photoPreloadCache = [];
+  document.title = '치과 임상 자료실';
+  document.getElementById('og-title').setAttribute('content', '치과 임상 자료실');
+  document.getElementById('og-image').setAttribute('content', 'https://snubh-prost.github.io/dental-site/icons/icon-192.png');
   if (_modalPushed) {
     _modalPushed = false;
     history.back();
@@ -222,20 +339,21 @@ function renderGallery() {
   const p = currentPhotos[currentPhotoIndex];
   el.innerHTML = `
     <div class="gallery-main">
-      <img id="gallery-main-img" src="${p.url}" alt="${p.caption||''}">
+      <img id="gallery-main-img" src="${_cldGallery(p.url)}" alt="${p.caption||''}" data-orig="${p.url}">
       <div class="gallery-caption" id="gallery-caption">${p.caption||''}</div>
       <div class="gallery-counter" id="gallery-counter">${currentPhotoIndex+1} / ${currentPhotos.length}</div>
       ${currentPhotos.length > 1 ? `
         <button class="gallery-nav prev" onclick="changePhoto(-1)">&#8249;</button>
         <button class="gallery-nav next" onclick="changePhoto(1)">&#8250;</button>` : ''}
+      <button class="gallery-share-btn" onclick="_copyShareLink()" title="링크 복사">🔗</button>
       <button class="gallery-fs-btn" onclick="_openFsGallery()" title="전체화면">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h4v1.5H2.5V4H1V1zm10 0h4v3h-1.5V2.5H11V1zM1 12h1.5v1.5H4V15H1v-3zm10.5 1.5H13V12h1.5v3H11v-1.5z"/></svg>
       </button>
     </div>
     <div class="gallery-thumbs">
       ${currentPhotos.map((ph,i)=>`
-        <img src="${ph.url}" alt="" class="${i===0?'active':''}" onclick="gotoPhoto(${i})"
-          onerror="this.style.display='none'">`).join('')}
+        <img src="${_cldThumb(ph.url)}" alt="" class="${i===0?'active':''}" onclick="gotoPhoto(${i})"
+          data-orig="${ph.url}" onerror="this.style.display='none'">`).join('')}
     </div>`;
   _placeAnnSVG(el.querySelector('.gallery-main'), p);
   _gz = { s: 1, ox: 50, oy: 50, tx: 0, ty: 0 };
@@ -256,14 +374,86 @@ function gotoPhoto(i) {
 }
 
 function updateGallery() {
-  const p = currentPhotos[currentPhotoIndex];
-  document.getElementById('gallery-main-img').src = p.url;
+  const p   = currentPhotos[currentPhotoIndex];
+  const idx = currentPhotoIndex;
+  const mainImg = document.getElementById('gallery-main-img');
+  const cache   = _photoPreloadCache[idx];
+
+  if (cache?.orig.complete && cache.orig.naturalWidth) {
+    // 원본 이미 다운로드+디코딩 완료 → 즉시 표시
+    mainImg.src = p.url;
+  } else {
+    // 프리뷰 즉시 표시 (작아서 빠름), 원본 로드 완료 시 교체
+    if (cache?.preview.src) mainImg.src = cache.preview.src;
+    if (cache) {
+      cache.orig.onload = () => { if (currentPhotoIndex === idx) mainImg.src = p.url; };
+    }
+  }
+
   document.getElementById('gallery-caption').textContent = p.caption || '';
-  document.getElementById('gallery-counter').textContent = `${currentPhotoIndex+1} / ${currentPhotos.length}`;
+  document.getElementById('gallery-counter').textContent = `${idx+1} / ${currentPhotos.length}`;
   document.querySelectorAll('.gallery-thumbs img').forEach((img,i) =>
-    img.classList.toggle('active', i === currentPhotoIndex));
+    img.classList.toggle('active', i === idx));
   const gm = document.querySelector('.gallery-main');
   if (gm) _placeAnnSVG(gm, p);
+}
+
+// ── PDF 인쇄 ────────────────────────────────────────────────────
+function printCase() {
+  const item = _currentModalItem?.item;
+  if (!item) return;
+  const dept = DEPARTMENTS.find(d => d.id === item.department);
+
+  const photosHTML = (item.photos || []).map(p => `
+    <div class="print-photo-item">
+      <img src="${_esc(p.url)}" alt="${_esc(p.caption||'')}">
+      ${p.caption ? `<div class="print-caption">${_esc(p.caption)}</div>` : ''}
+    </div>`).join('');
+
+  const tagsHTML = (item.tags || []).map(t =>
+    `<span class="print-tag">${_esc(t)}</span>`).join('');
+
+  const refsHTML = (item.references || []).length
+    ? `<div class="print-section-label">참고 논문</div>
+       <ol class="print-refs">${(item.references||[]).map(r => {
+         const title = r.title ? `<strong>${_esc(r.title)}</strong>` : '';
+         const doi   = r.doi   ? ` — <a href="https://doi.org/${_esc(r.doi)}" target="_blank">doi:${_esc(r.doi)}</a>` : '';
+         const url   = (!r.doi && r.url) ? ` — <a href="${_esc(r.url)}" target="_blank">${_esc(r.url)}</a>` : '';
+         return `<li>${title}${doi}${url}</li>`;
+       }).join('')}</ol>` : '';
+
+  const teethHTML = (item.teeth && item.teeth.length)
+    ? `<div class="print-section-label">치식</div>
+       <div class="print-teeth-wrap">${_renderToothChartHTML(item.teeth, false)}</div>` : '';
+
+  const descText = (item.description || '').trim();
+  const descHTML = descText
+    ? `<div class="print-section-label">설명</div>
+       <div class="print-desc">${marked.parse(descText)}</div>` : '';
+
+  const printArea = document.getElementById('print-area');
+  printArea.innerHTML = `
+    <div class="print-header">
+      ${dept ? `<div class="print-dept-tag">${_esc(dept.name)}</div>` : ''}
+      <div class="print-title">${_esc(item.title)}</div>
+      ${item.date ? `<div class="print-date">${_esc(item.date)}</div>` : ''}
+    </div>
+    ${teethHTML}
+    ${photosHTML ? `<div class="print-section-label">사진 (${(item.photos||[]).length}장)</div>
+       <div class="print-photos">${photosHTML}</div>` : ''}
+    ${descHTML}
+    ${tagsHTML ? `<div class="print-tags">${tagsHTML}</div>` : ''}
+    ${refsHTML}
+    <div class="print-footer">
+      <span>치과 임상 자료실 · ${_esc(location.href)}</span>
+      <span>${new Date().toLocaleDateString('ko-KR')}</span>
+    </div>`;
+
+  // details 요소 인쇄 시 모두 펼치기
+  printArea.querySelectorAll('details').forEach(d => d.open = true);
+  _renderMath(printArea);
+
+  window.print();
 }
 
 // ── References ─────────────────────────────────────────────────
@@ -368,10 +558,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target.id === 'editor-overlay') closeEditor();
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeModal(); closeEditor(); _annCancel(); }
+    const presOpen = document.getElementById('pres-overlay')?.classList.contains('open');
+    if (presOpen) {
+      if (e.key === 'Escape') _closePresentation();
+      if (e.key === 'ArrowLeft')  _presGo(-1);
+      if (e.key === 'ArrowRight') _presGo(1);
+      return;
+    }
+    if (e.key === 'Escape') { _closeSearch(); closeModal(); closeEditor(); _annCancel(); }
     if (document.getElementById('modal-overlay').classList.contains('open')) {
       if (e.key === 'ArrowLeft')  changePhoto(-1);
       if (e.key === 'ArrowRight') changePhoto(1);
+    }
+    const tag = document.activeElement.tagName;
+    if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA') {
+      e.preventDefault();
+      _openSearch();
     }
   });
 
@@ -391,7 +593,247 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ════════════════════════════════════════════════════════════════
 
 let _edId = null, _edType = null;
-let _edPhotos = [], _edTags = [];
+let _edPhotos = [], _edTags = [], _edTeeth = [];
+// _edTeeth: [{n: 16, type: 'implant'}, ...]
+let _tcMultiSel = new Set(); // shift-선택 중인 치아 번호들
+let _tcDragging = false, _tcDragMoved = false;
+
+const TOOTH_TYPES = [
+  { id: 'implant', label: '임플란트', color: '#2563eb' },
+  { id: 'crown',   label: '크라운',   color: '#f97316' },
+  { id: 'pontic',  label: 'Pontic',   color: '#059669' },
+  { id: 'rr',      label: 'R.R',      color: '#9f1239' },
+  { id: 'bridge',  label: '브릿지',   color: '#7c3aed' },
+  { id: 'missing', label: '발치',     color: '#64748b' },
+  { id: 'caries',  label: '충치',     color: '#b45309' },
+];
+
+function _toothEntry(n) { return _edTeeth.find(t => t.n === n) || null; }
+
+function _renderToothChartHTML(teeth, interactive) {
+  const rows = [
+    { label:'상악', quads:[[18,17,16,15,14,13,12,11],[21,22,23,24,25,26,27,28]] },
+    { label:'하악', quads:[[48,47,46,45,44,43,42,41],[31,32,33,34,35,36,37,38]] }
+  ];
+  const T = n => {
+    const entry = (teeth||[]).find(t => t.n === n);
+    const type  = entry ? TOOTH_TYPES.find(t => t.id === entry.type) : null;
+    const style = type ? `style="background:${type.color};color:#fff;border-color:${type.color}"` : '';
+    const cls   = entry ? ' tc-sel' : '';
+    const ev    = interactive ? `onclick="event.stopPropagation();_clickTooth(${n},this,event)"` : '';
+    return `<div class="tc-tooth${cls}" data-t="${n}" ${style} ${ev}>${n}</div>`;
+  };
+  const sorted = [...(teeth||[])].sort((a,b)=>a.n-b.n);
+  let badges = '';
+  if (sorted.length) {
+    const groups = {};
+    sorted.forEach(t => { (groups[t.type] = groups[t.type] || []).push(t.n); });
+    badges = `<div class="tc-summary">${TOOTH_TYPES.filter(tp => groups[tp.id]).map(tp =>
+      `<span class="tc-sum-row"><span class="tc-sum-label" style="color:${tp.color}">${tp.label}</span><span class="tc-sum-nums">${groups[tp.id].join(', ')}</span></span>`
+    ).join('')}</div>`;
+  }
+  return `<div class="tc-wrap">${rows.map(r=>`
+    <div class="tc-row">
+      <span class="tc-jaw">${r.label}</span>
+      <div class="tc-quad">${r.quads[0].map(T).join('')}</div>
+      <div class="tc-mid"></div>
+      <div class="tc-quad">${r.quads[1].map(T).join('')}</div>
+    </div>`).join('')}${badges}</div>`;
+}
+
+function _setupTcDrag() {
+  const wrap = document.getElementById('ed-tooth');
+  if (!wrap || wrap._dragSetup) return;
+  wrap._dragSetup = true;
+
+  function toothFromEl(el) {
+    const t = el && el.closest ? el.closest('.tc-tooth') : null;
+    return t ? +t.dataset.t : null;
+  }
+  function addToSel(n) {
+    if (!n) return;
+    const el = wrap.querySelector(`.tc-tooth[data-t="${n}"]`);
+    if (!_tcMultiSel.has(n)) { _tcMultiSel.add(n); if (el) el.classList.add('tc-multi'); }
+  }
+
+  let _dragStartN = null;
+
+  wrap.addEventListener('mousedown', e => {
+    const n = toothFromEl(e.target);
+    if (!n) return;
+    e.preventDefault();
+    _tcDragging = true;
+    _tcDragMoved = false;
+    _dragStartN = n;
+  });
+
+  wrap.addEventListener('mouseover', e => {
+    if (!_tcDragging) return;
+    const n = toothFromEl(e.target);
+    if (!n) return;
+    if (!_tcDragMoved) {
+      // 첫 이동 시 시작 치아도 포함
+      _tcDragMoved = true;
+      _closeTcPicker();
+      addToSel(_dragStartN);
+    }
+    addToSel(n);
+    _updateMultiBar();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (_tcDragging) {
+      _tcDragging = false;
+      if (_tcDragMoved && _tcMultiSel.size > 0) _updateMultiBar();
+    }
+  });
+
+  // Touch support
+  wrap.addEventListener('touchstart', e => {
+    const n = toothFromEl(e.target);
+    if (!n) return;
+    _tcDragging = true;
+    _tcDragMoved = false;
+    _dragStartN = n;
+  }, { passive: true });
+
+  wrap.addEventListener('touchmove', e => {
+    if (!_tcDragging) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const n = toothFromEl(el);
+    if (!n) return;
+    if (!_tcDragMoved) {
+      _tcDragMoved = true;
+      _closeTcPicker();
+      addToSel(_dragStartN);
+    }
+    addToSel(n);
+    _updateMultiBar();
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => { _tcDragging = false; });
+}
+
+function _clickTooth(n, el, e) {
+  // 드래그 직후 click 이벤트 무시
+  if (_tcDragMoved) { _tcDragMoved = false; return; }
+  // Shift+클릭: 다중 선택 모드
+  if (e && e.shiftKey) {
+    _closeTcPicker();
+    if (_tcMultiSel.has(n)) { _tcMultiSel.delete(n); el.classList.remove('tc-multi'); }
+    else { _tcMultiSel.add(n); el.classList.add('tc-multi'); }
+    _updateMultiBar();
+    return;
+  }
+  // 다중 선택 중에 일반 클릭하면 해당 치아도 추가 후 팝업
+  if (_tcMultiSel.size > 0) {
+    if (!_tcMultiSel.has(n)) { _tcMultiSel.add(n); el.classList.add('tc-multi'); }
+    _showMultiPicker(el);
+    return;
+  }
+  // 단일 치아 팝업
+  _closeTcPicker();
+  const existing = _toothEntry(n);
+  const picker = document.createElement('div');
+  picker.id = 'tc-picker';
+  picker.innerHTML = TOOTH_TYPES.map(t =>
+    `<button class="tcp-btn${existing&&existing.type===t.id?' tcp-active':''}"
+      style="--tc:${t.color}"
+      onclick="event.stopPropagation();_setToothType(${n},'${t.id}')">${t.label}</button>`
+  ).join('') +
+  (existing ? `<button class="tcp-btn tcp-remove" onclick="event.stopPropagation();_setToothType(${n},null)">✕ 제거</button>` : '');
+  _positionPicker(picker, el);
+  setTimeout(() => document.addEventListener('click', _closeTcPicker, {once:true}), 0);
+}
+
+function _showMultiPicker(anchorEl) {
+  _closeTcPicker();
+  const cnt = _tcMultiSel.size;
+  const picker = document.createElement('div');
+  picker.id = 'tc-picker';
+  picker.innerHTML =
+    `<div class="tcp-label">${cnt}개 치아에 적용:</div>` +
+    TOOTH_TYPES.map(t =>
+      `<button class="tcp-btn" style="--tc:${t.color}"
+        onclick="event.stopPropagation();_applyMultiType('${t.id}')">${t.label}</button>`
+    ).join('') +
+    `<button class="tcp-btn tcp-remove" onclick="event.stopPropagation();_applyMultiType(null)">✕ 제거</button>`;
+  _positionPicker(picker, anchorEl);
+  setTimeout(() => document.addEventListener('click', _closeTcPicker, {once:true}), 0);
+}
+
+function _positionPicker(picker, el) {
+  document.body.appendChild(picker);
+  const rect = el.getBoundingClientRect();
+  const pw = picker.offsetWidth, ph = picker.offsetHeight;
+  let left = rect.left + rect.width/2 - pw/2;
+  let top  = rect.bottom + 6;
+  if (left < 4) left = 4;
+  if (left + pw > window.innerWidth - 4) left = window.innerWidth - pw - 4;
+  if (top + ph > window.innerHeight - 4) top = rect.top - ph - 6;
+  picker.style.left = left + 'px';
+  picker.style.top  = top  + 'px';
+}
+
+function _closeTcPicker() {
+  const p = document.getElementById('tc-picker');
+  if (p) p.remove();
+}
+
+function _applyMultiType(typeId) {
+  _tcMultiSel.forEach(n => {
+    _edTeeth = _edTeeth.filter(t => t.n !== n);
+    if (typeId) _edTeeth.push({ n, type: typeId });
+  });
+  _tcMultiSel.clear();
+  _closeTcPicker();
+  document.getElementById('ed-tooth').innerHTML = _renderToothChartHTML(_edTeeth, true);
+  _setupTcDrag();
+  _updateMultiBar();
+}
+
+function _updateMultiBar() {
+  const wrap = document.querySelector('#ed-tooth .tc-wrap');
+  if (!wrap) return;
+  let bar = document.getElementById('tc-multi-bar');
+  if (_tcMultiSel.size === 0) { if (bar) bar.remove(); return; }
+  if (!bar) { bar = document.createElement('div'); bar.id = 'tc-multi-bar'; wrap.appendChild(bar); }
+  bar.innerHTML =
+    `<span class="tcmb-label">⇧ ${_tcMultiSel.size}개 선택됨 —</span>` +
+    TOOTH_TYPES.map(t =>
+      `<button class="tcp-btn tcmb-btn" style="--tc:${t.color}"
+        onclick="_applyMultiType('${t.id}')">${t.label}</button>`
+    ).join('') +
+    `<button class="tcp-btn tcp-remove tcmb-btn" onclick="_applyMultiType(null)">✕ 제거</button>` +
+    `<button class="tcp-btn tcmb-cancel" onclick="_clearMultiSel()">취소</button>`;
+}
+
+function _clearMultiSel() {
+  _tcMultiSel.clear();
+  document.querySelectorAll('.tc-tooth.tc-multi').forEach(el => el.classList.remove('tc-multi'));
+  const bar = document.getElementById('tc-multi-bar');
+  if (bar) bar.remove();
+}
+
+function _setToothType(n, typeId) {
+  _edTeeth = _edTeeth.filter(t => t.n !== n);
+  if (typeId) _edTeeth.push({ n, type: typeId });
+  document.getElementById('ed-tooth').innerHTML = _renderToothChartHTML(_edTeeth, true);
+  _setupTcDrag();
+}
+
+function _refreshTcBadges() {
+  const wrap = document.querySelector('#ed-tooth .tc-wrap');
+  if (!wrap) return;
+  let b = wrap.querySelector('.tc-badges');
+  const sorted = [..._edTeeth].sort((a,x)=>a.n-x.n);
+  if (!b && sorted.length) { b = document.createElement('div'); b.className='tc-badges'; wrap.appendChild(b); }
+  if (b) b.innerHTML = sorted.map(t => {
+    const type = TOOTH_TYPES.find(x=>x.id===t.type);
+    return `<span class="tc-badge">${t.n} ${type?type.label:''}</span>`;
+  }).join('');
+}
 let _edPendingImg = null;
 
 // ── 관리자 배지 ──────────────────────────────────────────────
@@ -469,7 +911,8 @@ function closeEditor() {
 // ── 폼 렌더 ──────────────────────────────────────────────────
 function _renderEditorForm(data = {}) {
   _edPhotos = (data.photos || []).map(p => ({ url: p.url, caption: p.caption || '', annotations: p.annotations || [] }));
-  _edTags   = data.tags ? [...data.tags] : [];
+  _edTags   = data.tags  ? [...data.tags]  : [];
+  _edTeeth  = (data.teeth || []).map(t => typeof t === 'number' ? {n:t, type:'implant'} : t);
   document.getElementById('editor-form-title').textContent =
     _edId
       ? (_edType === 'case' ? '케이스 편집' : '자료 편집')
@@ -481,6 +924,7 @@ function _renderEditorForm(data = {}) {
   _edRenderPhotoPreview();
   _edRenderTagChips();
   _edSetupTextareaDrop();
+  _setupTcDrag();
 }
 
 function _edFormHTML(d = {}) {
@@ -534,10 +978,25 @@ function _edFormHTML(d = {}) {
             <button type="button" class="tb-color tb-hl" style="background:#bbf7d0" onclick="_edHl('#bbf7d0')"></button>
             <button type="button" class="tb-color tb-hl" style="background:#bae6fd" onclick="_edHl('#bae6fd')"></button>
             <button type="button" class="tb-color tb-hl" style="background:#fecdd3" onclick="_edHl('#fecdd3')"></button>
+            <div class="tb-sep"></div>
+            <span class="tb-label">삽입</span>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('kbd')" title="단계 배지"><kbd style="background:#2563eb;color:#fff;padding:0.1em 0.4em;border-radius:3px;font-size:0.8em">Phase</kbd></button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('note')" title="안내 박스" style="color:#0c4a6e">ℹ️ 안내</button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('tip')" title="팁 박스" style="color:#14532d">💡 팁</button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('warning')" title="주의 박스" style="color:#78350f">⚠️ 주의</button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('danger')" title="위험 박스" style="color:#7f1d1d">🚫 위험</button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('dl')" title="항목 목록">📋 항목</button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('details')" title="접이식 섹션">▶ 접기</button>
+            <div class="tb-sep"></div>
+            <button type="button" class="tb-btn" id="ed-preview-toggle" onclick="_edTogglePreview()" title="미리보기">👁 미리보기</button>
           </div>
-          <textarea id="ed-description" rows="10"
-            placeholder="케이스/자료 새세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
-            style="min-height:200px;border-top:none;border-radius:0 0 8px 8px"></textarea>
+          <div class="ed-split" id="ed-split">
+            <textarea id="ed-description" rows="10"
+              placeholder="케이스/자료 상세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
+              style="min-height:200px;border-top:none;border-radius:0 0 0 8px"
+              oninput="_edUpdatePreview()"></textarea>
+            <div class="ed-preview-pane modal-description" id="ed-preview-pane" style="display:none"></div>
+          </div>
           <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem">이미지를 텍스트 영역으로 드래그하면 현재 커서 위치에 자동 삽입됩니다.</div>
         </div>
         <div class="form-group full">
@@ -547,6 +1006,10 @@ function _edFormHTML(d = {}) {
             <input class="tag-input" id="ed-tag-input" placeholder="태그 입력 후 Enter"
               onkeydown="_edTagInput(event)">
           </div>
+        </div>
+        <div class="form-group full">
+          <label>치식 차팅 <span style="font-weight:400;font-size:0.72rem;color:var(--text-muted)">(클릭으로 선택)</span></label>
+          <div id="ed-tooth">${_renderToothChartHTML(_edTeeth, true)}</div>
         </div>
       </div>
     </div>
@@ -894,6 +1357,50 @@ function _edHl(color) {
   ta.setSelectionRange(s + tag.length, s + tag.length); ta.focus();
 }
 
+function _edTogglePreview() {
+  const pane  = document.getElementById('ed-preview-pane');
+  const ta    = document.getElementById('ed-description');
+  const split = document.getElementById('ed-split');
+  const btn   = document.getElementById('ed-preview-toggle');
+  const on    = pane.style.display === 'none';
+  pane.style.display = on ? '' : 'none';
+  split.classList.toggle('ed-split-active', on);
+  ta.style.borderRadius = on ? '0' : '0 0 0 8px';
+  btn.classList.toggle('active', on);
+  if (on) _edUpdatePreview();
+}
+
+function _edUpdatePreview() {
+  const pane = document.getElementById('ed-preview-pane');
+  if (!pane || pane.style.display === 'none') return;
+  const val = document.getElementById('ed-description').value;
+  pane.innerHTML = marked.parse(val || '<span style="color:#94a3b8">미리보기가 여기에 표시됩니다.</span>');
+  _renderMath(pane);
+}
+
+function _edSnippet(type) {
+  const ta = document.getElementById('ed-description');
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  const sel = ta.value.slice(s, e).trim();
+  const before = ta.value.slice(0, s), after = ta.value.slice(e);
+  const nl = (before.length > 0 && !before.endsWith('\n')) ? '\n' : '';
+  const snippets = {
+    kbd:     () => { const t = sel||'Phase 1'; return { ins: `<kbd>${t}</kbd>`, cur: 5, len: t.length }; },
+    note:    () => ({ ins: `\n<div class="note"><b>ℹ️ 안내</b>${sel||'내용을 입력하세요.'}</div>\n`, cur: 0 }),
+    tip:     () => ({ ins: `\n<div class="tip"><b>💡 팁</b>${sel||'내용을 입력하세요.'}</div>\n`, cur: 0 }),
+    warning: () => ({ ins: `\n<div class="warning"><b>⚠️ 주의</b>${sel||'내용을 입력하세요.'}</div>\n`, cur: 0 }),
+    danger:  () => ({ ins: `\n<div class="danger"><b>🚫 위험</b>${sel||'내용을 입력하세요.'}</div>\n`, cur: 0 }),
+    dl:      () => ({ ins: `\n<dl>\n  <dt>항목 1</dt><dd>내용 1</dd>\n  <dt>항목 2</dt><dd>내용 2</dd>\n</dl>\n`, cur: 0 }),
+    details: () => ({ ins: `\n<details>\n<summary>${sel||'제목'}</summary>\n\n내용을 입력하세요.\n\n</details>\n`, cur: 0 }),
+  };
+  const { ins, cur, len } = snippets[type]();
+  const full = nl + ins;
+  ta.value = before + full + after;
+  const pos = s + full.length - (cur ? full.length - nl.length - cur - (len||0) : 0);
+  ta.setSelectionRange(pos, pos);
+  ta.focus();
+}
+
 // ── 텍스트 영역 이미지 드래그 ────────────────────────────────
 function _edSetupTextareaDrop() {
   const ta = document.getElementById('ed-description');
@@ -1014,6 +1521,7 @@ async function _edSave() {
       photos,
       references:  _edCollectRefs(),
       tags:        [..._edTags],
+      teeth:       [..._edTeeth],
       updatedAt:   firebase.firestore.FieldValue.serverTimestamp()
     };
     const col = _edType === 'case' ? 'cases' : 'departmentContents';
@@ -1263,15 +1771,21 @@ function toggleTheme() {
 
 // ── 북마크 ────────────────────────────────────────────────────
 function _toggleBookmark(id) {
-  if (_bookmarks.has(id)) _bookmarks.delete(id);
-  else _bookmarks.add(id);
+  const isNowBm = !_bookmarks.has(id);
+  if (isNowBm) _bookmarks.add(id); else _bookmarks.delete(id);
   localStorage.setItem('dental-bm', JSON.stringify([..._bookmarks]));
-  renderHome();
-  renderCases(
-    document.querySelector('#page-cases .search-input')?.value || '',
-    document.getElementById('case-dept-filter')?.value || ''
-  );
-  renderDeptPages();
+  // 해당 카드의 버튼만 업데이트
+  document.querySelectorAll(`.card-bm-btn[data-bm-id="${id}"]`).forEach(btn => {
+    btn.classList.toggle('active', isNowBm);
+    btn.title = isNowBm ? '북마크 해제' : '북마크';
+  });
+  // 북마크 필터 중일 때만 목록 재렌더
+  if (_showBmOnly) {
+    renderCases(
+      document.querySelector('#page-cases .search-input')?.value || '',
+      document.getElementById('case-dept-filter')?.value || ''
+    );
+  }
 }
 
 function setViewMode(mode) {
@@ -1279,10 +1793,7 @@ function setViewMode(mode) {
   localStorage.setItem('dental-view', mode);
   document.getElementById('view-grid-btn')?.classList.toggle('active', mode === 'grid');
   document.getElementById('view-list-btn')?.classList.toggle('active', mode === 'list');
-  renderCases(
-    document.querySelector('#page-cases .search-input')?.value || '',
-    document.getElementById('case-dept-filter')?.value || ''
-  );
+  document.getElementById('cases-grid')?.classList.toggle('list-view', mode === 'list');
 }
 
 function toggleBookmarkFilter() {
@@ -1311,14 +1822,28 @@ function _filterByTag(tag) {
 // ── 갤러리 스와이프 ───────────────────────────────────────────
 function _setupGallerySwipe() {
   const gm = document.querySelector('.gallery-main');
-  if (!gm || currentPhotos.length <= 1) return;
+  if (!gm) return;
+
+  // 이전/다음 버튼: touchend로 즉시 반응 (click의 300ms 대기 없음)
+  const addNavTouch = (sel, dir) => {
+    const btn = gm.querySelector(sel);
+    if (!btn) return;
+    btn.addEventListener('touchend', e => {
+      e.preventDefault(); // 후속 click 이벤트 차단
+      changePhoto(dir);
+    }, { passive: false });
+  };
+  addNavTouch('.gallery-nav.prev', -1);
+  addNavTouch('.gallery-nav.next',  1);
+
+  if (currentPhotos.length <= 1) return;
   let _sx = 0, _sy = 0;
   gm.addEventListener('touchstart', e => {
     _sx = e.touches[0].clientX;
     _sy = e.touches[0].clientY;
   }, { passive: true });
   gm.addEventListener('touchend', e => {
-    if (_gz.s > 1) return; // 줌 상태에서는 스와이프 무시
+    if (_gz.s > 1) return;
     const dx = e.changedTouches[0].clientX - _sx;
     const dy = e.changedTouches[0].clientY - _sy;
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) changePhoto(dx < 0 ? 1 : -1);
@@ -1437,7 +1962,12 @@ function _searchByTag(tag) {
   }, 200);
 }
 
+let _searchTimer;
 function _onSearchInput(q) {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => _doSearch(q), 180);
+}
+function _doSearch(q) {
   const tagSec = document.getElementById('search-tag-section');
   const resSec = document.getElementById('search-results-section');
   if (!q.trim()) {
@@ -1465,6 +1995,20 @@ function _onSearchInput(q) {
 }
 
 // ── 전체화면 갤러리 ─────────────────────────────────────────────
+let _fsScale = 1, _fsPanX = 0, _fsPanY = 0;
+
+function _resetFsZoom() {
+  _fsScale = 1; _fsPanX = 0; _fsPanY = 0;
+  const img = document.getElementById('fs-img');
+  if (img) img.style.transform = '';
+}
+
+function _applyFsTransform() {
+  const img = document.getElementById('fs-img');
+  if (!img) return;
+  img.style.transform = `translate(${_fsPanX}px,${_fsPanY}px) scale(${_fsScale})`;
+}
+
 function _openFsGallery() {
   let ov = document.getElementById('fs-gallery');
   if (!ov) {
@@ -1479,6 +2023,7 @@ function _openFsGallery() {
     document.body.appendChild(ov);
     _setupFsSwipe(ov);
   }
+  _resetFsZoom();
   _updateFsGallery();
   ov.classList.add('open');
   history.pushState({ page: _currentPage, fs: true }, '');
@@ -1492,6 +2037,7 @@ function _closeFsGallery() {
 }
 
 function _fsChangePhoto(dir) {
+  _resetFsZoom();
   currentPhotoIndex = (currentPhotoIndex + dir + currentPhotos.length) % currentPhotos.length;
   _updateFsGallery();
   updateGallery();
@@ -1501,16 +2047,230 @@ function _updateFsGallery() {
   const p = currentPhotos[currentPhotoIndex];
   const img = document.getElementById('fs-img');
   const ctr = document.getElementById('fs-counter');
-  if (img) img.src = p.url;
+  if (img) img.src = _cldGallery(p.url);
   if (ctr) ctr.textContent = `${currentPhotoIndex + 1} / ${currentPhotos.length}`;
 }
 
 function _setupFsSwipe(ov) {
-  let sx = 0;
-  ov.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+  let sx = 0, sy = 0, cancelled = false, pinchDist = 0, lastTap = 0;
+
+  function clamp() {
+    const maxX = Math.max(0, (_fsScale - 1) * ov.clientWidth  / 2);
+    const maxY = Math.max(0, (_fsScale - 1) * ov.clientHeight / 2);
+    _fsPanX = Math.max(-maxX, Math.min(maxX, _fsPanX));
+    _fsPanY = Math.max(-maxY, Math.min(maxY, _fsPanY));
+  }
+
+  ov.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      cancelled = true;
+      pinchDist = Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY
+      );
+      return;
+    }
+    if (e.touches.length > 2) { cancelled = true; return; }
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+    cancelled = _fsScale > 1 || !!e.target.closest('.fs-nav, .fs-close');
+    // 더블탭으로 줌 초기화
+    const now = Date.now();
+    if (now - lastTap < 280 && _fsScale > 1) _resetFsZoom();
+    lastTap = now;
+  }, { passive: true });
+
+  ov.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+      cancelled = true;
+      const d = Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY
+      );
+      _fsScale = Math.max(1, Math.min(6, _fsScale * (d / pinchDist)));
+      pinchDist = d;
+      clamp();
+      _applyFsTransform();
+      return;
+    }
+    if (_fsScale > 1 && e.touches.length === 1) {
+      _fsPanX += e.touches[0].clientX - sx;
+      _fsPanY += e.touches[0].clientY - sy;
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+      clamp();
+      _applyFsTransform();
+    }
+  }, { passive: true });
+
   ov.addEventListener('touchend', e => {
+    if (e.touches.length > 0) {
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+      return;
+    }
+    if (cancelled) { cancelled = false; return; }
     const dx = e.changedTouches[0].clientX - sx;
-    if (Math.abs(dx) > 50) _fsChangePhoto(dx < 0 ? 1 : -1);
+    if (Math.abs(dx) > 60) _fsChangePhoto(dx < 0 ? 1 : -1);
+  }, { passive: true });
+}
+
+// ── 발표 모드 ─────────────────────────────────────────────────
+let _presSlides = [], _presIdx = 0;
+
+function _openPresentation() {
+  if (!_currentModalItem) return;
+  const { item } = _currentModalItem;
+  _presSlides = _buildPresSlides(item);
+  _presIdx = 0;
+
+  let ov = document.getElementById('pres-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'pres-overlay';
+    ov.innerHTML = `
+      <div class="pres-header">
+        <button class="pres-close-btn" onclick="_closePresentation()">✕ 나가기</button>
+        <span id="pres-counter" class="pres-counter-txt"></span>
+      </div>
+      <div class="pres-slide-area" id="pres-slide"></div>
+      <div class="pres-footer">
+        <button class="pres-nav-btn" id="pres-prev" onclick="_presGo(-1)">&#8249;</button>
+        <div class="pres-dots" id="pres-dots"></div>
+        <button class="pres-nav-btn" id="pres-next" onclick="_presGo(1)">&#8250;</button>
+      </div>`;
+    document.body.appendChild(ov);
+    _setupPresSwipe(ov);
+    // 발표 모드 버튼 즉시 반응 (touchend)
+    document.getElementById('pres-prev').addEventListener('touchend', e => { e.preventDefault(); _presGo(-1); }, { passive: false });
+    document.getElementById('pres-next').addEventListener('touchend', e => { e.preventDefault(); _presGo( 1); }, { passive: false });
+  }
+  _renderPresSlide();
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _buildPresSlides(item) {
+  const dept = DEPARTMENTS.find(d => d.id === item.department);
+  const slides = [{ type: 'cover', item, dept }];
+  (item.photos || []).forEach((p, i) =>
+    slides.push({ type: 'photo', photo: p, photoIdx: i + 1, photoTotal: (item.photos||[]).length })
+  );
+  if (item.description?.trim()) slides.push({ type: 'desc', text: item.description });
+  const refs = (item.references || []).filter(r => r.title);
+  if (refs.length) slides.push({ type: 'refs', refs });
+  return slides;
+}
+
+function _renderPresSlide() {
+  const slide = _presSlides[_presIdx];
+  const el    = document.getElementById('pres-slide');
+  if (!el || !slide) return;
+
+  document.getElementById('pres-counter').textContent = `${_presIdx + 1} / ${_presSlides.length}`;
+  document.getElementById('pres-prev').disabled = _presIdx === 0;
+  document.getElementById('pres-next').disabled = _presIdx === _presSlides.length - 1;
+
+  const dotsEl = document.getElementById('pres-dots');
+  if (_presSlides.length <= 14) {
+    dotsEl.innerHTML = _presSlides.map((_, i) =>
+      `<span class="pres-dot${i === _presIdx ? ' active' : ''}" onclick="_presJump(${i})"></span>`
+    ).join('');
+  } else {
+    dotsEl.innerHTML = '';
+  }
+
+  el.className = 'pres-slide-area pres-type-' + slide.type;
+  el.style.animation = 'none';
+  requestAnimationFrame(() => { el.style.animation = ''; });
+
+  if (slide.type === 'cover') {
+    const tags = (slide.item.tags || []).map(t =>
+      `<span class="pres-tag">${_esc(t)}</span>`).join('');
+    el.innerHTML = `
+      <div class="pres-cover-dept">${slide.dept ? slide.dept.name : ''}</div>
+      <h1 class="pres-cover-title">${_esc(slide.item.title)}</h1>
+      <div class="pres-cover-date">${slide.item.date || ''}</div>
+      ${slide.item.summary ? `<p class="pres-cover-summary">${_esc(slide.item.summary)}</p>` : ''}
+      ${tags ? `<div class="pres-cover-tags">${tags}</div>` : ''}`;
+  } else if (slide.type === 'photo') {
+    el.innerHTML = `
+      <div class="pres-photo-wrap">
+        <img src="${_cldGallery(slide.photo.url)}" alt="${_esc(slide.photo.caption || '')}">
+      </div>
+      ${slide.photo.caption ? `<div class="pres-caption">${_esc(slide.photo.caption)}</div>` : ''}
+      ${slide.photoTotal > 1 ? `<div class="pres-photo-num">사진 ${slide.photoIdx} / ${slide.photoTotal}</div>` : ''}`;
+  } else if (slide.type === 'desc') {
+    el.innerHTML = `<div class="pres-desc-inner">${marked.parse(slide.text)}</div>`;
+    _renderMath(el.querySelector('.pres-desc-inner'));
+  } else if (slide.type === 'refs') {
+    el.innerHTML = `
+      <div class="pres-section-label">참고 논문</div>
+      <ol class="pres-refs-list">${slide.refs.map(r => `
+        <li>
+          ${r.authors ? `<span class="pres-ref-authors">${_esc(r.authors)}</span> ` : ''}
+          ${r.year ? `(${r.year}). ` : ''}
+          <span class="pres-ref-title">${_esc(r.title)}</span>
+          ${r.journal ? ` <em>${_esc(r.journal)}</em>` : ''}
+          ${r.doi ? ` <a href="https://doi.org/${r.doi}" target="_blank" class="pres-doi">DOI ↗</a>` : ''}
+        </li>`).join('')}
+      </ol>`;
+  }
+}
+
+function _presGo(dir) {
+  const next = _presIdx + dir;
+  if (next < 0 || next >= _presSlides.length) return;
+  const nextSlide = _presSlides[next];
+  const curSlide  = _presSlides[_presIdx];
+
+  // 사진 → 사진: img.src만 교체해서 현재 이미지 유지하며 로드
+  if (nextSlide.type === 'photo' && curSlide.type === 'photo') {
+    _presIdx = next;
+    _updatePresPhotoInPlace(nextSlide);
+    return;
+  }
+  _presIdx = next;
+  _renderPresSlide();
+}
+
+function _updatePresPhotoInPlace(slide) {
+  const el  = document.getElementById('pres-slide');
+  const img = el?.querySelector('img');
+  if (!img) { _renderPresSlide(); return; }
+
+  img.src = _cldGallery(slide.photo.url);
+  img.alt = _esc(slide.photo.caption || '');
+
+  // 캡션·번호·카운터만 즉시 갱신 (이미지 자체는 로드되면 자동 교체)
+  const captionEl = el.querySelector('.pres-caption');
+  if (captionEl) captionEl.textContent = slide.photo.caption || '';
+  const numEl = el.querySelector('.pres-photo-num');
+  if (numEl) numEl.textContent = `사진 ${slide.photoIdx} / ${slide.photoTotal}`;
+
+  document.getElementById('pres-counter').textContent = `${_presIdx + 1} / ${_presSlides.length}`;
+  document.getElementById('pres-prev').disabled = _presIdx === 0;
+  document.getElementById('pres-next').disabled = _presIdx === _presSlides.length - 1;
+  document.querySelectorAll('.pres-dot').forEach((d, i) => d.classList.toggle('active', i === _presIdx));
+}
+
+function _presJump(i) {
+  _presIdx = i;
+  _renderPresSlide();
+}
+
+function _closePresentation() {
+  document.getElementById('pres-overlay')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function _setupPresSwipe(ov) {
+  let sx = 0;
+  ov.addEventListener('touchstart', e => { if (e.touches.length === 1) sx = e.touches[0].clientX; }, { passive: true });
+  ov.addEventListener('touchend', e => {
+    if (e.touches.length > 0) return;
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) > 55) _presGo(dx < 0 ? 1 : -1);
   }, { passive: true });
 }
 
@@ -1566,3 +2326,10 @@ function _edToast(msg, type = 'success') {
   clearTimeout(t._timer);
   t._timer = setTimeout(() => { t.className = ''; }, 3000);
 }
+
+// ── 글로벌 에러 핸들러 ────────────────────────────────────────
+window.addEventListener('unhandledrejection', e => {
+  const msg = e.reason?.message || String(e.reason) || '알 수 없는 오류';
+  // Firebase 권한 오류 등 silent fail 방지 — console에만 기록
+  console.warn('[unhandled]', msg, e.reason);
+});
