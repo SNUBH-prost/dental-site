@@ -356,6 +356,56 @@ function updateGallery() {
   if (gm) _placeAnnSVG(gm, p);
 }
 
+// ── PDF 인쇄 ────────────────────────────────────────────────────
+function printCase() {
+  const item = _currentModalItem?.item;
+  if (!item) return;
+  const dept = DEPARTMENTS.find(d => d.id === item.department);
+
+  const photosHTML = (item.photos || []).map(p => `
+    <div class="print-photo-item">
+      <img src="${_esc(p.url)}" alt="${_esc(p.caption||'')}">
+      ${p.caption ? `<div class="print-caption">${_esc(p.caption)}</div>` : ''}
+    </div>`).join('');
+
+  const tagsHTML = (item.tags || []).map(t =>
+    `<span class="print-tag">${_esc(t)}</span>`).join('');
+
+  const refsHTML = (item.references || []).length
+    ? `<div class="print-section-label">참고 논문</div>
+       <ol class="print-refs">${(item.references||[]).map(r => {
+         const title = r.title ? `<strong>${_esc(r.title)}</strong>` : '';
+         const doi   = r.doi   ? ` — <a href="https://doi.org/${_esc(r.doi)}" target="_blank">doi:${_esc(r.doi)}</a>` : '';
+         const url   = (!r.doi && r.url) ? ` — <a href="${_esc(r.url)}" target="_blank">${_esc(r.url)}</a>` : '';
+         return `<li>${title}${doi}${url}</li>`;
+       }).join('')}</ol>` : '';
+
+  const teethHTML = (item.teeth && item.teeth.length)
+    ? `<div class="print-section-label">치식</div>
+       <div class="print-teeth-wrap">${_renderToothChartHTML(item.teeth, false)}</div>` : '';
+
+  const printArea = document.getElementById('print-area');
+  printArea.innerHTML = `
+    <div class="print-header">
+      ${dept ? `<div class="print-dept-tag">${_esc(dept.name)}</div>` : ''}
+      <div class="print-title">${_esc(item.title)}</div>
+      ${item.date ? `<div class="print-date">${_esc(item.date)}</div>` : ''}
+    </div>
+    ${teethHTML}
+    ${photosHTML ? `<div class="print-section-label">사진 (${(item.photos||[]).length}장)</div>
+       <div class="print-photos">${photosHTML}</div>` : ''}
+    <div class="print-section-label">설명</div>
+    <div class="print-desc">${marked.parse(item.description || '')}</div>
+    ${tagsHTML ? `<div class="print-tags">${tagsHTML}</div>` : ''}
+    ${refsHTML}
+    <div class="print-footer">
+      <span>치과 임상 자료실 · ${_esc(location.href)}</span>
+      <span>${new Date().toLocaleDateString('ko-KR')}</span>
+    </div>`;
+
+  window.print();
+}
+
 // ── References ─────────────────────────────────────────────────
 function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 

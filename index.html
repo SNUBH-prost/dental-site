@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=51">
+  <link rel="stylesheet" href="css/style.css?v=52">
   <link rel="stylesheet" href="css/editor.css?v=24">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -231,6 +231,7 @@
 <div id="modal-overlay" class="modal-overlay">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">✕</button>
+    <button class="modal-print-btn" onclick="printCase()" title="PDF 저장">🖨</button>
     <button class="modal-pres-btn" onclick="_openPresentation()" title="발표 모드">▶ 발표</button>
     <button class="modal-focus-btn" id="modal-focus-btn" onclick="_toggleFocusMode()" title="집중 모드">⤢</button>
     <div id="gallery-section"></div>
@@ -252,6 +253,9 @@
     </div>
   </div>
 </div>
+
+<!-- ── 인쇄 영역 ── -->
+<div id="print-area"></div>
 
 <!-- ── 인라인 에디터 ── -->
 <div id="editor-overlay" class="editor-overlay">
@@ -303,7 +307,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script defer src="js/firebase-config.js?v=21"></script>
 <script defer src="js/cloudinary-config.js?v=21"></script>
-<script defer src="js/app.js?v=50"></script>
+<script defer src="js/app.js?v=51"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {

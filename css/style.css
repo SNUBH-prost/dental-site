@@ -1152,6 +1152,7 @@ main {
   /* 모달 버튼 */
   .modal-pres-btn { left: 0.75rem; top: 0.75rem; }
   .modal-focus-btn { right: 2.6rem; top: 0.75rem; }
+  .modal-print-btn { right: 5.4rem; top: 0.75rem; }
 
   /* 참고 논문 목록 모바일 */
   .reference-list li { font-size: 0.8rem; }
@@ -1461,6 +1462,26 @@ main {
 }
 .modal-focus-btn:hover { background: rgba(15,23,42,0.65); }
 
+.modal-print-btn {
+  position: absolute;
+  top: 0.9rem;
+  right: 5.8rem;
+  background: rgba(15,23,42,0.35);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+}
+.modal-print-btn:hover { background: rgba(15,23,42,0.65); }
+
 /* ── 집중 모드 ── */
 body.focus-mode header { display: none; }
 body.focus-mode .modal-overlay {
@@ -1763,3 +1784,104 @@ body.focus-mode .modal {
 .tcmb-label { font-size: 0.72rem; font-weight: 600; color: var(--primary); flex-shrink: 0; }
 .tcmb-cancel { --tc: var(--text-muted) !important; border-color: var(--border) !important; color: var(--text-muted) !important; }
 .tcp-label { width: 100%; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); padding-bottom: 0.2rem; }
+
+/* ── 인쇄 / PDF 저장 ── */
+#print-area { display: none; }
+
+@media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body > *:not(#print-area) { display: none !important; }
+  #print-area {
+    display: block !important;
+    font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
+    color: #0f172a;
+    background: #fff;
+    padding: 1.5cm 1.8cm;
+    margin: 0;
+    font-size: 10pt;
+    line-height: 1.6;
+  }
+  .print-header {
+    border-bottom: 2px solid #2563eb;
+    padding-bottom: 0.6rem;
+    margin-bottom: 1.2rem;
+  }
+  .print-dept-tag {
+    display: inline-block;
+    background: #2563eb;
+    color: #fff;
+    font-size: 8pt;
+    font-weight: 600;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    margin-bottom: 0.35rem;
+  }
+  .print-title {
+    font-size: 18pt;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 0.2rem;
+    color: #0f172a;
+  }
+  .print-date { font-size: 8pt; color: #64748b; }
+  .print-section-label {
+    font-size: 7pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin: 1.1rem 0 0.45rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.2rem;
+  }
+  .print-photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.6rem;
+    page-break-inside: avoid;
+  }
+  .print-photo-item img {
+    width: 100%;
+    border-radius: 5px;
+    display: block;
+    border: 1px solid #e2e8f0;
+  }
+  .print-caption {
+    font-size: 7.5pt;
+    color: #64748b;
+    margin-top: 0.2rem;
+    text-align: center;
+  }
+  .print-desc { font-size: 9.5pt; line-height: 1.75; }
+  .print-desc h1 { font-size: 13pt; margin: 0.8rem 0 0.3rem; }
+  .print-desc h2 { font-size: 11pt; margin: 0.7rem 0 0.25rem; }
+  .print-desc h3 { font-size: 10pt; margin: 0.6rem 0 0.2rem; }
+  .print-desc ul, .print-desc ol { padding-left: 1.2rem; }
+  .print-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.5rem;
+  }
+  .print-tag {
+    background: #eff6ff;
+    color: #2563eb;
+    font-size: 8pt;
+    padding: 0.1rem 0.45rem;
+    border-radius: 99px;
+    border: 1px solid #bfdbfe;
+  }
+  .print-refs { font-size: 8.5pt; padding-left: 1.1rem; }
+  .print-refs li { margin-bottom: 0.3rem; }
+  .print-refs a { color: #2563eb; word-break: break-all; }
+  .print-teeth-wrap { page-break-inside: avoid; }
+  .print-footer {
+    margin-top: 1.5rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid #e2e8f0;
+    font-size: 7.5pt;
+    color: #94a3b8;
+    display: flex;
+    justify-content: space-between;
+  }
+}
