@@ -11,6 +11,19 @@ const _cldGallery = u => u;                                            // 갤러
 const _cldThumb   = u => _cld(u, 'w_160,h_120,c_fill,q_auto,f_auto'); // 썸네일만 최적화
 const _cldCard    = u => _cld(u, 'w_480,h_280,c_fill,q_auto,f_auto'); // 카드
 
+// ── KaTeX 수식 렌더링 ─────────────────────────────────────────
+function _renderMath(el) {
+  if (!el || typeof renderMathInElement === 'undefined') return;
+  renderMathInElement(el, {
+    delimiters: [
+      { left: '$$', right: '$$', display: true  },
+      { left: '$',  right: '$',  display: false },
+    ],
+    throwOnError: false,
+    output: 'html',
+  });
+}
+
 // ── marked 커스텀 렌더러 (이미지 크기) ───────────────────────
 (function setupMarked() {
   const renderer = new marked.Renderer();
@@ -240,7 +253,9 @@ function openModal(id, type) {
 
   // 첫 페인트 후: markdown·refs·치식 등 무거운 작업 처리
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    document.getElementById('modal-description').innerHTML = marked.parse(item.description || '');
+    const descEl = document.getElementById('modal-description');
+    descEl.innerHTML = marked.parse(item.description || '');
+    _renderMath(descEl);
     document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>
       `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
     ).join('');
@@ -416,6 +431,7 @@ function printCase() {
 
   // details 요소 인쇄 시 모두 펼치기
   printArea.querySelectorAll('details').forEach(d => d.open = true);
+  _renderMath(printArea);
 
   window.print();
 }
@@ -2139,6 +2155,7 @@ function _renderPresSlide() {
       ${slide.photoTotal > 1 ? `<div class="pres-photo-num">사진 ${slide.photoIdx} / ${slide.photoTotal}</div>` : ''}`;
   } else if (slide.type === 'desc') {
     el.innerHTML = `<div class="pres-desc-inner">${marked.parse(slide.text)}</div>`;
+    _renderMath(el.querySelector('.pres-desc-inner'));
   } else if (slide.type === 'refs') {
     el.innerHTML = `
       <div class="pres-section-label">참고 논문</div>
