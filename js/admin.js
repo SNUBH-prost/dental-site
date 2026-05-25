@@ -902,20 +902,6 @@ async function _adminSelectPubMed(type, idx, itemIdx) {
 
 // ── 사용량 ────────────────────────────────────────────────────────────────
 
-function saveCldKeys() {
-  const key    = document.getElementById('cld-key-input').value.trim();
-  const secret = document.getElementById('cld-secret-input').value.trim();
-  if (!key || !secret) { showToast('키와 시크릿을 모두 입력하세요.', 'error'); return; }
-  localStorage.setItem('cld-api-key', key);
-  localStorage.setItem('cld-api-secret', secret);
-  document.getElementById('cld-key-input').value = '';
-  document.getElementById('cld-secret-input').value = '';
-  const status = document.getElementById('cld-key-status');
-  status.textContent = '저장됨 ✓ (이 브라우저에만 보관)';
-  status.style.display = 'block';
-  showToast('API 키 저장됨. 새로고침 버튼을 누르세요.');
-}
-
 async function fetchFirebaseStats() {
   const [casesSnap, contentsSnap] = await Promise.all([
     db.collection('cases').get(),
@@ -933,17 +919,6 @@ async function fetchGithubStats() {
   return await res.json();
 }
 
-async function fetchCloudinaryStats() {
-  const key    = localStorage.getItem('cld-api-key');
-  const secret = localStorage.getItem('cld-api-secret');
-  if (!key || !secret) return null;
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/usage`, {
-    headers: { 'Authorization': 'Basic ' + btoa(key + ':' + secret) }
-  });
-  if (!res.ok) throw new Error(`Cloudinary API ${res.status}`);
-  return await res.json();
-}
-
 function _usageBar(pct) {
   const cls = pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : '';
   return `<div class="usage-bar-wrap"><div class="usage-bar-fill ${cls}" style="width:${Math.min(pct,100)}%"></div></div>`;
@@ -955,39 +930,14 @@ function _fmt(bytes) {
   return gb >= 1 ? gb.toFixed(2) + ' GB' : (bytes / 1e6).toFixed(1) + ' MB';
 }
 
-function renderCloudinaryCard(data) {
+function renderCloudinaryCard() {
   const el = document.createElement('div');
   el.className = 'usage-card';
-  const saved = !!localStorage.getItem('cld-api-key');
-
-  if (!saved) {
-    el.innerHTML = `
-      <div class="usage-card-head"><span class="usage-card-icon">🖼</span><div><div class="usage-card-title">Cloudinary</div><div class="usage-card-sub">이미지 저장소</div></div></div>
-      <p class="usage-error">API 키를 위에 입력하면 사용량을 확인할 수 있습니다.</p>
-      <a class="usage-link" href="https://cloudinary.com/console" target="_blank">대시보드에서 직접 확인 ↗</a>`;
-    return el;
-  }
-  if (!data) {
-    el.innerHTML = `
-      <div class="usage-card-head"><span class="usage-card-icon">🖼</span><div><div class="usage-card-title">Cloudinary</div><div class="usage-card-sub">이미지 저장소</div></div></div>
-      <p class="usage-error">API 키가 틀리거나 CORS 제한으로 직접 조회가 불가합니다.<br>대시보드에서 확인하세요.</p>
-      <a class="usage-link" href="https://cloudinary.com/console" target="_blank">Cloudinary 대시보드 ↗</a>`;
-    return el;
-  }
-
-  const storagePct = data.storage ? Math.round(data.storage.usage / data.storage.limit * 100) : 0;
-  const bwPct      = data.bandwidth ? Math.round(data.bandwidth.usage / data.bandwidth.limit * 100) : 0;
-  const trPct      = data.transformations ? Math.round(data.transformations.usage / data.transformations.limit * 100) : 0;
-
   el.innerHTML = `
-    <div class="usage-card-head"><span class="usage-card-icon">🖼</span><div><div class="usage-card-title">Cloudinary</div><div class="usage-card-sub">이미지 저장소 · Free ${data.plan||''}</div></div></div>
-    <div class="usage-row"><span class="usage-label">저장 공간</span><span class="usage-value">${_fmt(data.storage?.usage)} / ${_fmt(data.storage?.limit)}</span></div>
-    ${_usageBar(storagePct)}
-    <div class="usage-row"><span class="usage-label">월 대역폭</span><span class="usage-value">${_fmt(data.bandwidth?.usage)} / ${_fmt(data.bandwidth?.limit)}</span></div>
-    ${_usageBar(bwPct)}
-    <div class="usage-row"><span class="usage-label">변환 횟수</span><span class="usage-value">${(data.transformations?.usage||0).toLocaleString()} / ${(data.transformations?.limit||0).toLocaleString()}</span></div>
-    ${_usageBar(trPct)}
-    <a class="usage-link" href="https://cloudinary.com/console" target="_blank">대시보드 ↗</a>`;
+    <div class="usage-card-head"><span class="usage-card-icon">🖼</span><div><div class="usage-card-title">Cloudinary</div><div class="usage-card-sub">이미지 저장소 · Free 25 GB</div></div></div>
+    <p class="usage-error" style="margin-bottom:0.75rem">Cloudinary 관리 API는 브라우저에서 직접 조회가 불가합니다.<br>아래 링크에서 확인하세요.</p>
+    <div class="usage-row"><span class="usage-label">클라우드 이름</span><span class="usage-value">${cloudinaryConfig.cloudName}</span></div>
+    <a class="usage-link" href="https://cloudinary.com/console" target="_blank">📊 Cloudinary 대시보드 ↗</a>`;
   return el;
 }
 
@@ -1032,14 +982,13 @@ async function loadUsage() {
   if (!grid) return;
   grid.innerHTML = '<p style="color:var(--text-muted);padding:0.5rem 0">불러오는 중...</p>';
 
-  const [fbResult, ghResult, cldResult] = await Promise.allSettled([
+  const [fbResult, ghResult] = await Promise.allSettled([
     fetchFirebaseStats(),
-    fetchGithubStats(),
-    fetchCloudinaryStats()
+    fetchGithubStats()
   ]);
 
   grid.innerHTML = '';
-  grid.appendChild(renderCloudinaryCard(cldResult.status === 'fulfilled' ? cldResult.value : null));
-  grid.appendChild(renderFirebaseCard(fbResult.status === 'fulfilled'  ? fbResult.value  : null));
-  grid.appendChild(renderGithubCard(ghResult.status === 'fulfilled'   ? ghResult.value   : null));
+  grid.appendChild(renderCloudinaryCard());
+  grid.appendChild(renderFirebaseCard(fbResult.status === 'fulfilled' ? fbResult.value : null));
+  grid.appendChild(renderGithubCard(ghResult.status === 'fulfilled'  ? ghResult.value  : null));
 }

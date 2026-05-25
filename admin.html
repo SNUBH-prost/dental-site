@@ -268,19 +268,6 @@
           <button class="btn btn-outline btn-sm" onclick="loadUsage()">🔄 새로고침</button>
         </div>
 
-        <div class="form-card">
-          <div class="section-label">Cloudinary API 키</div>
-          <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">
-            <a href="https://cloudinary.com/console" target="_blank" style="color:var(--primary)">cloudinary.com 대시보드</a> 로그인 후 메인 페이지 상단에 바로 표시됩니다.
-          </p>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-            <input type="text"     id="cld-key-input"    placeholder="341734773437384"  style="flex:1;min-width:140px">
-            <input type="password" id="cld-secret-input" placeholder="341734773437384"             style="flex:2;min-width:200px">
-            <button class="btn btn-primary btn-sm" onclick="saveCldKeys()">저장</button>
-          </div>
-          <p id="cld-key-status" style="font-size:0.78rem;margin-top:0.4rem;color:var(--accent);display:none"></p>
-        </div>
-
         <div id="usage-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem"></div>
       </div>
 
@@ -297,6 +284,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script src="js/firebase-config.js?v=1"></script>
 <script src="js/cloudinary-config.js?v=1"></script>
-<script src="js/admin.js?v=4"></script>
+<script src="js/admin.js?v=5"></script>
 </body>
 </html>
