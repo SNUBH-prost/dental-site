@@ -384,6 +384,11 @@ function printCase() {
     ? `<div class="print-section-label">치식</div>
        <div class="print-teeth-wrap">${_renderToothChartHTML(item.teeth, false)}</div>` : '';
 
+  const descText = (item.description || '').trim();
+  const descHTML = descText
+    ? `<div class="print-section-label">설명</div>
+       <div class="print-desc">${marked.parse(descText)}</div>` : '';
+
   const printArea = document.getElementById('print-area');
   printArea.innerHTML = `
     <div class="print-header">
@@ -394,8 +399,7 @@ function printCase() {
     ${teethHTML}
     ${photosHTML ? `<div class="print-section-label">사진 (${(item.photos||[]).length}장)</div>
        <div class="print-photos">${photosHTML}</div>` : ''}
-    <div class="print-section-label">설명</div>
-    <div class="print-desc">${marked.parse(item.description || '')}</div>
+    ${descHTML}
     ${tagsHTML ? `<div class="print-tags">${tagsHTML}</div>` : ''}
     ${refsHTML}
     <div class="print-footer">

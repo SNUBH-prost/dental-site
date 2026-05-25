@@ -1152,7 +1152,6 @@ main {
   /* 모달 버튼 */
   .modal-pres-btn { left: 0.75rem; top: 0.75rem; }
   .modal-focus-btn { right: 2.6rem; top: 0.75rem; }
-  .modal-print-btn { right: 5.4rem; top: 0.75rem; }
 
   /* 참고 논문 목록 모바일 */
   .reference-list li { font-size: 0.8rem; }
@@ -1462,25 +1461,6 @@ main {
 }
 .modal-focus-btn:hover { background: rgba(15,23,42,0.65); }
 
-.modal-print-btn {
-  position: absolute;
-  top: 0.9rem;
-  right: 5.8rem;
-  background: rgba(15,23,42,0.35);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  width: 30px;
-  height: 30px;
-  font-size: 1rem;
-  cursor: pointer;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.12s;
-}
-.modal-print-btn:hover { background: rgba(15,23,42,0.65); }
 
 /* ── 집중 모드 ── */
 body.focus-mode header { display: none; }
@@ -1796,90 +1776,96 @@ body.focus-mode .modal {
     font-family: 'Pretendard', 'Apple SD Gothic Neo', -apple-system, sans-serif;
     color: #0f172a;
     background: #fff;
-    padding: 1.5cm 1.8cm;
+    padding: 1.4cm 1.6cm;
     margin: 0;
-    font-size: 10pt;
-    line-height: 1.6;
+    font-size: 11pt;
+    line-height: 1.65;
   }
   .print-header {
-    border-bottom: 2px solid #2563eb;
-    padding-bottom: 0.6rem;
-    margin-bottom: 1.2rem;
+    border-bottom: 2.5px solid #2563eb;
+    padding-bottom: 0.7rem;
+    margin-bottom: 1.4rem;
   }
   .print-dept-tag {
     display: inline-block;
     background: #2563eb;
     color: #fff;
-    font-size: 8pt;
-    font-weight: 600;
-    padding: 0.1rem 0.45rem;
+    font-size: 8.5pt;
+    font-weight: 700;
+    padding: 0.15rem 0.55rem;
     border-radius: 4px;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.02em;
   }
   .print-title {
-    font-size: 18pt;
-    font-weight: 700;
-    line-height: 1.3;
-    margin-bottom: 0.2rem;
+    font-size: 20pt;
+    font-weight: 800;
+    line-height: 1.25;
+    margin-bottom: 0.25rem;
     color: #0f172a;
   }
-  .print-date { font-size: 8pt; color: #64748b; }
+  .print-date { font-size: 9pt; color: #64748b; margin-top: 0.15rem; }
   .print-section-label {
-    font-size: 7pt;
+    font-size: 7.5pt;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #64748b;
-    margin: 1.1rem 0 0.45rem;
+    letter-spacing: 0.1em;
+    color: #94a3b8;
+    margin: 1.3rem 0 0.5rem;
     border-bottom: 1px solid #e2e8f0;
-    padding-bottom: 0.2rem;
+    padding-bottom: 0.25rem;
   }
   .print-photos {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
     page-break-inside: avoid;
   }
   .print-photo-item img {
     width: 100%;
-    border-radius: 5px;
+    border-radius: 6px;
     display: block;
     border: 1px solid #e2e8f0;
   }
   .print-caption {
-    font-size: 7.5pt;
+    font-size: 8pt;
     color: #64748b;
-    margin-top: 0.2rem;
+    margin-top: 0.25rem;
     text-align: center;
   }
-  .print-desc { font-size: 9.5pt; line-height: 1.75; }
-  .print-desc h1 { font-size: 13pt; margin: 0.8rem 0 0.3rem; }
-  .print-desc h2 { font-size: 11pt; margin: 0.7rem 0 0.25rem; }
-  .print-desc h3 { font-size: 10pt; margin: 0.6rem 0 0.2rem; }
-  .print-desc ul, .print-desc ol { padding-left: 1.2rem; }
+  .print-desc { font-size: 10.5pt; line-height: 1.8; }
+  .print-desc p { margin-bottom: 0.5rem; }
+  .print-desc h1 { font-size: 14pt; margin: 1rem 0 0.35rem; }
+  .print-desc h2 { font-size: 12pt; margin: 0.85rem 0 0.3rem; }
+  .print-desc h3 { font-size: 11pt; margin: 0.7rem 0 0.25rem; }
+  .print-desc ul, .print-desc ol { padding-left: 1.3rem; margin-bottom: 0.5rem; }
+  .print-desc li { margin-bottom: 0.2rem; }
+  .print-desc.empty { display: none; }
+  .print-section-label.hide { display: none; }
   .print-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3rem;
-    margin-top: 0.5rem;
+    gap: 0.35rem;
+    margin-top: 0.6rem;
   }
   .print-tag {
     background: #eff6ff;
-    color: #2563eb;
-    font-size: 8pt;
-    padding: 0.1rem 0.45rem;
+    color: #1d4ed8;
+    font-size: 8.5pt;
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
     border-radius: 99px;
     border: 1px solid #bfdbfe;
   }
-  .print-refs { font-size: 8.5pt; padding-left: 1.1rem; }
-  .print-refs li { margin-bottom: 0.3rem; }
+  .print-refs { font-size: 9pt; padding-left: 1.2rem; }
+  .print-refs li { margin-bottom: 0.4rem; line-height: 1.55; }
   .print-refs a { color: #2563eb; word-break: break-all; }
-  .print-teeth-wrap { page-break-inside: avoid; }
+  .print-teeth-wrap { page-break-inside: avoid; margin-bottom: 0.5rem; }
   .print-footer {
-    margin-top: 1.5rem;
-    padding-top: 0.4rem;
+    margin-top: 1.8rem;
+    padding-top: 0.5rem;
     border-top: 1px solid #e2e8f0;
-    font-size: 7.5pt;
+    font-size: 8pt;
     color: #94a3b8;
     display: flex;
     justify-content: space-between;
