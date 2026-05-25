@@ -414,6 +414,9 @@ function printCase() {
       <span>${new Date().toLocaleDateString('ko-KR')}</span>
     </div>`;
 
+  // details 요소 인쇄 시 모두 펼치기
+  printArea.querySelectorAll('details').forEach(d => d.open = true);
+
   window.print();
 }
 

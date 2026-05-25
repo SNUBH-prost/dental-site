@@ -1933,13 +1933,74 @@ body.focus-mode .modal {
   }
   .print-desc { font-size: 10.5pt; line-height: 1.8; }
   .print-desc p { margin-bottom: 0.5rem; }
-  .print-desc h1 { font-size: 14pt; margin: 1rem 0 0.35rem; }
-  .print-desc h2 { font-size: 12pt; margin: 0.85rem 0 0.3rem; }
-  .print-desc h3 { font-size: 11pt; margin: 0.7rem 0 0.25rem; }
+  .print-desc h1 { font-size: 14pt; font-weight: 700; color: #2563eb; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 0.25rem; margin: 1.2rem 0 0.5rem; }
+  .print-desc h2 { font-size: 12pt; font-weight: 700; color: #2563eb; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 0.2rem; margin: 1rem 0 0.4rem; }
+  .print-desc h3 { font-size: 11pt; font-weight: 700; margin: 0.85rem 0 0.3rem; }
+  .print-desc h4 { font-size: 10.5pt; font-weight: 700; color: #64748b; margin: 0.7rem 0 0.25rem; }
   .print-desc ul, .print-desc ol { padding-left: 1.3rem; margin-bottom: 0.5rem; }
-  .print-desc li { margin-bottom: 0.2rem; }
+  .print-desc li { margin-bottom: 0.25rem; }
+  .print-desc li::marker { color: #2563eb; }
+  .print-desc strong { font-weight: 700; }
+  .print-desc hr { border: none; border-top: 1px solid #e2e8f0; margin: 1rem 0; }
+  .print-desc a { color: #2563eb; }
   .print-desc.empty { display: none; }
   .print-section-label.hide { display: none; }
+
+  /* 설명 내 HTML 요소 */
+  .print-desc kbd {
+    display: inline-block;
+    background: #2563eb;
+    color: #fff;
+    font-size: 8pt;
+    font-weight: 700;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    font-family: inherit;
+    vertical-align: middle;
+  }
+  .print-desc dl { margin: 0.5rem 0 0.75rem; }
+  .print-desc dt { font-weight: 700; color: #2563eb; font-size: 9pt; margin-top: 0.4rem; }
+  .print-desc dd { margin-left: 1rem; font-size: 9.5pt; margin-bottom: 0.1rem; }
+  .print-desc blockquote {
+    border-left: 3px solid #2563eb;
+    background: #eff6ff;
+    padding: 0.5rem 0.9rem;
+    margin: 0.75rem 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 9.5pt;
+  }
+  .print-desc .note,
+  .print-desc .tip,
+  .print-desc .warning,
+  .print-desc .danger {
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    margin: 0.75rem 0;
+    font-size: 9.5pt;
+    line-height: 1.65;
+    border-left: 4px solid;
+    page-break-inside: avoid;
+  }
+  .print-desc .note    { background: #f0f9ff; border-color: #38bdf8; color: #0c4a6e; }
+  .print-desc .tip     { background: #f0fdf4; border-color: #4ade80; color: #14532d; }
+  .print-desc .warning { background: #fffbeb; border-color: #fbbf24; color: #78350f; }
+  .print-desc .danger  { background: #fef2f2; border-color: #f87171; color: #7f1d1d; }
+  .print-desc .note b,
+  .print-desc .tip b,
+  .print-desc .warning b,
+  .print-desc .danger b { display: block; margin-bottom: 0.2rem; font-size: 9pt; }
+  .print-desc details { border: 1px solid #e2e8f0; border-radius: 6px; margin: 0.75rem 0; page-break-inside: avoid; }
+  .print-desc summary { padding: 0.5rem 0.85rem; font-weight: 600; font-size: 9.5pt; list-style: none; }
+  .print-desc details > *:not(summary) { padding: 0.1rem 0.85rem 0.6rem; }
+  .print-desc figure { margin: 0.75rem 0; text-align: center; }
+  .print-desc figcaption { font-size: 8pt; color: #64748b; margin-top: 0.25rem; font-style: italic; }
+  .print-desc sup { font-size: 0.7em; vertical-align: super; }
+  .print-desc sub { font-size: 0.7em; vertical-align: sub; }
+  .print-desc table { width: 100%; border-collapse: collapse; margin: 0.6rem 0 1rem; font-size: 9pt; border: 1px solid #e2e8f0; }
+  .print-desc th { background: #2563eb; color: #fff; padding: 0.45rem 0.8rem; text-align: left; font-weight: 600; }
+  .print-desc td { padding: 0.4rem 0.8rem; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  .print-desc tr:nth-child(even) td { background: #f8fafc; }
+  .print-desc code { background: #f1f5f9; color: #2563eb; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 8.5pt; }
   .print-tags {
     display: flex;
     flex-wrap: wrap;
