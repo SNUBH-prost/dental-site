@@ -15,9 +15,16 @@ const _cldCard    = u => _cld(u, 'w_480,h_280,c_fill,q_auto,f_auto'); // 카드
 (function setupMarked() {
   const renderer = new marked.Renderer();
   const sizeMap  = { sm: '30%', md: '50%', lg: '75%' };
-  renderer.image = (href, title, text) => {
-    const w = sizeMap[text] || '100%';
-    return `<img src="${href}" alt="${title || ''}" style="width:${w};display:block;border-radius:8px;margin:0.75rem 0;border:1px solid #e2e8f0;max-width:100%">`;
+  // marked v5+ 는 객체 인수, v4 이하는 (href, title, text) 개별 인수
+  renderer.image = function(hrefOrToken, title, text) {
+    let href, alt;
+    if (hrefOrToken && typeof hrefOrToken === 'object') {
+      href = hrefOrToken.href; alt = hrefOrToken.text;
+    } else {
+      href = hrefOrToken; alt = text;
+    }
+    const w = sizeMap[alt] || '100%';
+    return `<img src="${href}" alt="${alt || ''}" style="width:${w};display:block;border-radius:8px;margin:0.75rem 0;border:1px solid #e2e8f0;max-width:100%">`;
   };
   marked.setOptions({ renderer, breaks: true });
 })();
