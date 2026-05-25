@@ -942,6 +942,15 @@ function _edFormHTML(d = {}) {
             <button type="button" class="tb-color tb-hl" style="background:#bbf7d0" onclick="_edHl('#bbf7d0')"></button>
             <button type="button" class="tb-color tb-hl" style="background:#bae6fd" onclick="_edHl('#bae6fd')"></button>
             <button type="button" class="tb-color tb-hl" style="background:#fecdd3" onclick="_edHl('#fecdd3')"></button>
+            <div class="tb-sep"></div>
+            <span class="tb-label">삽입</span>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('kbd')" title="단계 배지"><kbd style="background:#2563eb;color:#fff;padding:0.1em 0.4em;border-radius:3px;font-size:0.8em">Phase</kbd></button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('note')" title="안내 박스" style="color:#0c4a6e">ℹ️ 안내</button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('tip')" title="팁 박스" style="color:#14532d">💡 팁</button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('warning')" title="주의 박스" style="color:#78350f">⚠️ 주의</button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('danger')" title="위험 박스" style="color:#7f1d1d">🚫 위험</button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('dl')" title="항목 목록">📋 항목</button>
+            <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('details')" title="접이식 섹션">▶ 접기</button>
           </div>
           <textarea id="ed-description" rows="10"
             placeholder="케이스/자료 새세 내용&#10;&#10;💡 이미지를 이 칸에 드래그하면 글 중간에 삽입됩니다."
@@ -1304,6 +1313,29 @@ function _edHl(color) {
   const tag = `<mark style="background:${color}">${ta.value.slice(s,e) || '텍스트'}</mark>`;
   ta.value = ta.value.slice(0,s) + tag + ta.value.slice(e);
   ta.setSelectionRange(s + tag.length, s + tag.length); ta.focus();
+}
+
+function _edSnippet(type) {
+  const ta = document.getElementById('ed-description');
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  const sel = ta.value.slice(s, e).trim();
+  const before = ta.value.slice(0, s), after = ta.value.slice(e);
+  const nl = (before.length > 0 && !before.endsWith('\n')) ? '\n' : '';
+  const snippets = {
+    kbd:     () => { const t = sel||'Phase 1'; return { ins: `<kbd>${t}</kbd>`, cur: 5, len: t.length }; },
+    note:    () => ({ ins: `\n<div class="note"><b>ℹ️ 안내</b>${sel||'내용을 입력하세요.'}</div>\n`, cur: 0 }),
+    tip:     () => ({ ins: `\n<div class="tip"><b>💡 팁</b>${sel||'내용을 입력하세요.'}</div>\n`, cur: 0 }),
+    warning: () => ({ ins: `\n<div class="warning"><b>⚠️ 주의</b>${sel||'내용을 입력하세요.'}</div>\n`, cur: 0 }),
+    danger:  () => ({ ins: `\n<div class="danger"><b>🚫 위험</b>${sel||'내용을 입력하세요.'}</div>\n`, cur: 0 }),
+    dl:      () => ({ ins: `\n<dl>\n  <dt>항목 1</dt><dd>내용 1</dd>\n  <dt>항목 2</dt><dd>내용 2</dd>\n</dl>\n`, cur: 0 }),
+    details: () => ({ ins: `\n<details>\n<summary>${sel||'제목'}</summary>\n\n내용을 입력하세요.\n\n</details>\n`, cur: 0 }),
+  };
+  const { ins, cur, len } = snippets[type]();
+  const full = nl + ins;
+  ta.value = before + full + after;
+  const pos = s + full.length - (cur ? full.length - nl.length - cur - (len||0) : 0);
+  ta.setSelectionRange(pos, pos);
+  ta.focus();
 }
 
 // ── 텍스트 영역 이미지 드래그 ────────────────────────────────

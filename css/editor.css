@@ -378,6 +378,10 @@
 }
 .editor-panel .tb-color:hover { transform: scale(1.25); }
 .editor-panel .tb-hl { border-radius: 4px; }
+.editor-panel .tb-snippet { font-size: 0.78rem; border: 1px solid var(--border); background: #fff; }
+.editor-panel .tb-snippet:hover { background: var(--primary-pale); border-color: var(--primary); }
+[data-theme="dark"] .editor-panel .tb-snippet { background: #374151; border-color: #4b5563; }
+[data-theme="dark"] .editor-panel .tb-snippet:hover { background: #1e3a5f; border-color: #3b82f6; }
 .editor-panel textarea.drag-active {
   border-color: var(--primary);
   background: var(--primary-pale);
