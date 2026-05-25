@@ -97,6 +97,7 @@ function switchPanel(id) {
   document.getElementById('panel-' + id).classList.add('active');
   document.getElementById('nav-' + id).classList.add('active');
   window.scrollTo(0, 0);
+  if (id === 'usage') loadUsage();
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────
@@ -897,4 +898,148 @@ async function _adminSelectPubMed(type, idx, itemIdx) {
   set('title', title); set('authors', authors); set('year', year);
   set('journal', item.source); set('pages', pages); set('doi', doi);
   showToast('논문 정보가 입력되었습니다 ✓');
+}
+
+// ── 사용량 ────────────────────────────────────────────────────────────────
+
+function saveCldKeys() {
+  const key    = document.getElementById('cld-key-input').value.trim();
+  const secret = document.getElementById('cld-secret-input').value.trim();
+  if (!key || !secret) { showToast('키와 시크릿을 모두 입력하세요.', 'error'); return; }
+  localStorage.setItem('cld-api-key', key);
+  localStorage.setItem('cld-api-secret', secret);
+  document.getElementById('cld-key-input').value = '';
+  document.getElementById('cld-secret-input').value = '';
+  const status = document.getElementById('cld-key-status');
+  status.textContent = '저장됨 ✓ (이 브라우저에만 보관)';
+  status.style.display = 'block';
+  showToast('API 키 저장됨. 새로고침 버튼을 누르세요.');
+}
+
+async function fetchFirebaseStats() {
+  const [casesSnap, contentsSnap] = await Promise.all([
+    db.collection('cases').get(),
+    db.collection('departmentContents').get()
+  ]);
+  let photos = 0, refs = 0;
+  casesSnap.forEach(d => { photos += (d.data().photos||[]).length; refs += (d.data().references||[]).length; });
+  contentsSnap.forEach(d => { photos += (d.data().photos||[]).length; });
+  return { cases: casesSnap.size, contents: contentsSnap.size, photos, refs };
+}
+
+async function fetchGithubStats() {
+  const res = await fetch('https://api.github.com/repos/snubh-prost/dental-site');
+  if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+  return await res.json();
+}
+
+async function fetchCloudinaryStats() {
+  const key    = localStorage.getItem('cld-api-key');
+  const secret = localStorage.getItem('cld-api-secret');
+  if (!key || !secret) return null;
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/usage`, {
+    headers: { 'Authorization': 'Basic ' + btoa(key + ':' + secret) }
+  });
+  if (!res.ok) throw new Error(`Cloudinary API ${res.status}`);
+  return await res.json();
+}
+
+function _usageBar(pct) {
+  const cls = pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : '';
+  return `<div class="usage-bar-wrap"><div class="usage-bar-fill ${cls}" style="width:${Math.min(pct,100)}%"></div></div>`;
+}
+
+function _fmt(bytes) {
+  if (bytes == null) return '—';
+  const gb = bytes / 1e9;
+  return gb >= 1 ? gb.toFixed(2) + ' GB' : (bytes / 1e6).toFixed(1) + ' MB';
+}
+
+function renderCloudinaryCard(data) {
+  const el = document.createElement('div');
+  el.className = 'usage-card';
+  const saved = !!localStorage.getItem('cld-api-key');
+
+  if (!saved) {
+    el.innerHTML = `
+      <div class="usage-card-head"><span class="usage-card-icon">🖼</span><div><div class="usage-card-title">Cloudinary</div><div class="usage-card-sub">이미지 저장소</div></div></div>
+      <p class="usage-error">API 키를 위에 입력하면 사용량을 확인할 수 있습니다.</p>
+      <a class="usage-link" href="https://cloudinary.com/console" target="_blank">대시보드에서 직접 확인 ↗</a>`;
+    return el;
+  }
+  if (!data) {
+    el.innerHTML = `
+      <div class="usage-card-head"><span class="usage-card-icon">🖼</span><div><div class="usage-card-title">Cloudinary</div><div class="usage-card-sub">이미지 저장소</div></div></div>
+      <p class="usage-error">API 키가 틀리거나 CORS 제한으로 직접 조회가 불가합니다.<br>대시보드에서 확인하세요.</p>
+      <a class="usage-link" href="https://cloudinary.com/console" target="_blank">Cloudinary 대시보드 ↗</a>`;
+    return el;
+  }
+
+  const storagePct = data.storage ? Math.round(data.storage.usage / data.storage.limit * 100) : 0;
+  const bwPct      = data.bandwidth ? Math.round(data.bandwidth.usage / data.bandwidth.limit * 100) : 0;
+  const trPct      = data.transformations ? Math.round(data.transformations.usage / data.transformations.limit * 100) : 0;
+
+  el.innerHTML = `
+    <div class="usage-card-head"><span class="usage-card-icon">🖼</span><div><div class="usage-card-title">Cloudinary</div><div class="usage-card-sub">이미지 저장소 · Free ${data.plan||''}</div></div></div>
+    <div class="usage-row"><span class="usage-label">저장 공간</span><span class="usage-value">${_fmt(data.storage?.usage)} / ${_fmt(data.storage?.limit)}</span></div>
+    ${_usageBar(storagePct)}
+    <div class="usage-row"><span class="usage-label">월 대역폭</span><span class="usage-value">${_fmt(data.bandwidth?.usage)} / ${_fmt(data.bandwidth?.limit)}</span></div>
+    ${_usageBar(bwPct)}
+    <div class="usage-row"><span class="usage-label">변환 횟수</span><span class="usage-value">${(data.transformations?.usage||0).toLocaleString()} / ${(data.transformations?.limit||0).toLocaleString()}</span></div>
+    ${_usageBar(trPct)}
+    <a class="usage-link" href="https://cloudinary.com/console" target="_blank">대시보드 ↗</a>`;
+  return el;
+}
+
+function renderFirebaseCard(data) {
+  const el = document.createElement('div');
+  el.className = 'usage-card';
+  if (!data) {
+    el.innerHTML = `<div class="usage-card-head"><span class="usage-card-icon">🔥</span><div><div class="usage-card-title">Firebase</div></div></div><p class="usage-error">데이터를 불러오지 못했습니다.</p>`;
+    return el;
+  }
+  el.innerHTML = `
+    <div class="usage-card-head"><span class="usage-card-icon">🔥</span><div><div class="usage-card-title">Firebase Firestore</div><div class="usage-card-sub">Free Spark · 1 GB 한도</div></div></div>
+    <div class="usage-row"><span class="usage-label">임상 케이스</span><span class="usage-value">${data.cases}개</span></div>
+    <div class="usage-row"><span class="usage-label">각과 자료</span><span class="usage-value">${data.contents}개</span></div>
+    <div class="usage-row"><span class="usage-label">총 사진 수</span><span class="usage-value">${data.photos}장</span></div>
+    <div class="usage-row"><span class="usage-label">참고문헌</span><span class="usage-value">${data.refs}건</span></div>
+    <a class="usage-link" href="https://console.firebase.google.com/project/dental-clinical-5c291/firestore" target="_blank">Firebase 콘솔 ↗</a>`;
+  return el;
+}
+
+function renderGithubCard(data) {
+  const el = document.createElement('div');
+  el.className = 'usage-card';
+  if (!data) {
+    el.innerHTML = `<div class="usage-card-head"><span class="usage-card-icon">🐙</span><div><div class="usage-card-title">GitHub Pages</div></div></div><p class="usage-error">데이터를 불러오지 못했습니다.</p>`;
+    return el;
+  }
+  const sizeMb  = (data.size / 1024).toFixed(1);
+  const sizePct = Math.round(data.size / 1024 / 1024 * 100);
+  const updated = data.updated_at ? new Date(data.updated_at).toLocaleDateString('ko-KR') : '—';
+  el.innerHTML = `
+    <div class="usage-card-head"><span class="usage-card-icon">🐙</span><div><div class="usage-card-title">GitHub Pages</div><div class="usage-card-sub">정적 호스팅 · 1 GB 한도</div></div></div>
+    <div class="usage-row"><span class="usage-label">저장소 크기</span><span class="usage-value">${sizeMb} MB / 1 GB</span></div>
+    ${_usageBar(sizePct)}
+    <div class="usage-row"><span class="usage-label">최근 업데이트</span><span class="usage-value">${updated}</span></div>
+    <a class="usage-link" href="https://github.com/snubh-prost/dental-site" target="_blank">GitHub 저장소 ↗</a>`;
+  return el;
+}
+
+async function loadUsage() {
+  const grid = document.getElementById('usage-grid');
+  if (!grid) return;
+  grid.innerHTML = '<p style="color:var(--text-muted);padding:0.5rem 0">불러오는 중...</p>';
+
+  const [fbResult, ghResult, cldResult] = await Promise.allSettled([
+    fetchFirebaseStats(),
+    fetchGithubStats(),
+    fetchCloudinaryStats()
+  ]);
+
+  grid.innerHTML = '';
+  grid.appendChild(renderCloudinaryCard(cldResult.status === 'fulfilled' ? cldResult.value : null));
+  grid.appendChild(renderFirebaseCard(fbResult.status === 'fulfilled'  ? fbResult.value  : null));
+  grid.appendChild(renderGithubCard(ghResult.status === 'fulfilled'   ? ghResult.value   : null));
 }

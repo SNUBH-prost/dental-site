@@ -33,6 +33,21 @@
   <link rel="stylesheet" href="css/admin.css?v=5">
   <style>
     #login-screen,#admin-screen{display:none}
+    .usage-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.4rem}
+    .usage-card-head{display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem}
+    .usage-card-icon{font-size:1.5rem}
+    .usage-card-title{font-size:1rem;font-weight:700;color:var(--text)}
+    .usage-card-sub{font-size:0.72rem;color:var(--text-muted)}
+    .usage-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.2rem}
+    .usage-label{font-size:0.8rem;color:var(--text-muted)}
+    .usage-value{font-size:0.85rem;font-weight:600;color:var(--text)}
+    .usage-bar-wrap{background:var(--border);border-radius:99px;height:6px;margin-bottom:0.75rem;overflow:hidden}
+    .usage-bar-fill{height:100%;border-radius:99px;background:var(--primary);transition:width 0.6s ease}
+    .usage-bar-fill.warn{background:#f59e0b}
+    .usage-bar-fill.danger{background:#ef4444}
+    .usage-link{display:inline-block;margin-top:0.5rem;font-size:0.78rem;color:var(--primary);text-decoration:none}
+    .usage-link:hover{text-decoration:underline}
+    .usage-error{font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem}
     [data-theme="dark"]{--primary:#3b82f6;--primary-light:#60a5fa;--accent:#34d399;--danger:#f87171;--bg:#111827;--surface:#1f2937;--text:#f9fafb;--text-muted:#9ca3af;--border:#374151;--shadow:0 2px 12px rgba(0,0,0,0.4)}
     [data-theme="dark"] body{background:#111827!important;color:#f9fafb!important}
     [data-theme="dark"] header{background:#1e3a5f!important}
@@ -112,6 +127,7 @@
       <a onclick="switchPanel('content-add')"  id="nav-content-add">+ 새 자료</a>
       <a onclick="switchPanel('image-upload')" id="nav-image-upload">🖼 이미지 URL 복사</a>
       <a onclick="switchPanel('json-import')"  id="nav-json-import">📋 Claude JSON 가져오기</a>
+      <a onclick="switchPanel('usage')"        id="nav-usage">📊 사용량</a>
       <a href="index.html" style="opacity:0.6">← 사이트로 돌아가기</a>
     </aside>
 
@@ -245,6 +261,29 @@
         </div>
       </div>
 
+      <!-- 사용량 -->
+      <div id="panel-usage" class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📊 서비스 사용량</div>
+          <button class="btn btn-outline btn-sm" onclick="loadUsage()">🔄 새로고침</button>
+        </div>
+
+        <div class="form-card">
+          <div class="section-label">Cloudinary API 키</div>
+          <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.75rem">
+            <a href="https://cloudinary.com/console" target="_blank" style="color:var(--primary)">cloudinary.com 대시보드</a> 로그인 후 메인 페이지 상단에 바로 표시됩니다.
+          </p>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <input type="text"     id="cld-key-input"    placeholder="API Key (숫자 15자리)"  style="flex:1;min-width:140px">
+            <input type="password" id="cld-secret-input" placeholder="API Secret"             style="flex:2;min-width:200px">
+            <button class="btn btn-primary btn-sm" onclick="saveCldKeys()">저장</button>
+          </div>
+          <p id="cld-key-status" style="font-size:0.78rem;margin-top:0.4rem;color:var(--accent);display:none"></p>
+        </div>
+
+        <div id="usage-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem"></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -258,6 +297,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script src="js/firebase-config.js?v=1"></script>
 <script src="js/cloudinary-config.js?v=1"></script>
-<script src="js/admin.js?v=3"></script>
+<script src="js/admin.js?v=4"></script>
 </body>
 </html>
