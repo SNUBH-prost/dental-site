@@ -206,44 +206,23 @@ function openModal(id, type) {
   const dept = DEPARTMENTS.find(d => d.id === item.department);
   currentPhotos = item.photos || [];
   currentPhotoIndex = 0;
-  // 전체 프리로드 + decode()로 GPU 선디코딩
+  // 사진 프리로드 (네트워크만, decode 없이)
   _photoPreloadCache = currentPhotos.map(p => {
     const preview = new Image();
     preview.src = _cld(p.url, 'w_1200,q_auto,f_auto');
-    preview.decode().catch(() => {});
     const orig = new Image();
     orig.src = p.url;
-    orig.decode().catch(() => {});
     return { preview, orig, url: p.url };
   });
 
+  // 즉시: 제목·갤러리만 표시하고 모달 오픈 (첫 페인트 최우선)
   document.getElementById('modal-dept').textContent  = dept ? dept.name : '';
   document.getElementById('modal-title').textContent = item.title;
   document.getElementById('modal-date').textContent  = item.date || '';
-  document.getElementById('modal-description').innerHTML = marked.parse(item.description || '');
-  document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>
-    `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
-  ).join('');
-
-  renderRefs(item.references || []);
-  const teethEl = document.getElementById('modal-teeth');
-  if (item.teeth && item.teeth.length) {
-    teethEl.innerHTML = _renderToothChartHTML(item.teeth, false);
-    teethEl.style.display = '';
-  } else {
-    teethEl.innerHTML = '';
-    teethEl.style.display = 'none';
-  }
+  document.getElementById('modal-description').innerHTML = '';
+  document.getElementById('modal-tags').innerHTML = '';
+  document.getElementById('modal-teeth').style.display = 'none';
   renderGallery();
-
-  // OG 메타 동적 업데이트 (공유 시 미리보기)
-  const ogImg = (item.photos && item.photos[0]) ? item.photos[0].url
-    : 'https://snubh-prost.github.io/dental-site/icons/icon-192.png';
-  document.getElementById('og-title').setAttribute('content', item.title + ' — 치과 임상 자료실');
-  document.getElementById('og-desc').setAttribute('content', item.summary || item.description?.slice(0,100) || '');
-  document.getElementById('og-image').setAttribute('content', ogImg);
-  document.getElementById('og-url').setAttribute('content', location.href);
-  document.title = item.title + ' — 치과 임상 자료실';
 
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -251,6 +230,29 @@ function openModal(id, type) {
     _modalPushed = true;
     history.pushState({ page: _currentPage, modal: { id, type } }, '', '#' + type + '-' + id);
   }
+
+  // 첫 페인트 후: markdown·refs·치식 등 무거운 작업 처리
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.getElementById('modal-description').innerHTML = marked.parse(item.description || '');
+    document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>
+      `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
+    ).join('');
+    renderRefs(item.references || []);
+    const teethEl = document.getElementById('modal-teeth');
+    if (item.teeth && item.teeth.length) {
+      teethEl.innerHTML = _renderToothChartHTML(item.teeth, false);
+      teethEl.style.display = '';
+    } else {
+      teethEl.innerHTML = '';
+    }
+    const ogImg = (item.photos && item.photos[0]) ? item.photos[0].url
+      : 'https://snubh-prost.github.io/dental-site/icons/icon-192.png';
+    document.getElementById('og-title').setAttribute('content', item.title + ' — 치과 임상 자료실');
+    document.getElementById('og-desc').setAttribute('content', item.summary || item.description?.slice(0,100) || '');
+    document.getElementById('og-image').setAttribute('content', ogImg);
+    document.getElementById('og-url').setAttribute('content', location.href);
+    document.title = item.title + ' — 치과 임상 자료실';
+  }));
 }
 
 function _toggleFocusMode() {

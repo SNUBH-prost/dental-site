@@ -233,7 +233,6 @@ header {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.28s, visibility 0s linear 0.28s;
-  backdrop-filter: blur(2px);
 }
 .drawer-overlay.open {
   opacity: 1;
@@ -1220,8 +1219,7 @@ main {
   position: fixed;
   inset: 0;
   z-index: 800;
-  background: rgba(15,23,42,0.55);
-  backdrop-filter: blur(4px);
+  background: rgba(15,23,42,0.7);
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s, visibility 0s linear 0.2s;
