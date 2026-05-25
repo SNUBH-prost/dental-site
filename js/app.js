@@ -34,7 +34,8 @@ const DEPARTMENTS = [
 let allCases = [];
 let allContents = [];
 let currentPhotos = [];
-let _photoPreloadCache = []; // GC 방지용 참조 보관
+let _photoPreloadCache = {}; // url → HTMLImageElement (DOM에 삽입해 GPU 선디코딩)
+let _preloadContainer = null;
 let currentPhotoIndex = 0;
 let _currentModalItem = null;
 let isAdmin = false;
@@ -206,14 +207,12 @@ function openModal(id, type) {
   const dept = DEPARTMENTS.find(d => d.id === item.department);
   currentPhotos = item.photos || [];
   currentPhotoIndex = 0;
-  // 두 단계 프리로드: ① 빠른 프리뷰(즉시 표시용) ② 원본(품질)
-  _photoPreloadCache = currentPhotos.map(p => {
-    const preview = new Image();
-    preview.src = _cld(p.url, 'w_1200,q_auto,f_auto');
-    const orig = new Image();
-    orig.src = p.url;
-    return { preview, orig, url: p.url };
-  });
+  // 현재·다음 2장만 먼저 선디코딩, 나머지는 탐색 시 지연 로드
+  _photoPreloadCache = {};
+  if (_preloadContainer) _preloadContainer.innerHTML = '';
+  _preloadPhotoAt(0);
+  _preloadPhotoAt(1);
+  _preloadPhotoAt(2);
 
   document.getElementById('modal-dept').textContent  = dept ? dept.name : '';
   document.getElementById('modal-title').textContent = item.title;
@@ -284,6 +283,27 @@ function _copyShareLink() {
 }
 
 // ── Gallery ────────────────────────────────────────────────────
+function _ensurePreloadContainer() {
+  if (!_preloadContainer || !document.body.contains(_preloadContainer)) {
+    _preloadContainer = document.createElement('div');
+    _preloadContainer.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;pointer-events:none;';
+    document.body.appendChild(_preloadContainer);
+  }
+  return _preloadContainer;
+}
+
+function _preloadPhotoAt(i) {
+  if (i < 0 || i >= currentPhotos.length) return;
+  const url = currentPhotos[i].url;
+  if (_photoPreloadCache[url]) return; // already queued
+  const container = _ensurePreloadContainer();
+  const img = document.createElement('img');
+  img.src = url;
+  container.appendChild(img);
+  img.decode().catch(() => {}); // GPU 선디코딩
+  _photoPreloadCache[url] = img;
+}
+
 function renderGallery() {
   const el = document.getElementById('gallery-section');
   if (!currentPhotos.length) {
@@ -331,28 +351,19 @@ function updateGallery() {
   const p   = currentPhotos[currentPhotoIndex];
   const idx = currentPhotoIndex;
   const mainImg = document.getElementById('gallery-main-img');
-  const cache   = _photoPreloadCache[idx];
 
-  if (cache?.orig.complete && cache.orig.naturalWidth) {
-    // 원본 이미 다운로드 완료 → 바로 표시
-    mainImg.src = p.url;
-  } else {
-    // 프리뷰 즉시 표시 (이미 캐시됐거나 빠르게 로드됨)
-    if (cache?.preview.complete && cache.preview.naturalWidth) {
-      mainImg.src = cache.preview.src;
-    } else if (cache?.preview.src) {
-      mainImg.src = cache.preview.src; // 로딩 중이어도 설정 (브라우저가 표시해줌)
-    }
-    // 원본 로드 완료 시 교체
-    if (cache) {
-      cache.orig.onload = () => { if (currentPhotoIndex === idx) mainImg.src = p.url; };
-    }
-  }
+  // decode()로 선디코딩된 이미지 → 같은 URL 재사용 시 브라우저가 디코드 캐시 활용
+  mainImg.src = p.url;
+
+  // 앞뒤 사진 미리 선디코딩
+  _preloadPhotoAt(idx - 1);
+  _preloadPhotoAt(idx + 1);
+  _preloadPhotoAt(idx + 2);
 
   document.getElementById('gallery-caption').textContent = p.caption || '';
-  document.getElementById('gallery-counter').textContent = `${currentPhotoIndex+1} / ${currentPhotos.length}`;
+  document.getElementById('gallery-counter').textContent = `${idx+1} / ${currentPhotos.length}`;
   document.querySelectorAll('.gallery-thumbs img').forEach((img,i) =>
-    img.classList.toggle('active', i === currentPhotoIndex));
+    img.classList.toggle('active', i === idx));
   const gm = document.querySelector('.gallery-main');
   if (gm) _placeAnnSVG(gm, p);
 }
