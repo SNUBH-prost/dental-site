@@ -1677,7 +1677,7 @@ body.focus-mode .modal {
 .pres-photo-num { font-size: 0.75rem; color: #475569; }
 
 /* Description */
-.pres-type-desc { align-items: flex-start; max-width: 800px; margin: 0 auto; width: 100%; }
+.pres-type-desc { align-items: flex-start; justify-content: flex-start; max-width: 800px; margin: 0 auto; width: 100%; }
 .pres-desc-inner {
   width: 100%;
   line-height: 1.85;
