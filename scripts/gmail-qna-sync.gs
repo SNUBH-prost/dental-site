@@ -49,7 +49,7 @@ function _callGroq(question) {
       'Content-Type': 'application/json',
     },
     payload: JSON.stringify({
-      model: 'deepseek-r1-distill-llama-70b',
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: question },
@@ -64,8 +64,7 @@ function _callGroq(question) {
   const text = result?.choices?.[0]?.message?.content;
   if (!text) throw new Error('Groq 응답 실패: ' + res.getContentText());
   Logger.log('[Groq 답변 생성 완료]');
-  // deepseek-r1의 <think>...</think> 블록 제거
-  return text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+  return text.trim();
 }
 
 // ── Cloudinary 이미지 업로드 → URL ───────────────────────────────
