@@ -1550,6 +1550,7 @@ async function _edSave() {
     }
     _edToast('저장되었습니다.');
     closeEditor();
+    localStorage.removeItem(_CACHE_KEY_TS); // 저장 후 캐시 무효화 → 강제 재조회
     await loadData();
   } catch(err) {
     _edToast('저장 실패: ' + err.message, 'error');
