@@ -2336,6 +2336,55 @@ function _edToast(msg, type = 'success') {
 // ── 글로벌 에러 핸들러 ────────────────────────────────────────
 window.addEventListener('unhandledrejection', e => {
   const msg = e.reason?.message || String(e.reason) || '알 수 없는 오류';
-  // Firebase 권한 오류 등 silent fail 방지 — console에만 기록
   console.warn('[unhandled]', msg, e.reason);
 });
+
+// ── Pull-to-refresh (모바일) ──────────────────────────────────
+(function _setupPTR() {
+  let startY = 0, curDY = 0, active = false;
+  const THRESH = 72;
+
+  const ind = document.createElement('div');
+  ind.id = 'ptr-indicator';
+  ind.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>';
+  document.body.appendChild(ind);
+
+  function setPos(dy) {
+    const p = Math.min(dy / THRESH, 1);
+    const y = Math.min(dy * 0.5, 44) - 48;
+    ind.style.opacity = p;
+    ind.style.transform = `translateY(${y}px)`;
+    ind.classList.toggle('ptr-ready', p >= 1);
+  }
+  function reset() {
+    ind.style.opacity = '0';
+    ind.style.transform = 'translateY(-48px)';
+    ind.classList.remove('ptr-ready', 'ptr-spin');
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY > 2) return;
+    if (document.getElementById('modal-overlay')?.classList.contains('open')) return;
+    startY = e.touches[0].clientY;
+    curDY = 0; active = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!active) return;
+    curDY = Math.max(0, e.touches[0].clientY - startY);
+    if (curDY === 0) { active = false; return; }
+    setPos(curDY);
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!active) return;
+    active = false;
+    if (curDY >= THRESH) {
+      ind.classList.add('ptr-spin');
+      ind.style.opacity = '1';
+      loadData().finally(reset);
+    } else {
+      reset();
+    }
+  }, { passive: true });
+})();
