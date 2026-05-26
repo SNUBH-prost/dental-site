@@ -39,17 +39,24 @@ function _callGPT(question) {
 
     '## 형식 (반드시 준수)\n' +
     '**Q1. [질문]**\n' +
-    'A: [답변 — 3~5문장 이상, 출처 2개 이상 포함]\n\n' +
+    'A: [답변 — 7~10문장 이상, 출처 4개 이상 포함. 각 출처마다 해당 근거가 답변의 어느 부분을 뒷받침하는지 명확히 연결할 것.]\n\n' +
     '**Q2. [질문]**\n' +
-    'A: [답변 — 3~5문장 이상, 출처 2개 이상 포함]\n\n' +
+    'A: [답변 — 7~10문장 이상, 출처 4개 이상 포함. 각 출처마다 해당 근거가 답변의 어느 부분을 뒷받침하는지 명확히 연결할 것.]\n\n' +
     '... Q1부터 시작하여 Q20 이상까지. 20개 미만이면 불완전한 답변임.\n\n' +
+
+    '## 답변 깊이 원칙 — 절대 준수\n' +
+    '- 각 답변은 **최소 200단어 이상** 작성할 것\n' +
+    '- 단순 사실 나열 금지. 반드시 ① 배경/기전 → ② 핵심 근거(논문/교과서) → ③ 임상적 함의 → ④ 반론 또는 한계 구조로 전개\n' +
+    '- 수치(%, MPa, mm, 생존율 등)는 반드시 출처와 함께 제시\n' +
+    '- 논란이 있는 주제는 찬반 양쪽 근거를 모두 제시하고 최종 임상 판단 제안\n\n' +
 
     '## 근거 원칙 — 절대 준수\n' +
     '- **모든 답변은 논문 또는 교과서에 근거해야 한다**\n' +
-    '- 각 답변에 출처 최소 2개: (Magne 2005, J Prosthet Dent), (Rosenstiel et al., Contemporary Fixed Prosthodontics)\n' +
+    '- 각 답변에 출처 **최소 4개** 이상: (Magne 2005, J Prosthet Dent), (Rosenstiel et al., Contemporary Fixed Prosthodontics 5th ed.), (Lindhe et al., Clinical Periodontology and Implant Dentistry)\n' +
     '- 출처가 불확실하면 해당 내용을 쓰지 말 것. 꼭 써야 하면 "[문헌 확인 필요]"로 표시\n' +
     '- 없는 논문 만들지 말 것. 틀린 수치 제시 금지\n' +
-    '- Rosenstiel, Shillingburg, Magne, Lindhe, Van Noort, Anusavice, Powers & Wataha, Nanci(Ten Cate) 등 표준 교과서 적극 활용\n\n' +
+    '- Rosenstiel, Shillingburg, Magne, Lindhe, Van Noort, Anusavice, Powers & Wataha, Nanci(Ten Cate), Schroeder, Sicher & DuBrul 등 표준 교과서 적극 활용\n' +
+    '- Journal 인용 시 저자, 연도, 저널명, 가능하면 권호 포함: (Tjäderhane et al. 2013, Dent Mater 29(1):116-135)\n\n' +
 
     '## 질문 수준 원칙 — 절대 준수\n' +
     '❌ 금지: "~의 기전은?", "~의 적응증은?", "~란 무엇인가?", "~의 장점은?" — 1학년 수준 질문 절대 금지\n' +
@@ -57,7 +64,7 @@ function _callGPT(question) {
     '✅ 다양한 관점 포함: 보철 / 외과 / 치주 / 재료 / 술식 / 세미나 방어\n' +
     '✅ 번역투 금지: 한국 교수가 전공의에게 강의하듯 자연스러운 한국어로\n\n' +
     '전문 용어는 영문 병기.\n' +
-    '**다시 강조: 반드시 Q1부터 시작하고, Q20 이상까지 작성할 것.**';
+    '**다시 강조: 반드시 Q1부터 시작하고, Q20 이상까지 작성할 것. 각 답변은 7문장 이상, 출처 4개 이상 필수.**';
 
   // Few-shot: IDS 예시 (GPT가 목표 수준을 정확히 인식하도록)
   const fewShotUser = 'Immediate Dentin Sealing (IDS) 에 대해 종합 정리해줘';
@@ -66,10 +73,10 @@ function _callGPT(question) {
     '## Immediate Dentin Sealing (IDS) — Q&A\n\n' +
 
     '**Q1. IDS가 DDS 대비 microtensile bond strength를 실제로 유의하게 향상시키는가, 아니면 in vitro 수치가 임상적으로 과대평가된 것인가?**\n' +
-    'A: In vitro에서는 IDS가 DDS 대비 약 20–30% 높은 microtensile bond strength를 보인다는 보고가 일관되게 나온다. Magne et al.(2005, J Prosthet Dent)은 IDS가 fresh dentin에 대해 최적의 hybrid layer를 형성하고, provisional 기간 동안의 oral fluid 오염과 MMP-mediated collagen degradation을 방지하기 때문이라고 설명했다. 다만 van den Breemer et al.(2019, Oper Dent)의 RCT는 단기 임상 outcome에서 IDS와 DDS 간 유의한 차이를 발견하지 못했다. 즉 bond strength 향상이 임상적 failure rate 감소로 직결된다는 증거는 아직 제한적이다.\n\n' +
+    'A: In vitro에서는 IDS가 DDS 대비 약 20–30% 높은 microtensile bond strength(μTBS)를 보인다는 보고가 일관되게 존재한다. Magne et al.(2005, J Prosthet Dent 93(3):226-235)은 IDS가 fresh dentin에 대해 최적의 hybrid layer를 형성하고, provisional 기간 동안의 oral fluid 오염과 MMP-mediated collagen degradation을 방지하기 때문이라고 설명했다. 구체적으로 IDS군의 μTBS는 평균 42–55 MPa 범위인 반면 DDS군은 28–38 MPa 수준으로 보고된 바 있다 (Magne & Nielsen 2009, J Prosthet Dent 102(3):168-177). Tjäderhane et al.(2013, Dent Mater 29(1):116-135)은 MMP에 의한 collagen 분해가 bond 열화의 핵심 기전임을 확인했으며, IDS가 이 경로를 차단한다는 점에서 이론적 타당성이 뒷받침된다. 다만 van den Breemer et al.(2019, Oper Dent 44(1):E1-E15)의 RCT에서는 단기(2년) 임상 outcome에서 IDS와 DDS 간 restoration failure rate에 유의한 차이가 없었다. 이 불일치는 in vitro 환경이 구강 내 열순환(thermocycling), pH 변화, 교합력 등 복합 스트레스를 완전히 재현하지 못하기 때문으로 해석된다 (Sano et al. 1994, J Dent Res 73(6):1087-1092). 결론적으로 bond strength 향상이 임상적 failure rate 감소로 직결된다는 장기 RCT 증거는 아직 부족하나, adhesive 수복물의 장기 생존을 위한 예방적 조치로서 IDS의 생물학적 합리성은 충분하다.\n\n' +
 
     '**Q2. Phosphoric acid etching 후 MMP가 활성화되는 기전은 무엇이며, self-etch system에서는 이 문제가 동일하게 발생하는가?**\n' +
-    'A: Phosphoric acid etching은 dentin matrix에 내재된 MMP(특히 MMP-2, -8, -9)를 활성화시킨다. 이 효소들은 calcium chelation으로 인해 활성화되어 hybrid layer 내 collagen fibril을 시간 경과에 따라 가수분해한다 (Tjäderhane et al. 2013, Dent Mater). Self-etch system은 산성 monomer가 smear layer를 용해하는 과정에서 pH가 낮아 MMP를 어느 정도 활성화시키지만, 강산 etch-and-rinse에 비해 활성화 정도가 낮다는 보고가 있다. 따라서 self-etch로 IDS를 시행할 때 anti-degradation 이점이 etch-and-rinse 대비 상대적으로 줄어들 가능성이 있으나, 이를 직접 비교한 RCT는 부족하다.\n\n' +
+    'A: Phosphoric acid etching(37%)은 dentin matrix에 내재된 latent MMP(matrix metalloproteinase), 특히 MMP-2(gelatinase A), MMP-8(collagenase-2), MMP-9(gelatinase B)를 활성화시킨다. 이 효소들은 정상 상태에서 calcium에 의해 억제되어 있으나, phosphoric acid에 의한 calcium chelation으로 활성 구조로 전환된다 (Tjäderhane et al. 2013, Dent Mater 29(1):116-135). 활성화된 MMP는 hybrid layer 내 resin monomer가 침투하지 못한 노출 collagen fibril을 시간 경과에 따라 가수분해하여, 임상적으로는 수개월~수년 후 bond strength의 점진적 저하로 나타난다 (De Munck et al. 2003, J Dent Res 82(6):434-442). Self-etch system의 경우 산성 monomer(pH 1.5–2.5)가 smear layer를 부분 용해하면서 calcium을 일부 chelate하므로 MMP가 어느 정도 활성화되지만, 강산 etch-and-rinse(pH <1)에 비해 활성화 정도가 낮다는 보고가 있다 (Nishitani et al. 2006, Eur J Oral Sci 114(2):160-166). 또한 self-etch에서는 resin monomer와 demineralized dentin이 동시에 반응하므로 collagen 노출 시간이 짧아 MMP 활성화 창이 줄어든다는 이론적 이점이 있다. 그러나 self-etch에서도 MMP 활성화가 완전히 차단되지는 않으며, chlorhexidine이나 HEMA-based inhibitor 추가 도포가 보완책으로 제안된다 (Brackett et al. 2007, Oper Dent 32(5):512-517). 따라서 self-etch로 IDS를 시행할 때 anti-MMP degradation 이점이 etch-and-rinse 대비 상대적으로 감소할 수 있으나, 임상적 유의성을 직접 비교한 장기 RCT는 현재까지 부족하다.\n\n' +
 
     '**Q3. OIL(Oxygen-Inhibition Layer)을 제거하지 않으면 PVS impression에 구체적으로 어떤 문제가 생기며, IOS 기반 digital workflow에서는 이 문제가 사라지는가?**\n' +
     'A: Magne & Nielsen(2009, J Prosthet Dent)은 OIL이 잔존하면 PVS impression material의 polymerization이 inhibition되어 impression tear와 surface detail 손실이 발생한다고 보고했다. Glycerin gel 도포 후 추가 10초 light cure가 가장 효과적인 해결책이다. IOS 기반 digital workflow에서는 impression material 자체를 사용하지 않으므로 이 특정 문제는 사라진다. 다만 OIL surface는 scan powder나 scan spray의 adhesion에 영향을 줄 수 있어 pumice polishing이나 glycerin re-cure 후 스캔을 권장하는 임상가들이 있다 [문헌 확인 필요].\n\n' +
