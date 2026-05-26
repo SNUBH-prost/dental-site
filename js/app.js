@@ -107,7 +107,13 @@ async function loadData() {
   ]);
 
   allCases    = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  allContents = contentsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allContents = contentsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => {
+      const ta = a.createdAt?.toDate?.()?.getTime() ?? (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      const tb = b.createdAt?.toDate?.()?.getTime() ?? (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+      if (ta !== tb) return tb - ta;
+      return (b.date || '').localeCompare(a.date || '');
+    });
 
   try {
     localStorage.setItem(_CACHE_KEY_CASES,    JSON.stringify(allCases));

@@ -316,6 +316,7 @@ function _addQnADoc(title, description, answer, photoUrls, references) {
       answer:      { stringValue: answer },
       department:  { stringValue: 'qna' },
       date:        { stringValue: dateStr },
+      createdAt:   { timestampValue: new Date().toISOString() },
       photos:      { arrayValue: { values: photoValues } },
       tags:        { arrayValue: { values: [{ stringValue: '이메일' }] } },
       references:  { arrayValue: { values: refValues } },
