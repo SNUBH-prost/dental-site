@@ -70,6 +70,16 @@ function _callGroq(question) {
     '- 논란 있는 주제에서 한쪽 입장만 서술\n' +
     '- 구글 검색 수준의 피상적 개요 나열\n\n' +
 
+    '## 품질 기준 예시 — 아래와 같은 깊이와 문체로 작성하세요\n\n' +
+    '다음은 "Immediate Dentin Sealing(IDS)"에 대한 답변 일부입니다. 이 수준이 요구하는 최소 품질입니다.\n\n' +
+    '---\n' +
+    '이 개념의 뿌리는 1990년대 초로 거슬러 올라갑니다. Pashley와 동료들이 1992년 dentin bonding agent를 치아 삭제 직후 적용하면 dentin permeability가 유의하게 감소한다는 것을 발견했고, 이것이 "dentin pre-hybridization"이라는 개념의 출발점이었습니다. Paul과 Schärer는 1997년 "dual bonding technique"을 제안했는데, 이는 prep 시점과 final cementation 시점 두 번에 걸쳐 bonding을 시행하는 방식이었습니다. Pascal Magne(2005)가 이 개념을 체계화하면서 "Immediate Dentin Sealing"이라는 용어로 정립했고, J Esthet Restor Dent와 J Prosthet Dent에 연이은 논문을 발표하면서 현재의 protocol이 자리잡았습니다.\n\n' +
+    'DDS에서는 dentin bonding과 resin cement의 polymerization shrinkage가 거의 동시에 발생하면서, 그 stress가 미성숙한 hybrid layer에 직접 전달됩니다. 반면 IDS에서는 hybrid layer가 이미 완전히 polymerize되어 있는 상태이기 때문에, final cementation 시점의 shrinkage stress가 이 pre-cured layer에 의해 일부 흡수·분산되어 interfacial strain이 최소화됩니다. 이를 stress-absorbing layer(elastic cushion) 개념이라고도 부릅니다.\n\n' +
+    'Matrix metalloproteinase(MMP) — dentin 내부에 존재하는 zinc/calcium 의존성 endogenous protease — 는 phosphoric acid etching 과정에서 활성화되어 hybrid layer 내 collagen fibril을 시간이 지남에 따라 가수분해하는데, 이것이 "adhesive aging"의 핵심 기전입니다. IDS는 prep 직후 안정적인 resin seal을 제공함으로써 MMP 활성을 제한하고 collagen degradation 진행을 지연시킬 수 있습니다. DDS에서는 dentin이 노출된 채로 1~2주 이상 유지되면서 MMP-mediated degradation이 최대화되는 시간이 주어지는 셈입니다.\n\n' +
+    'Alghauli et al.(2024)의 systematic review and meta-analysis에서 11개의 임상 연구를 종합한 결과, IDS 그룹의 survival rate은 96.4~100%로 IDS를 시행하지 않은 그룹(81.8~96.7%)보다 유의하게 높았습니다(P<.05). 그러나 균형 있게 봐야 합니다. van den Breemer et al.(2019)의 RCT 결과는 단기 outcome — 특히 postoperative sensitivity와 patient satisfaction — 에서 IDS와 DDS 간 유의한 차이를 발견하지 못했습니다. 이는 IDS의 임상적 이득이 모든 상황에서 동일하게 큰 것은 아니며, 특히 extensive dentin exposure와 deep preparation 케이스에서 더 두드러진다는 것을 시사합니다.\n' +
+    '---\n\n' +
+    '위 예시처럼: 역사적 흐름 → 분자 기전 → 구체적 수치가 있는 임상 근거 → 상충하는 근거까지 모두 포함된 깊이로 작성하세요.\n\n' +
+
     '## 레퍼런스 출력 형식 (필수, 반드시 답변 맨 끝에 출력)\n' +
     '답변 본문을 완전히 작성한 후, 아래 형식의 JSON 블록을 출력하세요.\n' +
     'JPD, JOE, JER, IJPRD, JOMI, IJOI, CCED, Journal of Periodontology, Clinical Oral Implants Research 등 주요 저널에서 7개 이상 제시하세요.\n' +
@@ -97,7 +107,7 @@ function _callGroq(question) {
       'Content-Type': 'application/json',
     },
     payload: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: question },
