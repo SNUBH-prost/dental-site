@@ -86,6 +86,23 @@ function _renderAll() {
   _injectPageBottomBtns();
 }
 
+function _createdAtMs(item) {
+  const c = item.createdAt;
+  if (!c) return new Date(item.date || 0).getTime();
+  if (typeof c.toDate === 'function') return c.toDate().getTime();
+  if (typeof c === 'object' && c.seconds) return c.seconds * 1000 + Math.floor((c.nanoseconds || 0) / 1e6);
+  if (typeof c === 'string') return new Date(c).getTime();
+  return new Date(item.date || 0).getTime();
+}
+
+function _sortContents(arr) {
+  return [...arr].sort((a, b) => {
+    const diff = _createdAtMs(b) - _createdAtMs(a);
+    if (diff !== 0) return diff;
+    return (b.date || '').localeCompare(a.date || '');
+  });
+}
+
 async function loadData() {
   const now = Date.now();
   try {
@@ -94,7 +111,7 @@ async function loadData() {
     const ts = parseInt(localStorage.getItem(_CACHE_KEY_TS) || '0');
     if (cc && ct) {
       allCases    = JSON.parse(cc);
-      allContents = JSON.parse(ct);
+      allContents = _sortContents(JSON.parse(ct));
       _renderAll();
       // 캐시가 TTL 이내이면 Firebase 호출 생략
       if (now - ts < _CACHE_TTL) return;
@@ -107,13 +124,7 @@ async function loadData() {
   ]);
 
   allCases    = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  allContents = contentsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => {
-      const ta = a.createdAt?.toDate?.()?.getTime() ?? (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-      const tb = b.createdAt?.toDate?.()?.getTime() ?? (b.createdAt ? new Date(b.createdAt).getTime() : 0);
-      if (ta !== tb) return tb - ta;
-      return (b.date || '').localeCompare(a.date || '');
-    });
+  allContents = _sortContents(contentsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
   try {
     localStorage.setItem(_CACHE_KEY_CASES,    JSON.stringify(allCases));
