@@ -554,8 +554,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     _isPopState = false;
   });
 
+  // mousedown 시작점이 오버레이일 때만 닫음 (모달 안에서 드래그 후 오버레이에서 놓아도 닫히지 않음)
+  let _overlayMouseDownTarget = null;
+  document.getElementById('modal-overlay').addEventListener('mousedown', e => {
+    _overlayMouseDownTarget = e.target;
+  });
   document.getElementById('modal-overlay').addEventListener('click', e => {
-    if (e.target.id === 'modal-overlay') closeModal();
+    if (e.target.id === 'modal-overlay' && _overlayMouseDownTarget?.id === 'modal-overlay') closeModal();
+    _overlayMouseDownTarget = null;
   });
   document.getElementById('editor-overlay').addEventListener('click', e => {
     if (e.target.id === 'editor-overlay') closeEditor();
