@@ -363,9 +363,13 @@ function _uploadToCloudinary(attachment) {
   const dataUri = 'data:' + attachment.getContentType() + ';base64,' + base64;
   const url     = 'https://api.cloudinary.com/v1_1/' + CONFIG.CLOUDINARY_CLOUD_NAME + '/image/upload';
 
+  // 파일명의 슬래시·특수문자 제거 → public_id에 명시해 Cloudinary 오류 방지
+  const rawName  = (attachment.getName() || 'image').replace(/\.[^.]+$/, '');
+  const publicId = rawName.replace(/[\/\\]/g, '_').replace(/[^a-zA-Z0-9._-]/g, '_') + '_' + Date.now();
+
   const res = UrlFetchApp.fetch(url, {
     method: 'post',
-    payload: { file: dataUri, upload_preset: CONFIG.CLOUDINARY_UPLOAD_PRESET },
+    payload: { file: dataUri, upload_preset: CONFIG.CLOUDINARY_UPLOAD_PRESET, public_id: publicId },
     muteHttpExceptions: true,
   });
 
