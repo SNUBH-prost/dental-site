@@ -70,7 +70,7 @@ let _modalPushed = false;
 const _CACHE_KEY_CASES    = 'dental_cache_cases';
 const _CACHE_KEY_CONTENTS = 'dental_cache_contents';
 const _CACHE_KEY_TS       = 'dental_cache_ts';
-const _CACHE_TTL          = 3 * 60 * 1000; // 3분
+const _CACHE_TTL          = 1 * 60 * 1000; // 1분
 
 // 간단한 debounce 유틸
 function _debounce(fn, ms) {
