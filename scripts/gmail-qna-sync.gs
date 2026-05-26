@@ -82,7 +82,7 @@ function _callGPT(question) {
       'Content-Type': 'application/json',
     },
     payload: JSON.stringify({
-      model:      'gpt-4o-mini', // 품질 부족하면 'gpt-4o' 로 교체
+      model:      'gpt-4o',
       max_tokens: 4096,
       messages: [
         { role: 'system', content: systemPrompt },
