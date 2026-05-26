@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=58">
+  <link rel="stylesheet" href="css/style.css?v=59">
   <link rel="stylesheet" href="css/editor.css?v=27">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -265,6 +265,10 @@
       <div id="modal-teeth" style="display:none;margin-bottom:1rem"></div>
       <div class="modal-section-label">설명</div>
       <div class="modal-description" id="modal-description"></div>
+      <div id="modal-answer-section" style="display:none">
+        <div class="modal-section-label modal-answer-label">💡 AI 초안 답변 <span class="answer-badge">검토 필요</span></div>
+        <div class="modal-description modal-answer" id="modal-answer"></div>
+      </div>
       <div class="modal-tags" id="modal-tags"></div>
       <div id="refs-section" style="display:none">
         <div class="modal-section-label" style="margin-top:1.5rem">참고 논문</div>
@@ -337,7 +341,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
 <script defer src="js/firebase-config.js?v=21"></script>
 <script defer src="js/cloudinary-config.js?v=21"></script>
-<script defer src="js/app.js?v=64"></script>
+<script defer src="js/app.js?v=65"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {

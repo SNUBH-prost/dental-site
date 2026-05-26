@@ -2129,3 +2129,18 @@ body.focus-mode .modal {
   from { transform: translateY(0) rotate(0deg); }
   to   { transform: translateY(0) rotate(360deg); }
 }
+
+/* ── AI 답변 섹션 ────────────────────────────────────────────── */
+.modal-answer-label { display: flex; align-items: center; gap: 0.5rem; margin-top: 1.5rem; }
+.answer-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+}
+[data-theme="dark"] .answer-badge { background: #451a03; color: #fcd34d; border-color: #92400e; }
+.modal-answer { border-left: 3px solid #fcd34d; padding-left: 1rem; background: #fffbeb; border-radius: 0 8px 8px 0; }
+[data-theme="dark"] .modal-answer { background: #1c1710; border-left-color: #92400e; }

@@ -270,11 +270,19 @@ function openModal(id, type) {
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const descEl = document.getElementById('modal-description');
     descEl.innerHTML = marked.parse(item.description || '');
-    // KaTeX는 무거우므로 idle 타임에 처리 (모달 오픈 애니메이션 보호)
     if (typeof requestIdleCallback !== 'undefined') {
       requestIdleCallback(() => _renderMath(descEl), { timeout: 1500 });
     } else {
       setTimeout(() => _renderMath(descEl), 0);
+    }
+    // AI 답변 섹션
+    const answerSection = document.getElementById('modal-answer-section');
+    const answerEl = document.getElementById('modal-answer');
+    if (item.answer) {
+      answerEl.innerHTML = marked.parse(item.answer);
+      answerSection.style.display = '';
+    } else {
+      answerSection.style.display = 'none';
     }
     document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>
       `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
@@ -944,6 +952,11 @@ function _renderEditorForm(data = {}) {
   _edPhotos = (data.photos || []).map(p => ({ url: p.url, caption: p.caption || '', annotations: p.annotations || [] }));
   _edTags   = data.tags  ? [...data.tags]  : [];
   _edTeeth  = (data.teeth || []).map(t => typeof t === 'number' ? {n:t, type:'implant'} : t);
+  // answer 필드 복원 (폼 렌더 후 설정)
+  setTimeout(() => {
+    const ta = document.getElementById('ed-answer');
+    if (ta) ta.value = data.answer || '';
+  }, 0);
   document.getElementById('editor-form-title').textContent =
     _edId
       ? (_edType === 'case' ? '케이스 편집' : '자료 편집')
@@ -1029,6 +1042,10 @@ function _edFormHTML(d = {}) {
             <div class="ed-preview-pane modal-description" id="ed-preview-pane" style="display:none"></div>
           </div>
           <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem">이미지를 텍스트 영역으로 드래그하면 현재 커서 위치에 자동 삽입됩니다.</div>
+        </div>
+        <div class="form-group full" id="ed-answer-group">
+          <label>💡 AI 초안 답변 <span style="font-weight:400;font-size:0.72rem;color:var(--text-muted)">(선택, 마크다운 지원)</span></label>
+          <textarea id="ed-answer" rows="6" placeholder="AI가 생성한 답변 초안. 수정 후 저장하세요." style="min-height:120px"></textarea>
         </div>
         <div class="form-group full">
           <label>태그</label>
@@ -1549,6 +1566,7 @@ async function _edSave() {
       date:        document.getElementById('ed-date').value,
       summary:     document.getElementById('ed-summary').value.trim(),
       description: document.getElementById('ed-description').value.trim(),
+      answer:      (document.getElementById('ed-answer')?.value || '').trim(),
       photos,
       references:  _edCollectRefs(),
       tags:        [..._edTags],
