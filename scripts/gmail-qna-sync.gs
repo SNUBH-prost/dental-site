@@ -196,86 +196,15 @@ function _parseAndVerify(text) {
   return { answer: text, references: refs };
 }
 
-// ── GPT-4o Vision → 치과적 이미지 해설 ──────────────────────────
-function _analyzeImagesWithVision(attachments) {
-  if (!attachments || attachments.length === 0) return '';
-
+// ── GPT-4o Vision 호출 헬퍼 ─────────────────────────────────────
+function _visionCall(systemMsg, userText, imageBlocks, maxTokens) {
   const url = 'https://api.openai.com/v1/chat/completions';
-
-  // 이미지 content 블록 구성 (최대 4장, 용량 초과 방지)
-  const imageBlocks = [];
-  attachments.slice(0, 4).forEach(function(att) {
-    if (!att.getContentType().startsWith('image/')) return;
-    try {
-      const b64 = Utilities.base64Encode(att.getBytes());
-      imageBlocks.push({
-        type: 'image_url',
-        image_url: { url: 'data:' + att.getContentType() + ';base64,' + b64, detail: 'high' },
-      });
-    } catch(e) {
-      Logger.log('[Vision 이미지 인코딩 오류] ' + e.message);
-    }
-  });
-  if (imageBlocks.length === 0) return '';
-
-  const systemMsg =
-    '당신은 대학병원 치과 보철과 교수입니다. 전공의가 제출한 임상 사진 또는 스터디 모델 사진을 ' +
-    '보고 보철과 교수가 세미나에서 설명하듯 풍부하고 구체적인 임상 소견을 한국어로 작성하세요.\n\n' +
-
-    '## 출력 구조 (반드시 모든 항목 작성)\n\n' +
-
-    '### 1. 기본 현황 파악\n' +
-    '- 상/하악 구분, 촬영 방향(교합면/협면/설면 등)\n' +
-    '- 잔존 치아 번호 추정 (FDI 표기법 사용)\n' +
-    '- 결손 부위 기술 및 **Kennedy 분류 + modification** 명시\n' +
-    '- 모델 재료 및 상태 (die stone, 파손 여부, 인상 오류 흔적 등)\n\n' +
-
-    '### 2. 지대치(Abutment) 조건 분석\n' +
-    '- 각 지대치의 치관 형태, 경사도, 수복물 유무\n' +
-    '- 관찰 가능한 서베이 라인(survey line) 위치 및 언더컷 양상\n' +
-    '- 레스트 시트(rest seat) 위치 및 적합성\n' +
-    '- 클라스프(clasp) 적용 가능성 — circumferential vs. bar clasp 고려\n' +
-    '- 지대치 치주 상태 (모델에서 관찰 가능한 범위 내)\n\n' +
-
-    '### 3. 무치악 융기(Edentulous Ridge) 분석\n' +
-    '- 융기 형태: 형태(square/tapering/ovoid), 흡수 정도(Cawood & Howell 분류 가능 시)\n' +
-    '- 점막 두께 추정 가능 여부\n' +
-    '- 언더컷 존재 여부 및 위치\n' +
-    '- 의치상 면적의 충분성 평가\n\n' +
-
-    '### 4. 교합 및 악간 관계\n' +
-    '- 대합치 관계 (사진에서 확인 가능한 경우)\n' +
-    '- 교합 평면 기울기\n' +
-    '- 수직 고경 추정 (확인 불가 시 명시)\n' +
-    '- 관찰되는 교합 이상 (crossbite, 과잉 맹출 등)\n\n' +
-
-    '### 5. 보철 설계 고려사항\n' +
-    '- 주연결장치(major connector) 선택 시 고려해야 할 해부학적 요소\n' +
-    '- 의치 안정(stability)/지지(support)/유지(retention) 관련 관찰 소견\n' +
-    '- 예상되는 임상적 난점 또는 주의사항\n\n' +
-
-    '### 6. 전공의 교육 포인트\n' +
-    '- 이 케이스에서 반드시 확인해야 할 추가 검사/기록 (파노라마, 연구 모델, 교합 분석 등)\n' +
-    '- 세미나에서 교수가 물어볼 법한 질문 3가지\n' +
-    '- 이 케이스의 핵심 난이도 요소\n\n' +
-
-    '## 주의\n' +
-    '- 확정적 진단 금지. 소견(observation) 및 교육적 코멘트만 작성\n' +
-    '- 촬영 각도상 보이지 않는 부분은 "확인 불가" 명시\n' +
-    '- 번역투 금지. 보철과 교수가 전공의에게 말하듯 자연스러운 한국어로\n' +
-    '- 전문 용어는 영문 병기';
-
-  const userContent = [{ type: 'text', text: '첨부된 임상 사진들을 분석해주세요.' }].concat(imageBlocks);
-
+  const userContent = [{ type: 'text', text: userText }].concat(imageBlocks);
   const res = UrlFetchApp.fetch(url, {
     method: 'post',
-    headers: {
-      Authorization: 'Bearer ' + CONFIG.OPENAI_API_KEY,
-      'Content-Type': 'application/json',
-    },
+    headers: { Authorization: 'Bearer ' + CONFIG.OPENAI_API_KEY, 'Content-Type': 'application/json' },
     payload: JSON.stringify({
-      model:      'gpt-4o',
-      max_tokens: 4096,
+      model: 'gpt-4o', max_tokens: maxTokens,
       messages: [
         { role: 'system', content: systemMsg },
         { role: 'user',   content: userContent },
@@ -283,15 +212,105 @@ function _analyzeImagesWithVision(attachments) {
     }),
     muteHttpExceptions: true,
   });
-
   const result = JSON.parse(res.getContentText());
-  const text = result?.choices?.[0]?.message?.content;
-  if (!text) {
-    Logger.log('[Vision 오류] ' + res.getContentText());
-    return '';
-  }
-  Logger.log('[Vision 이미지 해설 생성 완료]');
-  return text.trim();
+  return result?.choices?.[0]?.message?.content || '';
+}
+
+// ── GPT-4o Vision → 치과적 이미지 심층 분석 (2-pass) ─────────────
+function _analyzeImagesWithVision(attachments) {
+  if (!attachments || attachments.length === 0) return '';
+
+  // 이미지 base64 인코딩 (최대 6장)
+  const imageBlocks = [];
+  attachments.slice(0, 6).forEach(function(att) {
+    if (!att.getContentType().startsWith('image/')) return;
+    try {
+      const b64 = Utilities.base64Encode(att.getBytes());
+      imageBlocks.push({
+        type: 'image_url',
+        image_url: { url: 'data:' + att.getContentType() + ';base64,' + b64, detail: 'high' },
+      });
+    } catch(e) { Logger.log('[Vision 인코딩 오류] ' + e.message); }
+  });
+  if (imageBlocks.length === 0) return '';
+
+  // ── PASS 1: 각 이미지를 사실 그대로 상세 묘사 (raw observation) ──
+  const pass1System =
+    '당신은 치과 보철과 전문의입니다. 제공된 이미지들을 보고 ' +
+    '각 이미지에서 보이는 것을 최대한 구체적이고 사실적으로 묘사하세요. ' +
+    '해석이나 결론은 아직 내리지 말고, 보이는 것만 나열하세요.\n\n' +
+    '각 이미지마다:\n' +
+    '**이미지 N:** 촬영 각도, 잔존 치아, 결손 부위, 마킹 라인, 수복물, ' +
+    '모델 상태, 연조직/경조직 형태 등 눈에 보이는 모든 것을 빠짐없이 기술하세요.';
+
+  Logger.log('[Vision Pass 1 시작]');
+  const rawObservation = _visionCall(pass1System, '각 이미지를 상세히 묘사해주세요.', imageBlocks, 2048);
+  if (!rawObservation) return '';
+  Logger.log('[Vision Pass 1 완료]');
+
+  // ── PASS 2: Pass1 묘사를 바탕으로 보철과 교수 수준 임상 분석 ──
+  const pass2System =
+    '당신은 대학병원 치과 보철과 교수입니다. ' +
+    '아래에 주어진 이미지 관찰 내용을 바탕으로 보철과 세미나 수준의 심층 임상 분석을 작성하세요. ' +
+    '번역투 금지. 교수가 전공의에게 설명하듯 자연스러운 한국어로. 전문 용어는 영문 병기.\n\n' +
+
+    '## 반드시 포함할 항목\n\n' +
+
+    '### 1. 증례 개요\n' +
+    '- 상/하악, 잔존 치아 번호(FDI), 결손 양상\n' +
+    '- **Kennedy 분류 + Applegate 수정 분류** (modification class 포함)\n' +
+    '- 모델 재료·상태·인상 품질 평가\n\n' +
+
+    '### 2. 지대치(Abutment) 개별 분석\n' +
+    '각 지대치마다:\n' +
+    '- 치관 형태 (짧은/긴 임상 치관, 경사, 언더컷 위치와 정도)\n' +
+    '- 관찰된 서베이 라인 위치 → 클라스프 종류 추천 (Akers, RPI, RPA, bar clasp 등)\n' +
+    '- 레스트 시트(occlusal/cingulum/incisal rest) 위치 및 준비 적합성\n' +
+    '- 지대치로서의 예후 추정 (좋음/보통/주의 필요)\n\n' +
+
+    '### 3. 무치악 융기 및 연조직\n' +
+    '- 부위별 ridge 형태 (Cawood & Howell Class 추정)\n' +
+    '- 언더컷 방향·위치·활용 가능성\n' +
+    '- 의치상 면적 및 지지 예후\n' +
+    '- 필요 시 ridge augmentation 고려 여부\n\n' +
+
+    '### 4. 교합 평면 및 악간 관계\n' +
+    '- 교합 평면 기울기 및 curve of Spee/Wilson 관찰 소견\n' +
+    '- 과잉 맹출(supraeruption), 경사(tipping), 회전(rotation) 치아 여부\n' +
+    '- 수직 고경(VDO) 및 중심위(CR) 관련 고려사항\n' +
+    '- 대합치 정보 없을 시 명시\n\n' +
+
+    '### 5. RPD/보철 설계 제안\n' +
+    '- 주연결장치(major connector) 추천 및 근거\n' +
+    '  (lingual bar vs. lingual plate vs. labial bar 등)\n' +
+    '- 부연결장치(minor connector) 위치\n' +
+    '- 클라스프 배치 계획 (치아별 구체적 제안)\n' +
+    '- 삽입로(path of insertion) 결정 시 고려사항\n' +
+    '- 의치 안정(stability) / 지지(support) / 유지(retention) 별 예상 문제점\n' +
+    '- 임플란트 overdenture 전환 고려 기준 (해당 시)\n\n' +
+
+    '### 6. 전처치 계획\n' +
+    '- RPD 제작 전 필요한 전처치 (치주, 충치, 발치, 교정 등)\n' +
+    '- 지대치 수복 필요 여부\n' +
+    '- mouth preparation 항목 (rest seat 형성, enameloplasty 등)\n\n' +
+
+    '### 7. 전공의 세미나 포인트\n' +
+    '- 반드시 추가로 확인해야 할 자료 (파노라마, CT, 교합 분석, facebow)\n' +
+    '- 이 케이스 핵심 난이도 요소 3가지\n' +
+    '- 교수가 세미나에서 반드시 물어볼 질문 5가지 (예상 모범 답안 포함)\n\n' +
+
+    '## 주의\n' +
+    '확정적 진단 금지. 관찰 불가 항목은 "확인 불가 — 추가 자료 필요"로 명시.';
+
+  const pass2UserText =
+    '아래는 이미지 관찰 내용입니다:\n\n' + rawObservation +
+    '\n\n위 관찰을 바탕으로 심층 임상 분석을 작성해주세요.';
+
+  Logger.log('[Vision Pass 2 시작]');
+  const deepAnalysis = _visionCall(pass2System, pass2UserText, [], 6144);
+  Logger.log('[Vision Pass 2 완료]');
+
+  return deepAnalysis.trim();
 }
 
 // ── Cloudinary 이미지 업로드 → URL ───────────────────────────────
