@@ -32,7 +32,7 @@
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
   <link rel="stylesheet" href="css/style.css?v=58">
-  <link rel="stylesheet" href="css/editor.css?v=26">
+  <link rel="stylesheet" href="css/editor.css?v=27">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
 <body>
@@ -57,7 +57,7 @@
           <a href="javascript:void(0)" data-page="dept-rpd"       onclick="showPage('dept-rpd');closeDeptMenu()"><img src="/dental-site/icons/icon-rpd.svg" class="nav-dept-icon"> RPD</a>
           <a href="javascript:void(0)" data-page="dept-cd"        onclick="showPage('dept-cd');closeDeptMenu()"><img src="/dental-site/icons/icon-cd.svg" class="nav-dept-icon"> CD</a>
           <a href="javascript:void(0)" data-page="dept-materials" onclick="showPage('dept-materials');closeDeptMenu()">🧪 재료</a>
-          <a href="javascript:void(0)" data-page="dept-qna"       onclick="showPage('dept-qna');closeDeptMenu()">💬 Q&amp;A</a>
+          <a href="javascript:void(0)" data-page="dept-qna"       onclick="showPage('dept-qna');closeDeptMenu()"><img src="/dental-site/icons/icon-qna.svg" class="nav-dept-icon"> Q&amp;A</a>
         </div>
       </div>
 
@@ -95,7 +95,7 @@
     <a href="javascript:void(0)" onclick="showPage('dept-rpd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-rpd.svg" class="drawer-dept-icon"></span>RPD</a>
     <a href="javascript:void(0)" onclick="showPage('dept-cd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-cd.svg" class="drawer-dept-icon"></span>CD</a>
     <a href="javascript:void(0)" onclick="showPage('dept-materials');toggleMobileMenu()"><span class="di">🧪</span>재료</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-qna');toggleMobileMenu()"><span class="di">💬</span>Q&amp;A</a>
+    <a href="javascript:void(0)" onclick="showPage('dept-qna');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-qna.svg" class="drawer-dept-icon"></span>Q&amp;A</a>
     <div class="drawer-section-label">기타</div>
     <a href="admin.html?v=1"><span class="di">⚙</span>관리</a>
   </div>
@@ -239,7 +239,7 @@
 
   <!-- ── Q&A ── -->
   <div id="page-dept-qna" class="page">
-    <div class="section-header"><div class="section-title">💬 Q&amp;A</div></div>
+    <div class="section-header"><div class="section-title"><img src="/dental-site/icons/icon-qna.svg" style="width:1.2em;height:1.2em;vertical-align:middle;margin-right:0.3em"> Q&amp;A</div></div>
     <div class="toolbar">
       <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('qna',this.value)">
       <div class="view-toggle-group">
@@ -286,7 +286,10 @@
   <div class="editor-panel">
     <div class="editor-panel-header">
       <h2 id="editor-form-title">편집</h2>
-      <button class="editor-panel-close" onclick="closeEditor()">✕</button>
+      <div style="display:flex;gap:0.4rem;align-items:center;">
+        <button class="editor-panel-focus-btn" id="editor-focus-btn" onclick="_toggleEditorFocus()" title="전체 모드">⤢</button>
+        <button class="editor-panel-close" onclick="closeEditor()">✕</button>
+      </div>
     </div>
     <div id="editor-form-content"></div>
   </div>
@@ -334,7 +337,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
 <script defer src="js/firebase-config.js?v=21"></script>
 <script defer src="js/cloudinary-config.js?v=21"></script>
-<script defer src="js/app.js?v=63"></script>
+<script defer src="js/app.js?v=64"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {

@@ -48,7 +48,7 @@ const DEPARTMENTS = [
   { id: "rpd",       name: "RPD",      iconImg: "/dental-site/icons/icon-rpd.svg" },
   { id: "cd",        name: "CD",       iconImg: "/dental-site/icons/icon-cd.svg" },
   { id: "materials", name: "재료",     icon: "🧪" },
-  { id: "qna",       name: "Q&A",      icon: "💬" }
+  { id: "qna",       name: "Q&A",      iconImg: "/dental-site/icons/icon-qna.svg" }
 ];
 
 let allCases = [];
@@ -300,6 +300,11 @@ function openModal(id, type) {
 function _toggleFocusMode() {
   const on = document.body.classList.toggle('focus-mode');
   document.getElementById('modal-focus-btn').textContent = on ? '⤡' : '⤢';
+}
+
+function _toggleEditorFocus() {
+  const on = document.body.classList.toggle('editor-focus-mode');
+  document.getElementById('editor-focus-btn').textContent = on ? '⤡' : '⤢';
 }
 
 function closeModal() {
@@ -927,6 +932,9 @@ function openEditorNew(type, deptId = '') {
 // ── 에디터 닫기 ──────────────────────────────────────────────
 function closeEditor() {
   document.getElementById('editor-overlay').classList.remove('open');
+  document.body.classList.remove('editor-focus-mode');
+  const fb = document.getElementById('editor-focus-btn');
+  if (fb) fb.textContent = '⤢';
   document.body.style.overflow = '';
   _edId = null; _edType = null; _edPhotos = []; _edTags = [];
 }

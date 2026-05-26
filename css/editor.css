@@ -45,6 +45,29 @@
 }
 .editor-panel-close:hover { background: var(--border); }
 
+.editor-panel-focus-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  line-height: 1;
+}
+.editor-panel-focus-btn:hover { background: var(--border); }
+
+/* 편집기 전체모드 */
+.editor-focus-mode .editor-overlay { align-items: stretch; padding: 0; }
+.editor-focus-mode .editor-panel {
+  max-width: 100%;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  margin: 0;
+  overflow-y: auto;
+}
+
 /* ── 카드 위의 관리자 버튼 ── */
 .card-admin-row {
   display: flex;
