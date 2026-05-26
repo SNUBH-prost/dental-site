@@ -6,7 +6,7 @@ const CONFIG = {
   ADMIN_EMAIL:    '',   // Firebase 관리자 이메일
   ADMIN_PASSWORD: '',   // Firebase 관리자 비밀번호
 
-  GROQ_API_KEY: '',     // https://console.groq.com 에서 발급
+  ANTHROPIC_API_KEY: '', // https://console.anthropic.com 에서 발급
 
   CLOUDINARY_CLOUD_NAME:    'dg7aas4ky',
   CLOUDINARY_UPLOAD_PRESET: 'dental_clinic',
@@ -29,9 +29,9 @@ function _getIdToken() {
   return data.idToken;
 }
 
-// ── Groq → 공부 가이드 생성 (찾아볼 점 + 생각할 점) ─────────────
-function _callGroq(question) {
-  const url = 'https://api.groq.com/openai/v1/chat/completions';
+// ── Claude → 공부 가이드 생성 (찾아볼 점 + 관점별 질문) ──────────
+function _callClaude(question) {
+  const url = 'https://api.anthropic.com/v1/messages';
 
   const systemPrompt =
     '당신은 치과 보철과 전공의 교육을 담당하는 시니어 레지던트입니다.\n' +
@@ -78,25 +78,23 @@ function _callGroq(question) {
   const res = UrlFetchApp.fetch(url, {
     method: 'post',
     headers: {
-      Authorization: 'Bearer ' + CONFIG.GROQ_API_KEY,
-      'Content-Type': 'application/json',
+      'x-api-key':         CONFIG.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type':      'application/json',
     },
     payload: JSON.stringify({
-      model:      'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: question },
-      ],
-      max_tokens:  3000,
-      temperature: 0.4,
+      model:      'claude-sonnet-4-6',
+      max_tokens: 4096,
+      system:     systemPrompt,
+      messages:   [{ role: 'user', content: question }],
     }),
     muteHttpExceptions: true,
   });
 
   const result = JSON.parse(res.getContentText());
-  const text = result?.choices?.[0]?.message?.content;
-  if (!text) throw new Error('Groq 응답 실패: ' + res.getContentText());
-  Logger.log('[Groq 공부 가이드 생성 완료]');
+  const text = result?.content?.[0]?.text;
+  if (!text) throw new Error('Claude 응답 실패: ' + res.getContentText());
+  Logger.log('[Claude 공부 가이드 생성 완료]');
   return text.trim();
 }
 
@@ -229,15 +227,15 @@ function checkQnAEmails() {
       // Groq 답변 초안 생성 + 레퍼런스 파싱
       let answer = '';
       let references = [];
-      if (CONFIG.GROQ_API_KEY) {
+      if (CONFIG.ANTHROPIC_API_KEY) {
         try {
-          const raw = _callGroq(title + '\n\n' + body);
+          const raw = _callClaude(title + '\n\n' + body);
           const parsed = _parseGroqResponse(raw);
           answer = parsed.answer;
           references = parsed.references;
           Logger.log('[레퍼런스 ' + references.length + '개 파싱됨]');
         } catch(e) {
-          Logger.log('[Groq 오류] ' + e.message);
+          Logger.log('[Claude 오류] ' + e.message);
         }
       }
 
