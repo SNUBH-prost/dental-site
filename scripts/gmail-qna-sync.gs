@@ -107,7 +107,7 @@ function _callGroq(question) {
       'Content-Type': 'application/json',
     },
     payload: JSON.stringify({
-      model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: question },
