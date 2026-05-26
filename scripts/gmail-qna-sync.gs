@@ -478,7 +478,18 @@ function checkQnAEmails() {
       let references = [];
       if (CONFIG.OPENAI_API_KEY) {
         try {
-          const raw = _callGPT(title + '\n\n' + body);
+          // Q&A 생성용 컨텍스트: 제목 + 본문 + Vision 소견 통합
+          // Vision 소견이 있으면 이미지 케이스 임을 명시해 few-shot 오염 방지
+          let qnaContext = '주제: ' + title;
+          if (body) qnaContext += '\n\n' + body;
+          if (visionNote) {
+            qnaContext += '\n\n[첨부 이미지 임상 소견]\n' + visionNote;
+            qnaContext += '\n\n위 임상 사진과 소견을 바탕으로 이 케이스에 대한 깊이 있는 Q&A를 작성해주세요.';
+          } else {
+            qnaContext += '\n\n위 주제에 대한 깊이 있는 Q&A를 작성해주세요.';
+          }
+
+          const raw = _callGPT(qnaContext);
           const parsed = _parseAndVerify(raw);
           // Vision 소견을 Q&A 본문 앞에 삽입
           answer = visionNote ? visionNote + '\n\n---\n\n' + parsed.answer : parsed.answer;
