@@ -196,6 +196,69 @@ function _parseAndVerify(text) {
   return { answer: text, references: refs };
 }
 
+// ── GPT-4o Vision → 치과적 이미지 해설 ──────────────────────────
+function _analyzeImagesWithVision(attachments) {
+  if (!attachments || attachments.length === 0) return '';
+
+  const url = 'https://api.openai.com/v1/chat/completions';
+
+  // 이미지 content 블록 구성 (최대 4장, 용량 초과 방지)
+  const imageBlocks = [];
+  attachments.slice(0, 4).forEach(function(att) {
+    if (!att.getContentType().startsWith('image/')) return;
+    try {
+      const b64 = Utilities.base64Encode(att.getBytes());
+      imageBlocks.push({
+        type: 'image_url',
+        image_url: { url: 'data:' + att.getContentType() + ';base64,' + b64, detail: 'high' },
+      });
+    } catch(e) {
+      Logger.log('[Vision 이미지 인코딩 오류] ' + e.message);
+    }
+  });
+  if (imageBlocks.length === 0) return '';
+
+  const systemMsg =
+    '당신은 치과 보철과 전문의입니다. 첨부된 임상 사진 또는 스터디 모델 사진을 보고 ' +
+    '치과적으로 의미 있는 소견을 한국어로 작성하세요.\n\n' +
+    '## 출력 형식\n' +
+    '**[이미지 임상 소견]**\n' +
+    '- 보이는 치아/수복물/조직/모델 구조를 구체적으로 기술\n' +
+    '- Kennedy 분류, 지대치 조건, 결손 양상 등 RPD/보철 관련 정보 포함\n' +
+    '- 서베이 라인, 레스트 시트, 언더컷 등 관찰 가능한 보철 계획 요소 기술\n' +
+    '- 교육적 관점에서 전공의가 주목해야 할 포인트 2~3가지 강조\n' +
+    '- 진단은 하지 말 것. 소견(observation)만 기술.\n' +
+    '- 관찰 불가능한 부분은 "촬영 각도상 확인 불가" 등으로 명시';
+
+  const userContent = [{ type: 'text', text: '첨부된 임상 사진들을 분석해주세요.' }].concat(imageBlocks);
+
+  const res = UrlFetchApp.fetch(url, {
+    method: 'post',
+    headers: {
+      Authorization: 'Bearer ' + CONFIG.OPENAI_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    payload: JSON.stringify({
+      model:      'gpt-4o',
+      max_tokens: 1024,
+      messages: [
+        { role: 'system', content: systemMsg },
+        { role: 'user',   content: userContent },
+      ],
+    }),
+    muteHttpExceptions: true,
+  });
+
+  const result = JSON.parse(res.getContentText());
+  const text = result?.choices?.[0]?.message?.content;
+  if (!text) {
+    Logger.log('[Vision 오류] ' + res.getContentText());
+    return '';
+  }
+  Logger.log('[Vision 이미지 해설 생성 완료]');
+  return text.trim();
+}
+
 // ── Cloudinary 이미지 업로드 → URL ───────────────────────────────
 function _uploadToCloudinary(attachment) {
   const base64  = Utilities.base64Encode(attachment.getBytes());
@@ -295,22 +358,32 @@ function checkQnAEmails() {
       const title = msg.getSubject().replace(/^\[QnA\]\s*/i, '').trim() || '(제목 없음)';
       const body  = msg.getPlainBody().trim();
 
-      // 이미지 첨부파일 업로드
+      // 이미지 첨부파일: Vision 분석 + Cloudinary 업로드
+      const imageAtts = msg.getAttachments().filter(function(a) {
+        return a.getContentType().startsWith('image/');
+      });
       const photoUrls = [];
-      msg.getAttachments().forEach(function(att) {
-        if (!att.getContentType().startsWith('image/')) return;
+      imageAtts.forEach(function(att) {
         try { photoUrls.push(_uploadToCloudinary(att)); }
-        catch(e) { Logger.log('[이미지 오류] ' + e.message); }
+        catch(e) { Logger.log('[이미지 업로드 오류] ' + e.message); }
       });
 
-      // Groq 답변 초안 생성 + 레퍼런스 파싱
+      // GPT-4o Vision 이미지 해설 (첨부 이미지가 있을 때만)
+      let visionNote = '';
+      if (CONFIG.OPENAI_API_KEY && imageAtts.length > 0) {
+        try { visionNote = _analyzeImagesWithVision(imageAtts); }
+        catch(e) { Logger.log('[Vision 오류] ' + e.message); }
+      }
+
+      // GPT Q&A 생성 + PubMed 검증
       let answer = '';
       let references = [];
       if (CONFIG.OPENAI_API_KEY) {
         try {
           const raw = _callGPT(title + '\n\n' + body);
           const parsed = _parseAndVerify(raw);
-          answer = parsed.answer;
+          // Vision 소견을 Q&A 본문 앞에 삽입
+          answer = visionNote ? visionNote + '\n\n---\n\n' + parsed.answer : parsed.answer;
           references = parsed.references;
           Logger.log('[PubMed 검증 완료 — 레퍼런스 ' + references.length + '개]');
         } catch(e) {
