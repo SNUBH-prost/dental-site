@@ -114,24 +114,86 @@ function _callGPT(question) {
   return part1 + '\n\n' + part2;
 }
 
-// ── Groq 응답에서 본문과 레퍼런스 분리 ────────────────────────
-function _parseGroqResponse(text) {
-  const jsonMatch = text.match(/```json\s*([\s\S]*?)```/);
-  let refs = [];
-  let answer = text;
-
-  if (jsonMatch) {
-    try {
-      refs = JSON.parse(jsonMatch[1].trim());
-      if (!Array.isArray(refs)) refs = [];
-    } catch(e) {
-      Logger.log('[레퍼런스 파싱 오류] ' + e.message);
-      refs = [];
-    }
-    answer = text.slice(0, text.indexOf(jsonMatch[0])).trim();
+// ── GPT 답변에서 인용 파싱 ────────────────────────────────────
+function _extractCitations(text) {
+  // (Author 2005, Journal ...) 또는 (Author et al. 2005, Journal ...) 패턴
+  const regex = /\(([A-Za-zÄÖÜäöüéèêàâčšžćđ]+(?:\s+et\s+al\.?)?(?:\s+&\s+[A-Za-z]+)?)\s+(\d{4})[,;\s]+([^)]{3,80})\)/g;
+  const seen  = {};
+  const out   = [];
+  let m;
+  while ((m = regex.exec(text)) !== null) {
+    const key = m[1].trim() + '_' + m[2].trim();
+    if (seen[key]) continue;
+    seen[key] = true;
+    out.push({ author: m[1].trim(), year: m[2].trim(), source: m[3].trim() });
   }
+  return out;
+}
 
-  return { answer: answer, references: refs };
+// ── PubMed API 논문 조회 ──────────────────────────────────────
+function _searchPubMed(author, year, source) {
+  try {
+    // 저자 성(last name)만 추출
+    const lastName = author.replace(/\s+et\s+al\.?/i, '').replace(/\s+&\s+.+/, '').trim().split(/\s+/).pop();
+    // 저널 첫 단어만 사용 (괄호/권호 제거)
+    const journalWord = source.replace(/\d+\(.*/, '').split(/[,\s]/)[0];
+    const query = lastName + '[Author] AND ' + year + '[pdat] AND ' + journalWord + '[journal]';
+    const searchUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi'
+      + '?db=pubmed&retmode=json&retmax=1&term=' + encodeURIComponent(query);
+
+    const sRes  = UrlFetchApp.fetch(searchUrl, { muteHttpExceptions: true });
+    const sData = JSON.parse(sRes.getContentText());
+    const ids   = sData?.esearchresult?.idlist;
+    if (!ids || ids.length === 0) return null;
+
+    const pmid = ids[0];
+    const sumUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi'
+      + '?db=pubmed&retmode=json&id=' + pmid;
+    const sumRes  = UrlFetchApp.fetch(sumUrl, { muteHttpExceptions: true });
+    const sumData = JSON.parse(sumRes.getContentText());
+    const doc     = sumData?.result?.[pmid];
+    if (!doc) return null;
+
+    const doi = (doc.articleids || []).find(function(a) { return a.idtype === 'doi'; });
+    return {
+      authors:  (doc.authors || []).map(function(a) { return a.name; }).join(', '),
+      year:     (doc.pubdate || year).split(' ')[0],
+      title:    doc.title   || '',
+      journal:  doc.fulljournalname || doc.source || source,
+      volume:   doc.volume  || '',
+      pages:    doc.pages   || '',
+      doi:      doi ? doi.value : '',
+      abstract: '',
+      abstractEn: '',
+    };
+  } catch(e) {
+    Logger.log('[PubMed 오류] ' + author + ' ' + year + ': ' + e.message);
+    return null;
+  }
+}
+
+// ── GPT 답변 파싱 + PubMed 인용 검증 ────────────────────────
+function _parseAndVerify(text) {
+  const citations = _extractCitations(text);
+  Logger.log('[인용 추출] ' + citations.length + '개');
+
+  const refs = [];
+  citations.forEach(function(c) {
+    const found = _searchPubMed(c.author, c.year, c.source);
+    if (found) {
+      Logger.log('[PubMed 확인] ' + c.author + ' ' + c.year + ' → ' + found.title.slice(0, 60));
+      refs.push(found);
+    } else {
+      Logger.log('[PubMed 미발견] ' + c.author + ' ' + c.year + ' / ' + c.source);
+      refs.push({
+        authors: c.author, year: c.year, title: '', journal: c.source,
+        volume: '', pages: '', doi: '', abstract: '', abstractEn: '',
+      });
+    }
+    Utilities.sleep(350); // NCBI rate limit 준수 (3 req/s)
+  });
+
+  return { answer: text, references: refs };
 }
 
 // ── Cloudinary 이미지 업로드 → URL ───────────────────────────────
@@ -247,10 +309,10 @@ function checkQnAEmails() {
       if (CONFIG.OPENAI_API_KEY) {
         try {
           const raw = _callGPT(title + '\n\n' + body);
-          const parsed = _parseGroqResponse(raw);
+          const parsed = _parseAndVerify(raw);
           answer = parsed.answer;
           references = parsed.references;
-          Logger.log('[레퍼런스 ' + references.length + '개 파싱됨]');
+          Logger.log('[PubMed 검증 완료 — 레퍼런스 ' + references.length + '개]');
         } catch(e) {
           Logger.log('[GPT 오류] ' + e.message);
         }
