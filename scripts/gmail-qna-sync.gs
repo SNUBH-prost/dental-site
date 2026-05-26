@@ -34,180 +34,65 @@ function _callGPT(question) {
   const url = 'https://api.openai.com/v1/chat/completions';
 
   const systemPrompt =
-    '당신은 치과 보철과 교수이자 해당 분야 KOL(Key Opinion Leader)입니다.\n' +
-    '전공의가 보내온 임상 질문에 대해 **대학원 교재 챕터 수준**으로 종합 정리를 작성하세요.\n\n' +
+    '당신은 치과 보철과 교수이자 해당 분야 전문가입니다.\n' +
+    '전공의가 보내온 임상 주제에 대해 **깊이 있는 Q&A 20개 이상**을 작성하세요.\n\n' +
 
-    '## 분량 및 깊이 요구사항 (반드시 준수)\n' +
-    '- 전체 분량: **최소 3,000단어** (한국어 기준). 짧게 끝내지 말 것.\n' +
-    '- 각 섹션: 최소 3~5문단. 단순 bullet 나열 금지 — 설명·근거·연결이 있는 **서술형 문단**으로.\n' +
-    '- 기전 설명: 분자·세포 수준까지 (어떤 효소/단백질이 어떤 기질에 작용해서 어떤 결과가 나오는지 구체적으로)\n' +
-    '- 임상 프로토콜: 각 step마다 "왜 그렇게 하는가"의 근거를 반드시 포함\n' +
-    '- 논란·미해결 문제: 반드시 포함. "아직 결론이 없다"는 것 자체가 중요한 임상 지식\n' +
-    '- 수치·통계: 알고 있는 것은 구체적으로 기재, 불확실한 것은 "[확인 필요]" 표시\n\n' +
+    '## 형식\n' +
+    '**Q1. [질문]**\n' +
+    'A: [답변] (출처: 저자 연도, 저널명 또는 교과서명)\n\n' +
+    '**Q2. [질문]**\n' +
+    'A: [답변] (출처: ...)\n\n' +
+    '... 총 20개 이상\n\n' +
 
-    '## 문체 원칙 (매우 중요)\n' +
-    '- **번역투 절대 금지**: "이것은 ~에 의해 야기됩니다", "~하는 것이 중요합니다" 같은 직역체 금지\n' +
-    '- 한국 치과대학 교수가 전공의에게 직접 강의하듯이 자연스럽게 작성\n' +
-    '- 전문 용어는 영문 병기하되, 문장 흐름은 자연스러운 한국어로\n' +
-    '- 수동태보다 능동태, 명사화보다 동사 중심 문장 선호\n\n' +
+    '## 근거 원칙 — 절대 준수\n' +
+    '- **모든 답변은 논문 또는 교과서에 근거해야 한다**\n' +
+    '- 각 답변 끝에 출처를 반드시 표시: (Magne 2005, J Prosthet Dent) 또는 (Rosenstiel, Land & Fujimoto 교과서 4판)\n' +
+    '- 출처가 불확실하면 해당 내용을 쓰지 말 것. 꼭 써야 하면 "[문헌 확인 필요]"로 표시\n' +
+    '- 없는 논문 만들지 말 것. 틀린 수치 제시 금지\n' +
+    '- Rosenstiel, Shillingburg, Magne, Lindhe, Van Noort, Anusavice, Powers & Wataha 등 표준 교과서 적극 활용\n\n' +
 
-    '## 출력 형식\n' +
-    '### 1. 개념과 정의\n' +
-    '### 2. 역사적 발전 과정\n' +
-    '### 3. 작용 기전 (소제목으로 세분화, 분자 수준까지)\n' +
-    '### 4. 임상 프로토콜 — Step by Step (각 step에 근거 포함)\n' +
-    '### 5. 근거 — 무엇이 입증되었나 (in vitro / RCT / systematic review / 한계)\n' +
-    '### 6. 특수 상황 / 응용\n' +
-    '### 7. 임상 의사결정 — 언제, 왜\n' +
-    '### 8. 핵심 Take-home messages\n' +
-    '### 9. 주요 참고문헌\n' +
-    '### 10. 관점별 질문 (총 20개 이상)\n\n' +
-
-    '## 근거 원칙 (가장 중요 — 반드시 준수)\n' +
-    '**작성하는 모든 내용은 논문 또는 교과서에 근거해야 한다.**\n' +
-    '- 수치, 기전 설명, 임상 권고, 비교 데이터 등 모든 서술은 출처가 있는 내용만 작성\n' +
-    '- 근거가 있는 내용: 논문/교과서 출처를 문장 끝에 간략히 표시 (예: (Magne 2005), (Rosenstiel 교과서))\n' +
-    '- 근거가 불확실한 내용: 아예 쓰지 말 것. 쓰고 싶다면 반드시 "이 부분은 문헌에서 확인 필요" 형태로만\n' +
-    '- **절대 금지**: 근거 없이 그럴듯하게 들리는 내용 서술, 없는 논문 만들기, 확인되지 않은 수치 제시\n\n' +
-
-    '## 참고문헌 원칙\n' +
-    '- 실제 존재하는 논문(저자·연도·저널)만 기재.\n' +
-    '- 불확실하면 "[확인 필요]" 표시. 없는 논문 만들지 말 것.\n\n' +
-
-    '## 관점별 질문 — 절대 원칙\n' +
-    '❌ 절대 금지: "~의 기전은?", "~의 적응증은?", "~란 무엇인가?", "~의 장점은?" (교과서 첫 페이지 수준 금지)\n' +
-    '✅ 목표: 세미나에서 교수가 전공의를 당황하게 만드는 수준의 질문. 여러 변수가 충돌하거나, 논란이 있거나, 일반적 통념을 뒤집는 질문.\n' +
-    '  ❌ "OIL을 제거해야 하나요?" → ✅ "IOS digital workflow에서 glycerin re-cure 없이 scan하면 실제로 impression accuracy에 문제가 생기는가?"\n' +
-    '  ❌ "MMP란 무엇인가요?" → ✅ "MMP 활성화가 self-etch에서도 etch-and-rinse와 동일하게 우려되는가? 아니라면 self-etch IDS의 anti-degradation 이점이 줄어드는가?"\n' +
-    '카테고리: [보철] [외과] [치주] [재료] [술식] [세미나 방어용] 각 3~4개, 합산 20개 이상.\n\n' +
-    '한국어로 작성, 전문 용어는 영문 병기.';
+    '## 질문 수준 원칙 — 절대 준수\n' +
+    '❌ 금지: "~의 기전은?", "~의 적응증은?", "~란 무엇인가?", "~의 장점은?" — 이런 1학년 수준 질문 절대 금지\n' +
+    '✅ 목표: 임상에서 실제로 부딪히는 판단 문제, 두 옵션 중 어느 것이 나은가, 논란이 있는 부분, 여러 변수가 충돌하는 상황\n' +
+    '✅ 다양한 관점 포함: 보철 / 외과 / 치주 / 재료 / 술식 / 세미나 방어\n' +
+    '✅ 번역투 금지: 한국 교수가 전공의에게 강의하듯 자연스러운 한국어로\n\n' +
+    '전문 용어는 영문 병기.';
 
   // Few-shot: IDS 예시 (GPT가 목표 수준을 정확히 인식하도록)
   const fewShotUser = 'Immediate Dentin Sealing (IDS) 에 대해 종합 정리해줘';
 
   const fewShotAssistant =
-    '## Immediate Dentin Sealing (IDS) — 종합 정리\n\n' +
+    '## Immediate Dentin Sealing (IDS) — Q&A\n\n' +
 
-    '### 1. 개념과 정의\n' +
-    'Immediate Dentin Sealing (IDS)은 indirect restoration을 위한 치아 삭제(prep) 직후, 인상 채득 이전에 노출된 dentin 표면에 dentin bonding agent(±flowable)를 즉시 도포·중합하여 hybrid layer를 미리 성숙시켜두는 술식입니다.\n' +
-    '이와 대비되는 개념이 Delayed Dentin Sealing (DDS) — 즉, 통상적인 protocol처럼 final cementation 시점에 dentin bonding을 시행하는 방식입니다.\n' +
-    '핵심 차이는 bonding 시점과 그로 인한 hybrid layer의 성숙 환경입니다. Indirect 수복물에서 final cementation은 보통 prep 후 1–2주 뒤에 이루어지는데, 이 기간 동안 dentin이 어떤 상태로 유지되느냐가 long-term 성공에 직접적인 영향을 미칩니다.\n\n' +
+    '**Q1. IDS가 DDS 대비 microtensile bond strength를 실제로 유의하게 향상시키는가, 아니면 in vitro 수치가 임상적으로 과대평가된 것인가?**\n' +
+    'A: In vitro에서는 IDS가 DDS 대비 약 20–30% 높은 microtensile bond strength를 보인다는 보고가 일관되게 나온다. Magne et al.(2005, J Prosthet Dent)은 IDS가 fresh dentin에 대해 최적의 hybrid layer를 형성하고, provisional 기간 동안의 oral fluid 오염과 MMP-mediated collagen degradation을 방지하기 때문이라고 설명했다. 다만 van den Breemer et al.(2019, Oper Dent)의 RCT는 단기 임상 outcome에서 IDS와 DDS 간 유의한 차이를 발견하지 못했다. 즉 bond strength 향상이 임상적 failure rate 감소로 직결된다는 증거는 아직 제한적이다.\n\n' +
 
-    '### 2. 역사적 발전 과정\n' +
-    'Pashley와 동료들이 1992년 dentin bonding agent를 치아 삭제 직후 적용하면 dentin permeability가 유의하게 감소한다는 것을 발견했고, 이것이 "dentin pre-hybridization"이라는 개념의 출발점이었습니다.\n' +
-    'Paul과 Schärer는 1997년 "dual bonding technique"을 제안했는데, 이는 prep 시점과 final cementation 시점 두 번에 걸쳐 bonding을 시행하는 방식이었습니다.\n' +
-    'Pascal Magne(2005)가 이 개념을 체계화하면서 "Immediate Dentin Sealing"이라는 용어로 정립했고, J Esthet Restor Dent와 J Prosthet Dent에 연이은 논문을 발표하면서 현재의 protocol이 자리잡았습니다.\n\n' +
+    '**Q2. Phosphoric acid etching 후 MMP가 활성화되는 기전은 무엇이며, self-etch system에서는 이 문제가 동일하게 발생하는가?**\n' +
+    'A: Phosphoric acid etching은 dentin matrix에 내재된 MMP(특히 MMP-2, -8, -9)를 활성화시킨다. 이 효소들은 calcium chelation으로 인해 활성화되어 hybrid layer 내 collagen fibril을 시간 경과에 따라 가수분해한다 (Tjäderhane et al. 2013, Dent Mater). Self-etch system은 산성 monomer가 smear layer를 용해하는 과정에서 pH가 낮아 MMP를 어느 정도 활성화시키지만, 강산 etch-and-rinse에 비해 활성화 정도가 낮다는 보고가 있다. 따라서 self-etch로 IDS를 시행할 때 anti-degradation 이점이 etch-and-rinse 대비 상대적으로 줄어들 가능성이 있으나, 이를 직접 비교한 RCT는 부족하다.\n\n' +
 
-    '### 3. 작용 기전\n\n' +
-    '#### 3.1 Fresh dentin substrate와 Hybrid layer 성숙\n' +
-    '치아 삭제 직후의 dentin은 saliva, blood, sulcular fluid 등에 의해 오염되지 않은 신선한 상태이며, collagen network이 노출되어 있어 primer와 resin이 최적의 wetting과 infiltration을 보입니다. 반면 DDS protocol에서는 provisional 기간 동안 dentin이 temporary cement, oral fluids, 미세 박테리아에 노출됩니다.\n' +
-    'Adhesive가 final cementation보다 훨씬 일찍 중합되기 때문에 resin network이 충분히 성숙할 시간을 갖게 됩니다. 이는 mechanical property와 interfacial stability 모두를 향상시킵니다.\n\n' +
+    '**Q3. OIL(Oxygen-Inhibition Layer)을 제거하지 않으면 PVS impression에 구체적으로 어떤 문제가 생기며, IOS 기반 digital workflow에서는 이 문제가 사라지는가?**\n' +
+    'A: Magne & Nielsen(2009, J Prosthet Dent)은 OIL이 잔존하면 PVS impression material의 polymerization이 inhibition되어 impression tear와 surface detail 손실이 발생한다고 보고했다. Glycerin gel 도포 후 추가 10초 light cure가 가장 효과적인 해결책이다. IOS 기반 digital workflow에서는 impression material 자체를 사용하지 않으므로 이 특정 문제는 사라진다. 다만 OIL surface는 scan powder나 scan spray의 adhesion에 영향을 줄 수 있어 pumice polishing이나 glycerin re-cure 후 스캔을 권장하는 임상가들이 있다 [문헌 확인 필요].\n\n' +
 
-    '#### 3.2 Polymerization stress의 decoupling\n' +
-    'DDS에서는 dentin bonding과 resin cement의 polymerization shrinkage가 거의 동시에 발생하면서, 그 stress가 미성숙한 hybrid layer에 직접 전달됩니다. 반면 IDS에서는 hybrid layer가 이미 완전히 polymerize되어 있는 상태이기 때문에, final cementation 시점의 shrinkage stress가 이 pre-cured layer에 의해 일부 흡수·분산되어 interfacial strain이 최소화됩니다. 이를 stress-absorbing layer(elastic cushion) 개념이라고도 부릅니다.\n\n' +
+    '**Q4. Eugenol이 포함된 temporary cement를 사용하면 final resin cement polymerization에 실제로 얼마나 영향을 미치는가?**\n' +
+    'A: Eugenol은 free radical scavenger로 작용하여 resin cement의 radical chain polymerization을 억제한다. Wataha et al. 및 Rosenstiel, Land & Fujimoto (Contemporary Fixed Prosthodontics 교과서)에서는 eugenol-based cement 사용 후 dentin surface에 잔류하는 eugenol이 resin monomer의 conversion degree를 유의하게 감소시킨다고 기술한다. 이 영향은 cement 제거 후에도 tubule 내 잔류 eugenol로 인해 지속될 수 있다. 임상적으로는 zinc oxide non-eugenol cement(예: Temp Bond NE) 또는 resin-based provisional cement 사용이 권장된다.\n\n' +
 
-    '#### 3.3 MMP 매개 hybrid layer degradation의 억제\n' +
-    'Matrix metalloproteinase(MMP) — dentin 내부에 존재하는 zinc/calcium 의존성 endogenous protease — 는 phosphoric acid etching 과정에서 활성화되어 hybrid layer 내 collagen fibril을 시간이 지남에 따라 가수분해합니다. IDS는 prep 직후 안정적인 resin seal을 제공함으로써 MMP 활성을 제한하고 collagen degradation 진행을 지연시킬 수 있습니다. DDS에서는 dentin이 노출된 채로 1–2주 이상 유지되면서 MMP-mediated degradation이 최대화되는 시간이 주어지는 셈입니다.\n\n' +
+    '**Q5. Filled adhesive(예: Optibond FL)와 unfilled adhesive를 IDS에 사용했을 때 후속 surface conditioning(airborne abrasion)에 대한 저항성 차이가 임상적으로 중요한가?**\n' +
+    'A: Stavridakis et al.(2005, Oper Dent)은 IDS layer가 너무 얇으면 후속 cleaning 과정에서 제거되어 bond strength가 오히려 감소한다고 보고했다. Filled adhesive인 Optibond FL은 cured film 두께가 약 40–80 μm로 unfilled adhesive 대비 두꺼워 mechanical conditioning에 대한 내성이 높다. 이 때문에 IDS에서는 filled adhesive가 gold standard로 권장되며, unfilled/lightly filled adhesive를 사용할 경우 flowable composite을 0.5 mm 두께로 추가 coating하여 보완하는 것이 권장된다 (Magne 2005).\n\n' +
 
-    '#### 3.4 Postoperative sensitivity 감소\n' +
-    'Pashley(1992)는 얕은 cavity에서도 ~20,000개, 깊은 cavity에서는 최대 ~40,000개의 dentinal tubule이 노출된다고 보고했습니다. IDS는 이 tubule을 prep 시점에 즉시 봉쇄함으로써 provisional cement, oral debris, moisture에의 노출을 차단합니다.\n\n' +
+    '**Q6. IDS 후 crown lengthening이 필요해진 경우, 이미 형성된 IDS layer는 어떻게 처리해야 하는가?**\n' +
+    'A: 직접적으로 이 시나리오를 다룬 전향적 연구는 부족하다 [문헌 확인 필요]. 일반적 임상 원칙상, crown lengthening 후 healing이 완료되면 IDS layer를 air abrasion 또는 phosphoric acid로 conditioning하고 필요 시 새로운 adhesive를 재도포하는 방식이 권장된다. Healing 기간에 대해서는 보편적으로 3–6개월이 권장되지만, 이는 치주 healing 원칙(Lindhe, Clinical Periodontology 교과서)에 근거한 것이며 IDS 특이적 data는 없다.\n\n' +
 
-    '### 4. 임상 프로토콜 — Step by Step\n\n' +
-    '**Step 1. Tooth preparation**\n' +
-    '원하는 형태로 prep을 완료한 뒤, 충치 및 기존 수복물을 모두 제거합니다. Desiccation은 반드시 피해야 합니다 — collagen network이 collapse되면 primer infiltration이 차단됩니다.\n\n' +
+    '**Q7. Alghauli et al.(2024)의 systematic review에서 보고된 IDS 그룹의 survival rate 96.4–100%와 비IDS 그룹의 81.8–96.7% 차이는 어떤 restoration type에서 가장 두드러지게 나타났는가?**\n' +
+    'A: Alghauli et al.(2024, J Prosthet Dent) systematic review는 ceramic partial coverage restoration(inlay, onlay, partial crown)과 laminate veneer에서 IDS의 이점이 가장 뚜렷하다고 보고했다. 이는 해당 수복물이 adhesive cementation에 전적으로 의존하며, dentin bonding quality가 long-term survival의 핵심 변수이기 때문이다. Full-coverage crown에서 conventional cement를 사용하는 경우 IDS의 이득은 주로 postoperative sensitivity 감소에 국한된다는 점도 언급되었다.\n\n' +
 
-    '**Step 2. Isolation**\n' +
-    'Rubber dam isolation이 standard입니다. Saliva, sulcular fluid, blood에 의한 minor contamination만으로도 adhesive wettability와 polymerization이 disrupt됩니다. Hemostatic agent를 사용했다면 residue가 monomer polymerization을 방해하므로 완전히 rinse해야 합니다.\n\n' +
+    '**Q8. Non-vital tooth에서 IDS를 시행할 때 vital tooth 대비 어떤 변수가 달라지며, 그 차이가 임상 결과에 영향을 미치는가?**\n' +
+    'A: Vital tooth에서는 outward pulpal fluid pressure(약 14–25 cmH₂O)가 adhesive의 dentin infiltration을 방해하는 요인이 되는 반면, non-vital tooth에서는 이 압력이 없어 이론적으로 adhesive penetration이 더 용이하다. 그러나 endodontic treatment 과정에서 사용된 NaOCl은 collagen denaturation을 일으켜 dentin의 bonding substrate를 변화시키며, EDTA는 smear layer 제거 후 tubule을 개방하여 adhesive 침투에 영향을 준다 (Bitter et al., J Adhes Dent 참고). IPDS(Immediate Pre-endodontic Dentin Sealing) 개념이 이에 대한 해결책으로 제안되었으나 아직 RCT 수준의 evidence는 부족하다.\n\n' +
 
-    '**Step 3. Adhesive system 선택 및 적용**\n' +
-    '3-step etch-and-rinse (예: Optibond FL)가 IDS gold standard: 35–37% phosphoric acid 15초 → rinse, moist bonding → primer active rubbing → bonding resin air-thin, light cure.\n' +
-    'Filled adhesive를 사용하는 이유: cured film이 더 두껍고 mechanical robustness가 좋아 이후 surface conditioning(airborne abrasion 등)에도 견딥니다.\n\n' +
+    '**Q9. Subgingival margin에서 IDS를 시행할 때 rubber dam isolation이 불가능한 경우, 습기 조절 수준이 bond strength에 미치는 영향을 정량적으로 어떻게 이해해야 하는가?**\n' +
+    'A: Rubber dam 없이 면봉과 retraction cord만으로 조절한 환경에서의 IDS bond strength는 rubber dam 환경 대비 유의하게 낮다는 보고들이 있다 [문헌 확인 필요]. 일반 원칙으로, saliva 오염은 hybrid layer 형성을 방해하여 접착력을 크게 저하시킨다 (Van Meerbeek et al., Oper Dent). 임상적 판단으로는 isolation이 완벽하지 않다면 IDS의 이론적 이점이 반감될 수 있으므로, 조건이 불량한 경우 conventional cementation protocol로의 전환을 고려해야 한다.\n\n' +
 
-    '**Step 4. Flowable composite coating (권장)**\n' +
-    '두께 약 0.5 mm의 flowable composite을 cured adhesive 위에 도포하고 light cure합니다. Unfilled/lightly filled adhesive system에서 특히 중요하며, micro-void를 메우고 oxygen inhibition으로 인한 약점을 보강합니다.\n\n' +
-
-    '**Step 5. Oxygen-Inhibition Layer (OIL) 제거 — 핵심**\n' +
-    '광중합된 adhesive 표면에는 oxygen에 의해 중합이 억제된 sticky uncured monomer layer가 남아 있습니다. 이 OIL이 남으면: (1) PVS impression material이 OIL에 결합·tear 발생, (2) resin-based provisional이 OIL에 bonding되어 제거 어려움.\n' +
-    'OIL 제거: Glycerin gel 도포 후 추가 10초 light cure (가장 권장) → alcohol-soaked cotton wiping → pumice slurry polishing.\n\n' +
-
-    '**Step 6. Provisional restoration**\n' +
-    'Non-eugenol cement 필수. Eugenol은 free radical scavenger로 작용하여 final cementation 시 resin cement의 polymerization을 방해합니다. IDS surface 위에 glycerin gel 또는 vaseline을 얇게 도포한 뒤 provisional 제작 시 unwanted adhesion을 방지할 수 있습니다.\n\n' +
-
-    '**Step 7. Final cementation — Surface refreshing**\n' +
-    'Provisional 제거 후 IDS surface cleaning 필수. Airborne particle abrasion (50 μm Al₂O₃, low pressure), phosphoric acid cleansing etch, pumice polishing 등이 효과적입니다. 과도한 conditioning은 IDS layer 자체를 제거할 수 있어 주의가 필요합니다.\n\n' +
-
-    '### 5. 근거 — 무엇이 입증되었나\n\n' +
-    '**In vitro bond strength**\n' +
-    '다수의 laboratory study에서 IDS가 DDS 대비 microtensile bond strength를 약 20–30% 향상시킨다고 보고합니다. Thermocycling과 long-term water storage 같은 aging 조건 하에서 IDS가 hydrolytic degradation과 nanoleakage에 더 잘 견디는 것으로 나타났습니다.\n\n' +
-    '**임상 결과**\n' +
-    '- Gresnigt et al.(2019, Dent Mater) — 11-year prospective trial, ceramic laminate veneer에서 IDS의 우수한 임상 성능 보고\n' +
-    '- van den Breemer et al.(2021, Clin Oral Invest) — 765개의 partial glass-ceramic posterior restoration 평가, 우수한 결과\n' +
-    '- Alghauli et al.(2024, J Prosthet Dent) systematic review: IDS 그룹 survival rate 96.4–100% vs 비IDS 81.8–96.7%, postoperative sensitivity 유의하게 감소 (P<.05)\n\n' +
-    '**그러나 — 문헌의 한계**\n' +
-    'van den Breemer et al.(2019, Oper Dent)의 RCT 결과는 단기 outcome에서 IDS와 DDS 간 유의한 차이를 발견하지 못했습니다. Evidence의 상당 부분이 in vitro이고, 임상 환경의 salivary contamination, pulpal fluid pressure, operator variability 등을 완전히 재현하지 못한다는 methodological 한계가 있습니다.\n\n' +
-
-    '### 6. 특수 상황 / 응용\n\n' +
-    '**Endodontically treated tooth — IPDS 개념**\n' +
-    '최근 Immediate Pre-endodontic Dentin Sealing (IPDS) 개념이 제안되고 있습니다. Endodontic treatment 시작 전 dentin sealing이 bond strength를 향상시킬 수 있다고 보고되었으나, 아직 evidence가 제한적입니다. Non-vital tooth에서 outward pulpal fluid pressure가 없어 adhesive interaction이 다를 수 있고, irrigant나 sealer contamination이 변수가 됩니다.\n\n' +
-    '**Digital workflow 통합**\n' +
-    'IOS 기반 fully digital workflow에서는 PVS와 OIL의 interaction 우려는 사라집니다. 다만 scan quality를 위해 glycerin re-cure나 pumice polishing으로 sealed surface를 처리하는 것이 권장됩니다.\n\n' +
-
-    '### 7. 임상 의사결정 — 언제 IDS를 해야 하는가\n\n' +
-    '**강하게 권장:**\n' +
-    '- Indirect adhesive restoration 예정 (inlay, onlay, partial crown, veneer, adhesive bridge)\n' +
-    '- Deep preparation — pulp에 가까운 prep\n' +
-    '- Provisional 기간이 길어질 것이 예상되는 경우 (다수 unit, complex full-mouth rehab)\n' +
-    '- Postoperative sensitivity 위험이 높은 환자 (gingival recession, exposed root surface)\n' +
-    '- Bonded ceramic restoration (lithium disilicate, leucite-reinforced)\n\n' +
-    '**이득이 상대적으로 적은 상황:**\n' +
-    '- Pure enamel margin의 minimal prep veneer\n' +
-    '- Non-vital tooth의 cuspal coverage crown\n' +
-    '- Provisional 기간이 매우 짧은 경우\n\n' +
-
-    '### 8. 핵심 Take-home messages\n\n' +
-    '1. IDS는 "한 가지 술식"이 아니라 protocol 전체 — adhesive 선택, isolation, OIL 처리, provisional cement 선택, cementation 시점의 surface conditioning까지 모두 일관되게 관리해야 효과가 납니다.\n' +
-    '2. 3-step etch-and-rinse + filled adhesive (Optibond FL)가 가장 robust한 조합.\n' +
-    '3. Glycerin re-cure로 OIL 제거는 생략하지 말 것 — impression tear, provisional contamination, final bond 감소가 모두 발생합니다.\n' +
-    '4. Non-eugenol provisional cement는 절대 원칙.\n' +
-    '5. Evidence는 long-term survival과 sensitivity 감소에 강력하나, marginal adaptation/microleakage 개선은 in vitro에서 일관되지 않습니다 — 세미나에서 질문 받으면 솔직하게 인정해야 합니다.\n\n' +
-
-    '### 9. 주요 참고문헌\n\n' +
-    '- Magne P. Immediate dentin sealing: a fundamental procedure for indirect bonded restorations. J Esthet Restor Dent. 2005;17(3):144–154.\n' +
-    '- Magne P, Kim TH, Cascione D, Donovan TE. Immediate dentin sealing improves bond strength of indirect restorations. J Prosthet Dent. 2005;94(6):511–519.\n' +
-    '- Magne P, Nielsen B. Interactions between impression materials and immediate dentin sealing. J Prosthet Dent. 2009;102(5):298–305.\n' +
-    '- Gresnigt MMM, et al. Performance of ceramic laminate veneers with immediate dentine sealing: An 11-year prospective clinical trial. Dent Mater. 2019;35(7):1042–1052.\n' +
-    '- Alghauli MA, Alqutaibi AY, Borzangy S. Clinical benefits of immediate dentin sealing: a systematic review and meta-analysis. J Prosthet Dent. 2024.\n' +
-    '- Tjäderhane L, et al. Strategies to prevent hydrolytic degradation of the hybrid layer. Dent Mater. 2013;29(10):999–1011.\n\n' +
-
-    '### 10. 관점별 질문 (총 22개)\n\n' +
-    '**[보철 관점]**\n' +
-    '1. Optibond FL로 IDS 후 flowable composite을 추가 coating한 경우, final cementation 시 resin cement와 flowable 간 interlayer bonding strength가 flowable-dentin 간 bonding strength보다 약한지 확인된 data가 있는가?\n' +
-    '2. IDS 위에 resin cement vs glass ionomer-based cement를 사용할 때 장기 marginal integrity 차이가 있는가, 그리고 IDS가 conventional cementation의 대안이 될 수 있는가?\n' +
-    '3. Full-arch rehabilitation에서 natural abutment와 implant abutment가 혼재할 때, IDS를 natural tooth에만 시행하면 두 group 간 cementation 시점의 seating 동작이 달라지는가?\n' +
-    '4. Provisional 기간 중 추가 occlusal adjustment나 margin refinement가 필요한 경우, IDS layer를 일부 삭제하고 re-seal하는 것이 최선인가?\n\n' +
-    '**[외과 관점]**\n' +
-    '5. Immediate implant 케이스에서 인접 자연치를 동시에 prep하고 IDS를 시행할 때, 수술 중 blood contamination 리스크를 어떻게 관리할 것인가?\n' +
-    '6. Subgingival margin이 깊어 rubber dam isolation이 불가능한 경우, IDS를 시행하는 것과 포기하는 것 중 어느 쪽의 예후가 더 좋은가에 대한 근거는?\n' +
-    '7. Crown lengthening 후 IDS를 시행할 때 healing 기간을 얼마나 기다려야 하는가, 그리고 초기 healing 상태에서 sulcular fluid flow가 hybrid layer 성숙을 방해하는가?\n\n' +
-    '**[치주 관점]**\n' +
-    '8. IDS 시행 후 biologic width violation이 발생한 경우, 염증성 sulcular exudate가 IDS layer 하방으로 침투하여 hybrid layer를 degradation시키는가?\n' +
-    '9. Subgingival margin에서 IDS를 시행할 때, sulcus에서 발생하는 MMP-8(collagenase)가 IDS layer 주변 dentin에 미치는 영향이 supragingival 상황과 다른가?\n' +
-    '10. Aggressive periodontitis 환자에서 높은 MMP 활성도가 IDS seal 유지에 불리하게 작용할 수 있는가, 그리고 chlorhexidine 전처치가 IDS 효과를 향상시키는 근거가 있는가?\n\n' +
-    '**[재료 관점]**\n' +
-    '11. Self-etch adhesive로 IDS를 시행할 경우, phosphoric acid를 사용하는 etch-and-rinse 대비 MMP 활성화 정도가 어떻게 다르며, IDS의 anti-degradation 이점이 동일하게 기대되는가?\n' +
-    '12. Universal adhesive를 self-etch mode로 사용하여 IDS 시행 시 vs etch-and-rinse mode — 후속 conditioning에 대한 resistance와 final bond strength에 차이가 있는가?\n' +
-    '13. IDS에 사용한 adhesive와 final cementation resin cement의 monomer composition이 호환되지 않을 때(예: MDP-based vs non-MDP), 어떤 interfacial incompatibility 문제가 발생하는가?\n' +
-    '14. Flowable composite으로 IDS 두께를 과도하게 확보했을 때(예: 1mm 이상) seating accuracy와 marginal fit에 어떤 영향이 있는가?\n\n' +
-    '**[술식 관점]**\n' +
-    '15. IDS 시행 후 final impression 시 retraction cord에 함유된 epinephrine이나 aluminum chloride가 IDS layer에 미치는 영향이 있는가?\n' +
-    '16. Lithium disilicate restoration 내면을 HF etching + silane 처리할 때, IDS surface를 air abrasion으로 refresh하는 것과 phosphoric acid만으로 cleansing하는 것의 bond strength 차이는?\n' +
-    '17. IDS 후 PMMA 기반 long-term provisional을 직접법으로 제작할 때, vaseline을 도포했음에도 provisional resin이 일부 결합되는 경우 어떻게 관리하는가?\n' +
-    '18. 여러 치아에 동시 IDS 시행 시 각 치아의 curing time을 단축하면 hybrid layer의 conversion degree에 어떤 영향이 있으며, bulk cure가 가능한가?\n\n' +
-    '**[세미나 방어용]**\n' +
-    '19. IDS의 long-term benefit을 지지하는 핵심 RCT들이 단기 outcome에서는 DDS와 유의한 차이를 보이지 못했는데, IDS의 이득이 임상적으로 meaningful한 차이를 만드는 것은 어떤 specific scenario로 제한되는가?\n' +
-    '20. In vitro의 "20–30% bond strength 향상"이 임상적으로 실제 failure rate 감소로 이어진다는 직접적 evidence는 어느 수준인가? Bond strength와 clinical success rate의 correlation이 확립되어 있는가?\n' +
-    '21. IDS layer 위에 self-adhesive resin cement로 adhesive 재도포 없이 cementation하는 것과, 별도 adhesive를 재도포한 후 conventional resin cement를 사용하는 것 중 어느 쪽이 더 우수한가?\n' +
-    '22. Endodontically treated tooth에서 IPDS 개념이 valid하다면, NaOCl·EDTA irrigant와 sealer가 잔류하는 상황에서 adhesive bonding의 기전이 vital tooth와 어떻게 달라지는가?';
+    '**Q10. IDS 위에 사용하는 resin cement로 self-adhesive resin cement(예: RelyX Unicem)와 conventional resin cement + separate adhesive 중 어느 것이 더 나은 결과를 보이는가?**\n' +
+    'A: Self-adhesive resin cement는 IDS layer 위에서 additional adhesive 없이 사용 시 bond strength가 conventional resin cement + adhesive 조합보다 낮다는 in vitro 연구들이 있다. 이는 self-adhesive cement의 산성 monomer가 이미 중합된 IDS resin layer를 효과적으로 etching하지 못하기 때문이다 (Radovic et al., J Dent 참고). IDS 위에는 phosphoric acid cleansing etch 후 thin adhesive layer를 재도포하고 conventional resin cement를 사용하는 것이 권장된다 (Magne 2005, J Esthet Restor Dent).';
 
   const res = UrlFetchApp.fetch(url, {
     method: 'post',
