@@ -1676,8 +1676,8 @@ body.focus-mode .modal {
 .pres-caption { font-size: 0.88rem; color: #94a3b8; text-align: center; max-width: 640px; }
 .pres-photo-num { font-size: 0.75rem; color: #475569; }
 
-/* Description */
-.pres-type-desc { align-items: flex-start; justify-content: flex-start; max-width: 800px; margin: 0 auto; width: 100%; }
+/* Description / Answer */
+.pres-type-desc, .pres-type-answer { align-items: flex-start; justify-content: flex-start; max-width: 800px; margin: 0 auto; width: 100%; }
 .pres-desc-inner {
   width: 100%;
   line-height: 1.85;

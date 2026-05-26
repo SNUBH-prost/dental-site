@@ -105,22 +105,21 @@ function _sortContents(arr) {
 
 async function loadData() {
   const now = Date.now();
+  // 캐시가 있으면 즉시 표시 (빠른 초기 렌더)
   try {
     const cc = localStorage.getItem(_CACHE_KEY_CASES);
     const ct = localStorage.getItem(_CACHE_KEY_CONTENTS);
-    const ts = parseInt(localStorage.getItem(_CACHE_KEY_TS) || '0');
     if (cc && ct) {
       allCases    = JSON.parse(cc);
       allContents = _sortContents(JSON.parse(ct));
       _renderAll();
-      // 캐시가 TTL 이내이면 Firebase 호출 생략
-      if (now - ts < _CACHE_TTL) return;
     }
   } catch(e) {}
 
+  // 항상 Firestore에서 최신 데이터를 가져와 갱신
   const [casesSnap, contentsSnap] = await Promise.all([
     db.collection("cases").orderBy("date", "desc").get(),
-    db.collection("departmentContents").orderBy("date", "desc").get()
+    db.collection("departmentContents").orderBy("createdAt", "desc").get()
   ]);
 
   allCases    = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -2180,6 +2179,7 @@ function _buildPresSlides(item) {
     slides.push({ type: 'photo', photo: p, photoIdx: i + 1, photoTotal: (item.photos||[]).length })
   );
   if (item.description?.trim()) slides.push({ type: 'desc', text: item.description });
+  if (item.answer?.trim()) slides.push({ type: 'answer', text: item.answer });
   const refs = (item.references || []).filter(r => r.title);
   if (refs.length) slides.push({ type: 'refs', refs });
   return slides;
@@ -2226,6 +2226,9 @@ function _renderPresSlide() {
   } else if (slide.type === 'desc') {
     el.innerHTML = `<div class="pres-desc-inner">${marked.parse(slide.text)}</div>`;
     _renderMath(el.querySelector('.pres-desc-inner'));
+  } else if (slide.type === 'answer') {
+    el.innerHTML = `<div class="pres-desc-inner pres-answer-inner">${marked.parse(slide.text)}</div>`;
+    _renderMath(el.querySelector('.pres-answer-inner'));
   } else if (slide.type === 'refs') {
     el.innerHTML = `
       <div class="pres-section-label">참고 논문</div>
