@@ -2101,3 +2101,31 @@ body.focus-mode .modal {
     justify-content: space-between;
   }
 }
+
+/* ── Pull-to-refresh ─────────────────────────────────────────── */
+#ptr-indicator {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  margin-left: -20px;
+  border-radius: 50%;
+  background: var(--primary, #2563eb);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(-48px);
+  z-index: 1200;
+  pointer-events: none;
+  box-shadow: 0 2px 12px rgba(37,99,235,0.3);
+}
+#ptr-indicator.ptr-spin {
+  animation: ptr-rotate 0.7s linear infinite;
+}
+@keyframes ptr-rotate {
+  from { transform: translateY(0) rotate(0deg); }
+  to   { transform: translateY(0) rotate(360deg); }
+}

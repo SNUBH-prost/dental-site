@@ -69,6 +69,14 @@ let _modalPushed = false;
 // ── 데이터 로드 ───────────────────────────────────────────────
 const _CACHE_KEY_CASES    = 'dental_cache_cases';
 const _CACHE_KEY_CONTENTS = 'dental_cache_contents';
+const _CACHE_KEY_TS       = 'dental_cache_ts';
+const _CACHE_TTL          = 3 * 60 * 1000; // 3분
+
+// 간단한 debounce 유틸
+function _debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
 
 function _renderAll() {
   renderHome();
@@ -79,18 +87,20 @@ function _renderAll() {
 }
 
 async function loadData() {
-  // 캐시가 있으면 즉시 렌더 (체감 속도 향상)
+  const now = Date.now();
   try {
     const cc = localStorage.getItem(_CACHE_KEY_CASES);
     const ct = localStorage.getItem(_CACHE_KEY_CONTENTS);
+    const ts = parseInt(localStorage.getItem(_CACHE_KEY_TS) || '0');
     if (cc && ct) {
       allCases    = JSON.parse(cc);
       allContents = JSON.parse(ct);
       _renderAll();
+      // 캐시가 TTL 이내이면 Firebase 호출 생략
+      if (now - ts < _CACHE_TTL) return;
     }
   } catch(e) {}
 
-  // Firestore에서 최신 데이터 받아 갱신
   const [casesSnap, contentsSnap] = await Promise.all([
     db.collection("cases").orderBy("date", "desc").get(),
     db.collection("departmentContents").orderBy("date", "desc").get()
@@ -102,6 +112,7 @@ async function loadData() {
   try {
     localStorage.setItem(_CACHE_KEY_CASES,    JSON.stringify(allCases));
     localStorage.setItem(_CACHE_KEY_CONTENTS, JSON.stringify(allContents));
+    localStorage.setItem(_CACHE_KEY_TS,       String(now));
   } catch(e) {}
 
   _renderAll();
@@ -164,6 +175,7 @@ function renderDeptPages() {
     const container = document.getElementById(`dept-content-${d.id}`);
     if (!container) return;
     const items = allContents.filter(c => c.department === d.id);
+    container.className = _viewMode === 'list' ? 'card-grid list-view' : 'card-grid';
     container.innerHTML = items.length ? items.map(c => cardHTML(c, 'content')).join('') :
       '<div class="empty">등록된 자료가 없습니다.</div>';
   });
@@ -175,9 +187,12 @@ function filterDept(deptId, filter = '') {
     return c.department === deptId && (!q || c.title.includes(q) || (c.summary||'').includes(q));
   });
   const container = document.getElementById(`dept-content-${deptId}`);
+  container.className = _viewMode === 'list' ? 'card-grid list-view' : 'card-grid';
   container.innerHTML = items.length ? items.map(c => cardHTML(c, 'content')).join('') :
     '<div class="empty">검색 결과가 없습니다.</div>';
 }
+const _filterDeptDebounced  = _debounce(filterDept,  200);
+const _renderCasesDebounced = _debounce(renderCases, 200);
 
 // ── Card HTML ──────────────────────────────────────────────────
 function cardHTML(item, type) {
@@ -255,7 +270,12 @@ function openModal(id, type) {
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const descEl = document.getElementById('modal-description');
     descEl.innerHTML = marked.parse(item.description || '');
-    _renderMath(descEl);
+    // KaTeX는 무거우므로 idle 타임에 처리 (모달 오픈 애니메이션 보호)
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(() => _renderMath(descEl), { timeout: 1500 });
+    } else {
+      setTimeout(() => _renderMath(descEl), 0);
+    }
     document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>
       `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
     ).join('');
@@ -287,6 +307,8 @@ function closeModal() {
   document.body.classList.remove('focus-mode');
   document.getElementById('modal-focus-btn').textContent = '⤢';
   document.body.style.overflow = '';
+  // 프리로드 이미지 참조 해제 (메모리 회수)
+  _photoPreloadCache = [];
   document.title = '치과 임상 자료실';
   document.getElementById('og-title').setAttribute('content', '치과 임상 자료실');
   document.getElementById('og-image').setAttribute('content', 'https://snubh-prost.github.io/dental-site/icons/icon-192.png');
@@ -472,9 +494,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   _updateAdminLinks(_isDark);
 
-  // 뷰 모드 초기 버튼 상태
-  document.getElementById('view-grid-btn')?.classList.toggle('active', _viewMode === 'grid');
-  document.getElementById('view-list-btn')?.classList.toggle('active', _viewMode === 'list');
+  // 뷰 모드 초기 버튼 상태 (모든 페이지의 토글 버튼 동기화)
+  document.querySelectorAll('.view-toggle-btn[data-mode]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === _viewMode);
+  });
 
   // 초기 히스토리 상태 설정
   history.replaceState({ page: 'home' }, '');
@@ -1771,9 +1794,12 @@ function _toggleBookmark(id) {
 function setViewMode(mode) {
   _viewMode = mode;
   localStorage.setItem('dental-view', mode);
-  document.getElementById('view-grid-btn')?.classList.toggle('active', mode === 'grid');
-  document.getElementById('view-list-btn')?.classList.toggle('active', mode === 'list');
-  document.getElementById('cases-grid')?.classList.toggle('list-view', mode === 'list');
+  document.querySelectorAll('.view-toggle-btn[data-mode]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  document.querySelectorAll('.card-grid').forEach(el => {
+    el.classList.toggle('list-view', mode === 'list');
+  });
 }
 
 function toggleBookmarkFilter() {
@@ -2306,3 +2332,59 @@ function _edToast(msg, type = 'success') {
   clearTimeout(t._timer);
   t._timer = setTimeout(() => { t.className = ''; }, 3000);
 }
+
+// ── 글로벌 에러 핸들러 ────────────────────────────────────────
+window.addEventListener('unhandledrejection', e => {
+  const msg = e.reason?.message || String(e.reason) || '알 수 없는 오류';
+  console.warn('[unhandled]', msg, e.reason);
+});
+
+// ── Pull-to-refresh (모바일) ──────────────────────────────────
+(function _setupPTR() {
+  let startY = 0, curDY = 0, active = false;
+  const THRESH = 72;
+
+  const ind = document.createElement('div');
+  ind.id = 'ptr-indicator';
+  ind.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>';
+  document.body.appendChild(ind);
+
+  function setPos(dy) {
+    const p = Math.min(dy / THRESH, 1);
+    const y = Math.min(dy * 0.5, 44) - 48;
+    ind.style.opacity = p;
+    ind.style.transform = `translateY(${y}px)`;
+    ind.classList.toggle('ptr-ready', p >= 1);
+  }
+  function reset() {
+    ind.style.opacity = '0';
+    ind.style.transform = 'translateY(-48px)';
+    ind.classList.remove('ptr-ready', 'ptr-spin');
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY > 2) return;
+    if (document.getElementById('modal-overlay')?.classList.contains('open')) return;
+    startY = e.touches[0].clientY;
+    curDY = 0; active = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!active) return;
+    curDY = Math.max(0, e.touches[0].clientY - startY);
+    if (curDY === 0) { active = false; return; }
+    setPos(curDY);
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!active) return;
+    active = false;
+    if (curDY >= THRESH) {
+      ind.classList.add('ptr-spin');
+      ind.style.opacity = '1';
+      loadData().finally(reset);
+    } else {
+      reset();
+    }
+  }, { passive: true });
+})();
