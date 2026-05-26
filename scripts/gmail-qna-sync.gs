@@ -6,7 +6,7 @@ const CONFIG = {
   ADMIN_EMAIL:    '',   // Firebase 관리자 이메일
   ADMIN_PASSWORD: '',   // Firebase 관리자 비밀번호
 
-  GEMINI_API_KEY: '',   // https://aistudio.google.com/app/apikey 에서 발급
+  GROQ_API_KEY: '',     // https://console.groq.com 에서 발급
 
   CLOUDINARY_CLOUD_NAME:    'dg7aas4ky',
   CLOUDINARY_UPLOAD_PRESET: 'dental_clinic',
@@ -29,32 +29,43 @@ function _getIdToken() {
   return data.idToken;
 }
 
-// ── Gemini API → 답변 초안 생성 ─────────────────────────────────
-function _callGemini(question) {
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + CONFIG.GEMINI_API_KEY;
-
-  const prompt =
-    '당신은 서울대학교 치과병원 보철과 전문의입니다. ' +
-    '아래 임상 질문에 대해 근거 중심의 학술적 답변을 한국어로 작성해주세요. ' +
-    '핵심 내용을 간결하게, 필요하면 항목별로 구분해서 설명해주세요. ' +
-    '불확실한 내용은 "확인 필요"로 표시하세요.\n\n' +
-    '질문: ' + question;
+// ── Groq API → 답변 초안 생성 ───────────────────────────────────
+function _callGroq(question) {
+  const url = 'https://api.groq.com/openai/v1/chat/completions';
+  const systemPrompt =
+    '당신은 서울대학교 치과병원 보철과 전임의입니다. ' +
+    '아래 임상 질문에 대해 다음 원칙에 따라 답변하세요.\n\n' +
+    '1. 근거 중심(Evidence-based): 정립된 임상 원칙, 보철학 문헌(Literature) 또는 학회 가이드라인의 핵심 근거를 명시할 것.\n' +
+    '2. 단계별 구조화: 진단(Diagnosis), 치료 계획(Treatment planning), 실행(Execution) 등 흐름에 맞춰 소제목이나 번호로 구분할 것.\n' +
+    '3. 임상 실무 적용: 실제 원내 임상(Clinical practice)에서 바로 적용할 수 있는 구체적인 팁이나 주의사항(예: 재료 선택, 삭제법, 기공 소통 등 문맥에 맞는 내용)을 1~2가지 포함할 것.\n' +
+    '4. 장기 예후 및 한계 명시: 치료 후의 유지 관리(Maintenance) 측면을 고려하되, 환자 상태나 술식에 따라 가변적인 부분은 "임상적 판단 필요"로 명확히 선을 그을 것.\n' +
+    '5. 권위 있는 레퍼런스 첨부: 답변과 직접적으로 관련된 전 세계 보철/접착 분야의 주요 논문(예: JPD, JOE, JER 등) 레퍼런스(저자, 연도, 저널명 포함)를 5개 제시할 것.\n' +
+    '6. 한국어로 작성, 전문 용어는 영문 병기.';
 
   const res = UrlFetchApp.fetch(url, {
     method: 'post',
-    contentType: 'application/json',
+    headers: {
+      Authorization: 'Bearer ' + CONFIG.GROQ_API_KEY,
+      'Content-Type': 'application/json',
+    },
     payload: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
+      model: 'deepseek-r1-distill-llama-70b',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: question },
+      ],
+      max_tokens: 2048,
+      temperature: 0.3,
     }),
     muteHttpExceptions: true,
   });
 
   const result = JSON.parse(res.getContentText());
-  const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini 응답 실패: ' + res.getContentText());
-  Logger.log('[Gemini 답변 생성 완료]');
-  return text.trim();
+  const text = result?.choices?.[0]?.message?.content;
+  if (!text) throw new Error('Groq 응답 실패: ' + res.getContentText());
+  Logger.log('[Groq 답변 생성 완료]');
+  // deepseek-r1의 <think>...</think> 블록 제거
+  return text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 }
 
 // ── Cloudinary 이미지 업로드 → URL ───────────────────────────────
@@ -143,11 +154,11 @@ function checkQnAEmails() {
         catch(e) { Logger.log('[이미지 오류] ' + e.message); }
       });
 
-      // Gemini 답변 초안 생성
+      // Groq 답변 초안 생성
       let answer = '';
-      if (CONFIG.GEMINI_API_KEY) {
-        try { answer = _callGemini(title + '\n\n' + body); }
-        catch(e) { Logger.log('[Gemini 오류] ' + e.message); }
+      if (CONFIG.GROQ_API_KEY) {
+        try { answer = _callGroq(title + '\n\n' + body); }
+        catch(e) { Logger.log('[Groq 오류] ' + e.message); }
       }
 
       _addQnADoc(title, body, answer, photoUrls);
