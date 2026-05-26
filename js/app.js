@@ -882,7 +882,21 @@ async function deleteCardItem(id, type) {
   if (!confirm('정말 삭제하시겠습니까?')) return;
   const col = type === 'case' ? 'cases' : 'departmentContents';
   await db.collection(col).doc(id).delete();
-  await loadData();
+
+  // 로컬 배열에서 즉시 제거
+  if (type === 'case') {
+    allCases = allCases.filter(c => c.id !== id);
+  } else {
+    allContents = allContents.filter(c => c.id !== id);
+  }
+
+  // 캐시 무효화 후 화면 갱신
+  localStorage.removeItem(_CACHE_KEY_TS);
+  try {
+    localStorage.setItem(_CACHE_KEY_CASES,    JSON.stringify(allCases));
+    localStorage.setItem(_CACHE_KEY_CONTENTS, JSON.stringify(allContents));
+  } catch(e) {}
+  _renderAll();
 }
 
 // ── 에디터 열기 (기존 항목 편집) ────────────────────────────
