@@ -38,6 +38,7 @@ function _callGPT(question) {
     '전공의가 보내온 임상 주제에 대해 **깊이 있는 Q&A를 반드시 Q1부터 시작하여 20개 이상** 작성하세요.\n\n' +
 
     '## 형식 (반드시 준수)\n' +
+    '제목, 머리말, 요약, 마무리 문장 등 Q&A 이외의 텍스트는 일절 출력하지 말 것. 오직 Q&A만 출력.\n\n' +
     '**Q1. [질문]**\n' +
     'A: [답변 — 7~10문장 이상, 출처 4개 이상 포함. 각 출처마다 해당 근거가 답변의 어느 부분을 뒷받침하는지 명확히 연결할 것.]\n\n' +
     '**Q2. [질문]**\n' +
@@ -70,8 +71,6 @@ function _callGPT(question) {
   const fewShotUser = 'Immediate Dentin Sealing (IDS) 에 대해 종합 정리해줘';
 
   const fewShotAssistant =
-    '## Immediate Dentin Sealing (IDS) — Q&A\n\n' +
-
     '**Q1. IDS가 DDS 대비 microtensile bond strength를 실제로 유의하게 향상시키는가, 아니면 in vitro 수치가 임상적으로 과대평가된 것인가?**\n' +
     'A: In vitro에서는 IDS가 DDS 대비 약 20–30% 높은 microtensile bond strength(μTBS)를 보인다는 보고가 일관되게 존재한다. Magne et al.(2005, J Prosthet Dent 93(3):226-235)은 IDS가 fresh dentin에 대해 최적의 hybrid layer를 형성하고, provisional 기간 동안의 oral fluid 오염과 MMP-mediated collagen degradation을 방지하기 때문이라고 설명했다. 구체적으로 IDS군의 μTBS는 평균 42–55 MPa 범위인 반면 DDS군은 28–38 MPa 수준으로 보고된 바 있다 (Magne & Nielsen 2009, J Prosthet Dent 102(3):168-177). Tjäderhane et al.(2013, Dent Mater 29(1):116-135)은 MMP에 의한 collagen 분해가 bond 열화의 핵심 기전임을 확인했으며, IDS가 이 경로를 차단한다는 점에서 이론적 타당성이 뒷받침된다. 다만 van den Breemer et al.(2019, Oper Dent 44(1):E1-E15)의 RCT에서는 단기(2년) 임상 outcome에서 IDS와 DDS 간 restoration failure rate에 유의한 차이가 없었다. 이 불일치는 in vitro 환경이 구강 내 열순환(thermocycling), pH 변화, 교합력 등 복합 스트레스를 완전히 재현하지 못하기 때문으로 해석된다 (Sano et al. 1994, J Dent Res 73(6):1087-1092). 결론적으로 bond strength 향상이 임상적 failure rate 감소로 직결된다는 장기 RCT 증거는 아직 부족하나, adhesive 수복물의 장기 생존을 위한 예방적 조치로서 IDS의 생물학적 합리성은 충분하다.\n\n' +
 
