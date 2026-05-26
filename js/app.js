@@ -175,6 +175,7 @@ function renderDeptPages() {
     const container = document.getElementById(`dept-content-${d.id}`);
     if (!container) return;
     const items = allContents.filter(c => c.department === d.id);
+    container.className = _viewMode === 'list' ? 'card-grid list-view' : 'card-grid';
     container.innerHTML = items.length ? items.map(c => cardHTML(c, 'content')).join('') :
       '<div class="empty">등록된 자료가 없습니다.</div>';
   });
@@ -186,6 +187,7 @@ function filterDept(deptId, filter = '') {
     return c.department === deptId && (!q || c.title.includes(q) || (c.summary||'').includes(q));
   });
   const container = document.getElementById(`dept-content-${deptId}`);
+  container.className = _viewMode === 'list' ? 'card-grid list-view' : 'card-grid';
   container.innerHTML = items.length ? items.map(c => cardHTML(c, 'content')).join('') :
     '<div class="empty">검색 결과가 없습니다.</div>';
 }
@@ -492,9 +494,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   _updateAdminLinks(_isDark);
 
-  // 뷰 모드 초기 버튼 상태
-  document.getElementById('view-grid-btn')?.classList.toggle('active', _viewMode === 'grid');
-  document.getElementById('view-list-btn')?.classList.toggle('active', _viewMode === 'list');
+  // 뷰 모드 초기 버튼 상태 (모든 페이지의 토글 버튼 동기화)
+  document.querySelectorAll('.view-toggle-btn[data-mode]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === _viewMode);
+  });
 
   // 초기 히스토리 상태 설정
   history.replaceState({ page: 'home' }, '');
@@ -1791,9 +1794,12 @@ function _toggleBookmark(id) {
 function setViewMode(mode) {
   _viewMode = mode;
   localStorage.setItem('dental-view', mode);
-  document.getElementById('view-grid-btn')?.classList.toggle('active', mode === 'grid');
-  document.getElementById('view-list-btn')?.classList.toggle('active', mode === 'list');
-  document.getElementById('cases-grid')?.classList.toggle('list-view', mode === 'list');
+  document.querySelectorAll('.view-toggle-btn[data-mode]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  document.querySelectorAll('.card-grid').forEach(el => {
+    el.classList.toggle('list-view', mode === 'list');
+  });
 }
 
 function toggleBookmarkFilter() {
