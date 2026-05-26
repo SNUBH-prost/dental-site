@@ -6,7 +6,9 @@ const CONFIG = {
   ADMIN_EMAIL:    '',   // Firebase 관리자 이메일
   ADMIN_PASSWORD: '',   // Firebase 관리자 비밀번호
 
-  ANTHROPIC_API_KEY: '', // https://console.anthropic.com 에서 발급 (claude-sonnet-4-6 사용)
+  // ── Vertex AI (GCP) 설정 ──────────────────────────────────────
+  GCP_PROJECT_ID: '',          // GCP 프로젝트 ID (예: 'my-project-123456')
+  GCP_REGION:     'us-east5',  // Claude 지원 리전 (us-east5 권장)
 
   CLOUDINARY_CLOUD_NAME:    'dg7aas4ky',
   CLOUDINARY_UPLOAD_PRESET: 'dental_clinic',
@@ -29,9 +31,13 @@ function _getIdToken() {
   return data.idToken;
 }
 
-// ── Anthropic Claude API → 답변 + 레퍼런스 생성 ─────────────────
+// ── Vertex AI (GCP) → Claude 답변 + 레퍼런스 생성 ───────────────
+// API 키 불필요 — ScriptApp.getOAuthToken()으로 GCP 인증
 function _callClaude(question) {
-  const url = 'https://api.anthropic.com/v1/messages';
+  const model = 'claude-sonnet-4-5';   // Vertex AI Model Garden에서 확인
+  const url   = 'https://' + CONFIG.GCP_REGION + '-aiplatform.googleapis.com/v1/projects/' +
+                CONFIG.GCP_PROJECT_ID + '/locations/' + CONFIG.GCP_REGION +
+                '/publishers/anthropic/models/' + model + ':rawPredict';
 
   const systemPrompt =
     '당신은 서울대학교 치과병원 보철과 전임의이자 JPD·Dent Mater 등 국제 보철학 저널에 다수 논문을 발표한 임상 연구자입니다.\n' +
@@ -103,23 +109,22 @@ function _callClaude(question) {
   const res = UrlFetchApp.fetch(url, {
     method: 'post',
     headers: {
-      'x-api-key':         CONFIG.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type':      'application/json',
+      'Authorization': 'Bearer ' + ScriptApp.getOAuthToken(),
+      'Content-Type':  'application/json',
     },
     payload: JSON.stringify({
-      model:      'claude-sonnet-4-6',
-      max_tokens: 8192,
-      system:     systemPrompt,
-      messages:   [{ role: 'user', content: question }],
+      anthropic_version: 'vertex-2023-10-16',
+      max_tokens:        8192,
+      system:            systemPrompt,
+      messages:          [{ role: 'user', content: question }],
     }),
     muteHttpExceptions: true,
   });
 
   const result = JSON.parse(res.getContentText());
   const text = result?.content?.[0]?.text;
-  if (!text) throw new Error('Claude 응답 실패: ' + res.getContentText());
-  Logger.log('[Claude 답변 생성 완료]');
+  if (!text) throw new Error('Claude(Vertex) 응답 실패: ' + res.getContentText());
+  Logger.log('[Claude(Vertex) 답변 생성 완료]');
   return text.trim();
 }
 
@@ -252,7 +257,7 @@ function checkQnAEmails() {
       // Groq 답변 초안 생성 + 레퍼런스 파싱
       let answer = '';
       let references = [];
-      if (CONFIG.ANTHROPIC_API_KEY) {
+      if (CONFIG.GCP_PROJECT_ID) {
         try {
           const raw = _callClaude(title + '\n\n' + body);
           const parsed = _parseGroqResponse(raw);
