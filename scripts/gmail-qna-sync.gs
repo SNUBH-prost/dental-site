@@ -30,7 +30,8 @@ function _getIdToken() {
 }
 
 // ── OpenAI GPT 단일 배치 호출 (startQ~endQ) ──────────────────────
-function _callGPTBatch(question, startQ, endQ) {
+// prevQSummary: 이전 배치 질문 요약 (중복 방지용, 선택)
+function _callGPTBatch(question, startQ, endQ, prevQSummary) {
   const url = 'https://api.openai.com/v1/chat/completions';
 
   const rangeLabel = 'Q' + startQ + '부터 Q' + endQ + '까지 정확히 ' + (endQ - startQ + 1) + '개';
@@ -69,6 +70,11 @@ function _callGPTBatch(question, startQ, endQ) {
     '✅ 목표: 임상에서 실제로 부딪히는 판단 문제, 두 옵션 중 어느 것이 나은가, 논란이 있는 부분, 여러 변수가 충돌하는 상황\n' +
     '✅ 다양한 관점 포함: 보철 / 외과 / 치주 / 재료 / 술식 / 세미나 방어\n' +
     '✅ 번역투 금지: 한국 교수가 전공의에게 강의하듯 자연스러운 한국어로\n\n' +
+
+    '## 질문 다양성 원칙 — 절대 준수\n' +
+    '- 각 질문은 서로 다른 임상 상황, 시술 단계, 재료 선택, 합병증, 실패 원인, 대안적 술식을 다룰 것\n' +
+    '- 유사한 주제를 표현만 바꿔 반복하는 것 절대 금지\n' +
+    '- 20개 질문 전체를 통틀어 동일 키워드(예: bond strength, MMP, IDS…)가 2개 이상 겹치지 않도록 할 것\n\n' +
     '전문 용어는 영문 병기.\n' +
     '**반드시 Q' + startQ + '부터 Q' + endQ + '까지 정확히 ' + (endQ - startQ + 1) + '개 작성. 이 범위를 벗어난 번호는 출력 금지.**';
 
@@ -94,7 +100,8 @@ function _callGPTBatch(question, startQ, endQ) {
         { role: 'system',    content: systemPrompt },
         { role: 'user',      content: fewShotUser },
         { role: 'assistant', content: fewShotAssistant },
-        { role: 'user',      content: question + '\n\n[' + rangeLabel + '만 작성할 것]' },
+        { role: 'user',      content: question + '\n\n[' + rangeLabel + '만 작성할 것]'
+            + (prevQSummary ? '\n\n' + prevQSummary : '') },
       ],
     }),
     muteHttpExceptions: true,
@@ -109,8 +116,15 @@ function _callGPTBatch(question, startQ, endQ) {
 
 // ── OpenAI GPT → Q1~Q20 두 번 나눠 호출 후 합산 ─────────────────
 function _callGPT(question) {
-  const part1 = _callGPTBatch(question, 1,  10);
-  const part2 = _callGPTBatch(question, 11, 20);
+  const part1 = _callGPTBatch(question, 1, 10, '');
+
+  // Q1-10 질문 제목만 추출 → Q11-20 배치에 "중복 금지" 목록으로 전달
+  const q1Lines = (part1.match(/\*\*Q\d+\.[^\*]+\*\*/g) || []).join('\n');
+  const prevQSummary = q1Lines
+    ? '【이미 작성된 Q1~Q10 질문 목록 — 아래와 동일하거나 유사한 주제 절대 금지】\n' + q1Lines
+    : '';
+
+  const part2 = _callGPTBatch(question, 11, 20, prevQSummary);
   return part1 + '\n\n' + part2;
 }
 
