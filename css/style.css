@@ -2102,6 +2102,37 @@ body.focus-mode .modal {
   }
 }
 
+/* ── 인용 위첨자 ─────────────────────────────────────────────── */
+.cite-sup {
+  color: #2563eb;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.72em;
+  vertical-align: super;
+  line-height: 0;
+  padding: 0 1px;
+  border-radius: 3px;
+  transition: background 0.1s;
+}
+.cite-sup:hover {
+  background: #dbeafe;
+}
+
+#cite-tip {
+  position: absolute;
+  z-index: 9999;
+  background: #1e293b;
+  color: #f1f5f9;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  max-width: 300px;
+  word-break: keep-all;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+  pointer-events: none;
+}
+
 /* ── Pull-to-refresh ─────────────────────────────────────────── */
 #ptr-indicator {
   position: fixed;

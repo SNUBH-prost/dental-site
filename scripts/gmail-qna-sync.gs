@@ -186,6 +186,14 @@ function _searchPubMed(author, year, source) {
   }
 }
 
+// ── 교과서 여부 판별 (PubMed 검색 건너뛰기용) ─────────────────
+function _isTextbook(source) {
+  const publishers = ['Quintessence', 'Mosby', 'Elsevier', 'Blackwell', 'Wiley',
+    'Springer', 'Saunders', 'Year Book', 'Hanover Park', 'Karger', 'Thieme'];
+  const s = source || '';
+  return publishers.some(function(p) { return s.indexOf(p) !== -1; });
+}
+
 // ── GPT 답변 파싱 + PubMed 인용 검증 ────────────────────────
 function _parseAndVerify(text) {
   const citations = _extractCitations(text);
@@ -193,6 +201,14 @@ function _parseAndVerify(text) {
 
   const refs = [];
   citations.forEach(function(c) {
+    if (_isTextbook(c.source)) {
+      Logger.log('[교과서 — PubMed 건너뜀] ' + c.author + ' ' + c.year);
+      refs.push({
+        authors: c.author, year: c.year, title: c.source, journal: '교과서',
+        volume: '', pages: '', doi: '', abstract: '', abstractEn: '',
+      });
+      return; // sleep 없이 건너뜀
+    }
     const found = _searchPubMed(c.author, c.year, c.source);
     if (found) {
       Logger.log('[PubMed 확인] ' + c.author + ' ' + c.year + ' → ' + found.title.slice(0, 60));

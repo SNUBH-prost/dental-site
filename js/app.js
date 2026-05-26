@@ -24,6 +24,46 @@ function _renderMath(el) {
   });
 }
 
+// ── 인용구 위첨자 변환 ────────────────────────────────────────
+function _renderWithCitations(text, refs) {
+  if (!text) return '';
+  if (!refs || !refs.length) return marked.parse(text);
+
+  const citeRe = /\(([A-Za-zÄÖÜäöüéèêàâčšžćđ]+(?:\s+et\s+al\.?)?(?:\s+&\s+[A-Za-z]+)?)\s+(\d{4})[,;\s]+([^)]{3,80})\)/g;
+
+  // 첫 등장 순서대로 번호 부여
+  const keyToIdx = {};
+  let nextIdx = 0;
+  let m;
+  while ((m = citeRe.exec(text)) !== null) {
+    const key = m[1].trim() + '_' + m[2].trim();
+    if (!(key in keyToIdx)) keyToIdx[key] = nextIdx++;
+  }
+
+  citeRe.lastIndex = 0;
+  const processed = text.replace(citeRe, (match, author, year) => {
+    const key = author.trim() + '_' + year.trim();
+    const n = keyToIdx[key];
+    if (n === undefined || n >= refs.length) return match;
+
+    const ref = refs[n];
+    const parts = [
+      ref.authors || author,
+      ref.year ? `(${ref.year}).` : `(${year}).`,
+      ref.title ? ref.title + '.' : '',
+      ref.journal && ref.journal !== '교과서'
+        ? ref.journal + (ref.volume ? ' ' + ref.volume : '') + (ref.pages ? ':' + ref.pages : '') + '.'
+        : (ref.title ? '' : (ref.journal || '')),
+      ref.doi ? `DOI: ${ref.doi}` : '',
+    ].filter(Boolean);
+
+    const tip = parts.join(' ').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<sup class="cite-sup" data-n="${n + 1}" data-tip="${tip}">[${n + 1}]</sup>`;
+  });
+
+  return marked.parse(processed);
+}
+
 // ── marked 커스텀 렌더러 (이미지 크기) ───────────────────────
 (function setupMarked() {
   const renderer = new marked.Renderer();
@@ -291,6 +331,22 @@ function openModal(id, type) {
       requestIdleCallback(() => _renderMath(descEl), { timeout: 1500 });
     } else {
       setTimeout(() => _renderMath(descEl), 0);
+    }
+
+    const answerEl  = document.getElementById('modal-answer');
+    const answerSec = document.getElementById('modal-answer-section');
+    if (answerEl && answerSec) {
+      if (item.answer?.trim()) {
+        answerEl.innerHTML = _renderWithCitations(item.answer, item.references || []);
+        answerSec.style.display = '';
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(() => _renderMath(answerEl), { timeout: 1500 });
+        } else {
+          setTimeout(() => _renderMath(answerEl), 0);
+        }
+      } else {
+        answerSec.style.display = 'none';
+      }
     }
     document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>
       `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
@@ -605,6 +661,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderDeptPages();
     _injectAdminControls();
   });
+
+  // 인용 위첨자 툴팁
+  _setupCiteTip();
 });
 
 // ════════════════════════════════════════════════════════════════
@@ -2179,7 +2238,7 @@ function _buildPresSlides(item) {
     slides.push({ type: 'photo', photo: p, photoIdx: i + 1, photoTotal: (item.photos||[]).length })
   );
   if (item.description?.trim()) slides.push({ type: 'desc', text: item.description });
-  if (item.answer?.trim()) slides.push({ type: 'answer', text: item.answer });
+  if (item.answer?.trim()) slides.push({ type: 'answer', text: item.answer, refs: item.references || [] });
   const refs = (item.references || []).filter(r => r.title);
   if (refs.length) slides.push({ type: 'refs', refs });
   return slides;
@@ -2227,7 +2286,7 @@ function _renderPresSlide() {
     el.innerHTML = `<div class="pres-desc-inner">${marked.parse(slide.text)}</div>`;
     _renderMath(el.querySelector('.pres-desc-inner'));
   } else if (slide.type === 'answer') {
-    el.innerHTML = `<div class="pres-desc-inner pres-answer-inner">${marked.parse(slide.text)}</div>`;
+    el.innerHTML = `<div class="pres-desc-inner pres-answer-inner">${_renderWithCitations(slide.text, slide.refs || [])}</div>`;
     _renderMath(el.querySelector('.pres-answer-inner'));
   } else if (slide.type === 'refs') {
     el.innerHTML = `
@@ -2358,6 +2417,48 @@ window.addEventListener('unhandledrejection', e => {
   const msg = e.reason?.message || String(e.reason) || '알 수 없는 오류';
   console.warn('[unhandled]', msg, e.reason);
 });
+
+// ── 인용 위첨자 툴팁 ──────────────────────────────────────────
+function _setupCiteTip() {
+  const tip = document.getElementById('cite-tip');
+  if (!tip) return;
+
+  function show(el) {
+    const text = el.dataset.tip || '';
+    if (!text) return;
+    tip.textContent = text;
+    tip.style.display = 'block';
+    const r = el.getBoundingClientRect();
+    const tw = tip.offsetWidth;
+    const th = tip.offsetHeight;
+    let left = r.left + window.scrollX + r.width / 2 - tw / 2;
+    let top  = r.top  + window.scrollY - th - 8;
+    if (left < 8) left = 8;
+    if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+    if (top < window.scrollY + 8) top = r.bottom + window.scrollY + 8;
+    tip.style.left = left + 'px';
+    tip.style.top  = top  + 'px';
+  }
+
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('.cite-sup');
+    if (el) show(el);
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest('.cite-sup')) tip.style.display = 'none';
+  });
+  document.addEventListener('click', e => {
+    const el = e.target.closest('.cite-sup');
+    if (!el) { tip.style.display = 'none'; return; }
+    e.stopPropagation();
+    if (tip.style.display === 'none' || tip.dataset.for !== el.dataset.n) {
+      tip.dataset.for = el.dataset.n;
+      show(el);
+    } else {
+      tip.style.display = 'none';
+    }
+  });
+}
 
 // ── Pull-to-refresh (모바일) ──────────────────────────────────
 (function _setupPTR() {
