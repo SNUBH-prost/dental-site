@@ -29,63 +29,50 @@ function _getIdToken() {
   return data.idToken;
 }
 
-// ── OpenAI GPT 단일 배치 호출 (startQ~endQ) ──────────────────────
-// prevQSummary: 이전 배치 질문 요약 (중복 방지용, 선택)
-function _callGPTBatch(question, startQ, endQ, prevQSummary) {
+// ── OpenAI GPT Q&A 생성 (Q1~Q10, narrative review 스타일) ──────────
+function _callGPTBatch(question) {
   const url = 'https://api.openai.com/v1/chat/completions';
 
-  const rangeLabel = 'Q' + startQ + '부터 Q' + endQ + '까지 정확히 ' + (endQ - startQ + 1) + '개';
-
   const systemPrompt =
-    '당신은 치과 보철과 교수이자 해당 분야 전문가입니다.\n' +
-    '전공의가 보내온 임상 주제에 대해 **깊이 있는 Q&A를 ' + rangeLabel + '** 작성하세요.\n' +
-    '이전 또는 이후 번호는 절대 포함하지 말 것. ' + rangeLabel + '만 출력.\n\n' +
+    '당신은 치과대학 임상 교수입니다. 주어진 주제에 대해 ' +
+    '**임상 narrative review 논문 수준의 Q&A를 Q1부터 Q10까지 정확히 10개** 작성하세요.\n' +
+    '제목, 머리말, 마무리 등 Q&A 외의 텍스트는 일절 출력하지 말 것.\n\n' +
 
-    '## 형식 (반드시 준수)\n' +
-    '제목, 머리말, 요약, 마무리 문장 등 Q&A 이외의 텍스트는 일절 출력하지 말 것. 오직 Q&A만 출력.\n\n' +
-    '**Q' + startQ + '. [질문]**\n' +
-    'A: [답변 — 7~10문장 이상, 출처 4개 이상 포함. 각 출처마다 해당 근거가 답변의 어느 부분을 뒷받침하는지 명확히 연결할 것.]\n\n' +
-    '**Q' + (startQ + 1) + '. [질문]**\n' +
-    'A: [답변 — 7~10문장 이상, 출처 4개 이상 포함.]\n\n' +
-    '...\n\n' +
-    '**Q' + endQ + '. [질문]**\n' +
-    'A: [답변 — 7~10문장 이상, 출처 4개 이상 포함.]\n\n' +
+    '## 답변 구조 — 모든 답변에 반드시 적용\n' +
+    '각 답변은 아래 흐름을 따르는 **서술식 학술 문체**로 작성한다 (소제목 없이 자연스럽게 이어지는 단락으로):\n' +
+    '① **개요/배경** — 개념 정의, 임상적 중요성, 문제 제기\n' +
+    '② **근거** — SR·MA·RCT를 in vitro 연구보다 우선 인용. 수치(생존율·bond strength·KIC 등)는 반드시 출처와 함께\n' +
+    '③ **임상 적용** — 술식이 있으면 단계별(step-by-step) 기술, 재료·방법 선택 기준 제시\n' +
+    '④ **한계·논란** — 반론, 근거 공백, 방법론적 한계를 균형 있게 제시\n' +
+    '⑤ **결론** — 현재 근거 수준(SR·RCT·전문가 합의 등) 명시 후 임상 권고\n\n' +
 
-    '## 답변 깊이 원칙 — 절대 준수\n' +
-    '- 각 답변은 **최소 200단어 이상** 작성할 것\n' +
-    '- 단순 사실 나열 금지. 반드시 ① 배경/기전 → ② 핵심 근거(논문/교과서) → ③ 임상적 함의 → ④ 반론 또는 한계 구조로 전개\n' +
-    '- 수치(%, MPa, mm, 생존율 등)는 반드시 출처와 함께 제시\n' +
-    '- 논란이 있는 주제는 찬반 양쪽 근거를 모두 제시하고 최종 임상 판단 제안\n\n' +
+    '## 답변 품질 기준 — 절대 준수\n' +
+    '- 각 답변 **최소 400단어** (한글 기준)\n' +
+    '- 인용 **최소 6개**. 가능하면 체계적 문헌고찰(SR)·메타분석(MA)·RCT를 1순위로 인용\n' +
+    '- 없는 논문·틀린 수치 절대 금지. 불확실한 경우 "[문헌 확인 필요]" 표시\n' +
+    '- 표준 교과서 적극 활용: Rosenstiel, Shillingburg, Magne, Lindhe, Van Noort, Anusavice, Powers & Wataha, Nanci 등\n' +
+    '- 인용 형식: 저자, 연도, 저널명, 권호 포함 — 예: (Pjetursson et al., 2018, Clin Oral Implants Res 29(S16):196-223)\n' +
+    '- 전문 용어는 영문 병기. 번역투 금지 — 교수가 전공의에게 강의하듯 자연스러운 한국어\n\n' +
 
-    '## 근거 원칙 — 절대 준수\n' +
-    '- **모든 답변은 논문 또는 교과서에 근거해야 한다**\n' +
-    '- 각 답변에 출처 **최소 4개** 이상\n' +
-    '- 출처가 불확실하면 해당 내용을 쓰지 말 것. 꼭 써야 하면 "[문헌 확인 필요]"로 표시\n' +
-    '- 없는 논문 만들지 말 것. 틀린 수치 제시 금지\n' +
-    '- Rosenstiel, Shillingburg, Magne, Lindhe, Van Noort, Anusavice, Powers & Wataha, Nanci(Ten Cate) 등 표준 교과서 적극 활용\n' +
-    '- Journal 인용 시 저자, 연도, 저널명, 가능하면 권호 포함: (Tjäderhane et al. 2013, Dent Mater 29(1):116-135)\n\n' +
-
-    '## 질문 수준 원칙 — 절대 준수\n' +
-    '❌ 금지: "~의 기전은?", "~의 적응증은?", "~란 무엇인가?", "~의 장점은?" — 1학년 수준 질문 절대 금지\n' +
-    '✅ 목표: 임상에서 실제로 부딪히는 판단 문제, 두 옵션 중 어느 것이 나은가, 논란이 있는 부분, 여러 변수가 충돌하는 상황\n' +
-    '✅ 다양한 관점 포함: 보철 / 외과 / 치주 / 재료 / 술식 / 세미나 방어\n' +
-    '✅ 번역투 금지: 한국 교수가 전공의에게 강의하듯 자연스러운 한국어로\n\n' +
-
-    '## 질문 다양성 원칙 — 절대 준수\n' +
-    '- 각 질문은 서로 다른 임상 상황, 시술 단계, 재료 선택, 합병증, 실패 원인, 대안적 술식을 다룰 것\n' +
-    '- 유사한 주제를 표현만 바꿔 반복하는 것 절대 금지\n' +
-    '- 20개 질문 전체를 통틀어 동일 키워드(예: bond strength, MMP, IDS…)가 2개 이상 겹치지 않도록 할 것\n\n' +
-    '전문 용어는 영문 병기.\n' +
-    '**반드시 Q' + startQ + '부터 Q' + endQ + '까지 정확히 ' + (endQ - startQ + 1) + '개 작성. 이 범위를 벗어난 번호는 출력 금지.**';
+    '## 질문 설계 기준\n' +
+    '- 개념(why) + 술식(how) + 근거(what evidence)를 통합하는 질문\n' +
+    '- 단순 정의·나열 질문 금지. 판단·선택·논란이 내포된 질문\n' +
+    '- 10개 질문은 서로 다른 임상 측면(재료·술식·합병증·예후·의사결정 등)을 다룰 것\n' +
+    '- 같은 키워드가 2개 이상 겹치지 않을 것\n\n' +
+    '**Q1부터 Q10까지 정확히 10개. 이 범위를 벗어난 번호 출력 금지.**';
 
   const fewShotUser = 'Immediate Dentin Sealing (IDS) — Q1부터 Q2까지 작성해줘';
 
   const fewShotAssistant =
-    '**Q1. IDS가 DDS 대비 microtensile bond strength를 실제로 유의하게 향상시키는가, 아니면 in vitro 수치가 임상적으로 과대평가된 것인가?**\n' +
-    'A: In vitro에서는 IDS가 DDS 대비 약 20–30% 높은 microtensile bond strength(μTBS)를 보인다는 보고가 일관되게 존재한다. Magne et al.(2005, J Prosthet Dent 93(3):226-235)은 IDS가 fresh dentin에 대해 최적의 hybrid layer를 형성하고, provisional 기간 동안의 oral fluid 오염과 MMP-mediated collagen degradation을 방지하기 때문이라고 설명했다. 구체적으로 IDS군의 μTBS는 평균 42–55 MPa 범위인 반면 DDS군은 28–38 MPa 수준으로 보고된 바 있다 (Magne & Nielsen 2009, J Prosthet Dent 102(3):168-177). Tjäderhane et al.(2013, Dent Mater 29(1):116-135)은 MMP에 의한 collagen 분해가 bond 열화의 핵심 기전임을 확인했으며, IDS가 이 경로를 차단한다는 점에서 이론적 타당성이 뒷받침된다. 다만 van den Breemer et al.(2019, Oper Dent 44(1):E1-E15)의 RCT에서는 단기(2년) 임상 outcome에서 IDS와 DDS 간 restoration failure rate에 유의한 차이가 없었다. 이 불일치는 in vitro 환경이 구강 내 열순환(thermocycling), pH 변화, 교합력 등 복합 스트레스를 완전히 재현하지 못하기 때문으로 해석된다 (Sano et al. 1994, J Dent Res 73(6):1087-1092). 결론적으로 bond strength 향상이 임상적 failure rate 감소로 직결된다는 장기 RCT 증거는 아직 부족하나, adhesive 수복물의 장기 생존을 위한 예방적 조치로서 IDS의 생물학적 합리성은 충분하다.\n\n' +
+    '**Q1. IDS(Immediate Dentin Sealing)의 생물학적 근거, 표준 술식, 그리고 DDS 대비 임상적 효과에 대한 현재까지의 근거 수준은 어떠한가?**\n\n' +
+    'A: IDS는 지대치 형성 직후, 인상 채득 전에 resin adhesive를 dentin에 즉시 도포·중합하는 술식으로, Magne et al.에 의해 체계화되었다. 핵심 이론적 근거는 두 가지다: 첫째, 노출된 dentin에 존재하는 MMP(matrix metalloproteinase)-2, -8, -9는 phosphoric acid etching에 의해 활성화되어 hybrid layer 내 미침투 collagen fibril을 점진적으로 가수분해하며, IDS는 이 경로를 조기에 차단한다 (Tjäderhane et al., 2013, Dent Mater 29(1):116-135). 둘째, provisional 기간 중 구강액 및 임시접착제 성분에 의한 dentin 오염을 방지하여 최종 접착 시 clean bonding substrate를 확보할 수 있다 (Magne et al., 2005, J Prosthet Dent 93(3):226-235).\n\n' +
+    'In vitro bond strength 연구들은 일관되게 IDS의 우월성을 지지한다. Magne & Nielsen(2009, J Prosthet Dent 102(3):168-177)에서 IDS군의 microtensile bond strength(μTBS)는 평균 51 MPa로 DDS군(32 MPa)을 유의하게 상회하였으며, Stavridakis et al.(2004, Oper Dent 29(2):144-154)에서도 IDS군이 약 40% 높은 μTBS를 보였다. IDS의 표준 술식은 다음과 같다: ① 형성 완료 후 세척·건조, ② 37% phosphoric acid 15초 도포 후 세척, ③ 선택한 adhesive system 도포, ④ 광중합 후 oxygen-inhibited layer(OIL) 제거 — pumice microabrasion 또는 glycerin gel 하 2차 광중합, ⑤ dies spacer 적용 후 인상 채득. OIL을 반드시 제거해야 하는 이유는 최종 cementation 시 luting resin과의 재접착(rebonding)을 위한 reactive surface 확보를 위해서다 (Grégoire et al., 2003, J Prosthet Dent 89(5):462-472).\n\n' +
+    '임상 RCT 데이터는 아직 제한적이다. van den Breemer et al.(2019, Oper Dent 44(1):E1-E15)의 split-mouth RCT에서는 2년 추적 결과 IDS군과 DDS군 간 restoration survival rate에 통계적으로 유의한 차이가 없었다. 이는 단기 관찰 한계 및 소표본이라는 방법론적 제약을 반영한다. 현재 IDS를 지지하는 근거 수준은 in vitro evidence와 expert consensus(Level III–IV) 수준에 머물러 있으며, 장기 무작위 대조 연구가 부재하다는 점은 명확한 한계다. 결론적으로, adhesive indirect restoration에서 IDS는 생물학적 합리성과 실험실 근거가 충분하여 임상적으로 권장할 수 있으나, "IDS = 임상 outcome 향상"이라는 직접적 인과관계는 아직 고수준 RCT로 입증되지 않았음을 인지해야 한다.\n\n' +
 
-    '**Q2. Phosphoric acid etching 후 MMP가 활성화되는 기전은 무엇이며, self-etch system에서는 이 문제가 동일하게 발생하는가?**\n' +
-    'A: Phosphoric acid etching(37%)은 dentin matrix에 내재된 latent MMP(matrix metalloproteinase), 특히 MMP-2(gelatinase A), MMP-8(collagenase-2), MMP-9(gelatinase B)를 활성화시킨다. 이 효소들은 정상 상태에서 calcium에 의해 억제되어 있으나, phosphoric acid에 의한 calcium chelation으로 활성 구조로 전환된다 (Tjäderhane et al. 2013, Dent Mater 29(1):116-135). 활성화된 MMP는 hybrid layer 내 resin monomer가 침투하지 못한 노출 collagen fibril을 시간 경과에 따라 가수분해하여, 임상적으로는 수개월~수년 후 bond strength의 점진적 저하로 나타난다 (De Munck et al. 2003, J Dent Res 82(6):434-442). Self-etch system의 경우 산성 monomer(pH 1.5–2.5)가 smear layer를 부분 용해하면서 calcium을 일부 chelate하므로 MMP가 어느 정도 활성화되지만, 강산 etch-and-rinse(pH <1)에 비해 활성화 정도가 낮다는 보고가 있다 (Nishitani et al. 2006, Eur J Oral Sci 114(2):160-166). 또한 self-etch에서는 resin monomer와 demineralized dentin이 동시에 반응하므로 collagen 노출 시간이 짧아 MMP 활성화 창이 줄어든다는 이론적 이점이 있다. 그러나 self-etch에서도 MMP 활성화가 완전히 차단되지는 않으며, chlorhexidine이나 HEMA-based inhibitor 추가 도포가 보완책으로 제안된다 (Brackett et al. 2007, Oper Dent 32(5):512-517). 따라서 self-etch로 IDS를 시행할 때 anti-MMP degradation 이점이 etch-and-rinse 대비 상대적으로 감소할 수 있으나, 임상적 유의성을 직접 비교한 장기 RCT는 현재까지 부족하다.';
+    '**Q2. Dental ceramic 계열별 fracture toughness의 차이와 임상 파절 패턴, 그리고 수복 위치·교합 조건에 따른 재료 선택 근거는 무엇인가?**\n\n' +
+    'A: 치과용 세라믹은 결정상(crystalline phase) 함량과 종류에 따라 크게 feldspathic porcelain, leucite-reinforced glass ceramic(e.g., IPS Empress), lithium disilicate(e.g., IPS e.max CAD), 그리고 yttria-stabilized tetragonal zirconia polycrystal(Y-TZP)로 나뉜다. Fracture toughness(KIC)는 재료의 균열 저항성을 나타내는 핵심 지표이며, 계열 간 현저한 차이를 보인다: feldspathic porcelain 0.7–1.0 MPa·m½, leucite-reinforced 1.2–1.5 MPa·m½, lithium disilicate 2.0–3.5 MPa·m½, Y-TZP 5.0–10.0 MPa·m½ (Kelly & Benetti, 2011, Dent Mater 27(1):73-82). Zirconia의 높은 강도는 tetragonal→monoclinic phase transformation(transformation toughening)에 기반하는데, 균열 선단에 compressive stress를 형성하여 균열 진전을 억제한다 (Chevalier, 2006, Biomaterials 27(4):535-543).\n\n' +
+    '임상 생존율 메타분석에서 Pjetursson et al.(2018, Clin Oral Implants Res 29(S16):196-223)은 zirconia FDP의 10년 생존율을 약 90.4%로 보고하였으며, 이는 metal-ceramic FDP(94.4%)와 통계적으로 유의한 차이가 없었다. Lithium disilicate 단관의 5년 생존율은 Mörmann et al.(2013, J Dent 41(12):1100-1111)에서 97.2%로 우수한 성적을 보였다. 수복 위치 및 교합 조건에 따른 선택 기준은 다음과 같다: ① 전치부 veneer 또는 partial coverage — feldspathic 또는 ultra-thin lithium disilicate(≥0.3 mm), ② 구치부 단관 — monolithic lithium disilicate 또는 monolithic zirconia, ③ 3-unit 이상 FDP — Y-TZP 프레임워크 또는 monolithic high-translucency zirconia, ④ 임플란트 상부구조 — screw-retained monolithic zirconia가 cement void 없이 위생에 유리하다. Antagonist wear 측면에서 polished monolithic zirconia는 enamel 마모를 최소화한다는 점도 임상 선택에 중요한 근거가 된다 (Lawson et al., 2014, J Prosthet Dent 112(6):1380-1387).\n\n' +
+    '논란이 되는 부분은 고투명 zirconia(5Y-TZP, cubic-containing)의 long-term durability다. 투명도를 높이기 위해 결정립 크기를 증가시키면 transformation toughening 효율이 감소하여 3Y-TZP 대비 KIC가 낮아지는 paradox가 발생한다 (Zhang & Lawn, 2018, J Dent Res 97(2):140-147). 또한 Y-TZP는 저온 열화(low-temperature degradation, LTD)에 의해 표면 tetragonal phase가 자발적으로 monoclinic으로 전환되어 장기 강도가 저하될 수 있다는 우려도 존재한다 (Lughi & Sergo, 2010, Dent Mater 26(8):807-820). 결론적으로, 치과 세라믹 선택은 단일 지표(강도)로 결정할 수 없으며, 수복 위치·교합력·심미 요구·위생 관리 가능성을 통합적으로 고려해야 한다. 현재 근거 수준에서 lithium disilicate는 단관·소교의에, zirconia는 장교의 및 고부하 구치부에 우선 권장되나, 10년 이상 장기 RCT 비교 데이터는 여전히 제한적이다.';
 
   const res = UrlFetchApp.fetch(url, {
     method: 'post',
@@ -100,8 +87,7 @@ function _callGPTBatch(question, startQ, endQ, prevQSummary) {
         { role: 'system',    content: systemPrompt },
         { role: 'user',      content: fewShotUser },
         { role: 'assistant', content: fewShotAssistant },
-        { role: 'user',      content: question + '\n\n[' + rangeLabel + '만 작성할 것]'
-            + (prevQSummary ? '\n\n' + prevQSummary : '') },
+        { role: 'user',      content: question + '\n\n[Q1부터 Q10까지 정확히 10개만 작성할 것]' },
       ],
     }),
     muteHttpExceptions: true,
@@ -109,23 +95,14 @@ function _callGPTBatch(question, startQ, endQ, prevQSummary) {
 
   const result = JSON.parse(res.getContentText());
   const text = result?.choices?.[0]?.message?.content;
-  if (!text) throw new Error('GPT 응답 실패 (Q' + startQ + '-Q' + endQ + '): ' + res.getContentText());
-  Logger.log('[GPT Q' + startQ + '-Q' + endQ + ' 생성 완료]');
+  if (!text) throw new Error('GPT 응답 실패: ' + res.getContentText());
+  Logger.log('[GPT Q1-Q10 생성 완료]');
   return text.trim();
 }
 
-// ── OpenAI GPT → Q1~Q20 두 번 나눠 호출 후 합산 ─────────────────
+// ── OpenAI GPT → Q1~Q10 단일 호출 ───────────────────────────────
 function _callGPT(question) {
-  const part1 = _callGPTBatch(question, 1, 10, '');
-
-  // Q1-10 질문 제목만 추출 → Q11-20 배치에 "중복 금지" 목록으로 전달
-  const q1Lines = (part1.match(/\*\*Q\d+\.[^\*]+\*\*/g) || []).join('\n');
-  const prevQSummary = q1Lines
-    ? '【이미 작성된 Q1~Q10 질문 목록 — 아래와 동일하거나 유사한 주제 절대 금지】\n' + q1Lines
-    : '';
-
-  const part2 = _callGPTBatch(question, 11, 20, prevQSummary);
-  return part1 + '\n\n' + part2;
+  return _callGPTBatch(question);
 }
 
 // ── GPT 답변에서 인용 파싱 ────────────────────────────────────
