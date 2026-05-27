@@ -132,11 +132,11 @@ function _callGPT(question) {
 function _extractCitations(text) {
   // Normalize "Author et al.(year, Journal)" → "(Author year, Journal)"
   text = text.replace(
-    /(?<!\()([A-Za-zÄÖÜäöüéèêàâčšžćđ]+(?:\s+et\s+al\.?)?(?:\s+&\s+[A-Za-z]+)?)\s*\(\s*((?:19|20)\d{2})\s*[,;]\s*([^)(]*(?:\([^)]*\))*[^)(]*)\)/g,
+    /(?<!\()([A-Za-zÄÖÜäöüéèêàâčšžćđ']+(?:\s+et\s+al\.?)?(?:\s+&\s+[A-Za-z']+)?)\s*\(\s*((?:19|20)\d{2})\s*[,;]\s*([^)(]*(?:\([^)]*\))*[^)(]*)\)/g,
     '($1 $2, $3)'
   );
-  // Nested-paren support handles volumes like 29(1):116-135 or 23(Suppl):S268
-  const regex = /\(([A-Za-zÄÖÜäöüéèêàâčšžćđ]+(?:\s+et\s+al\.?)?(?:\s+&\s+[A-Za-z]+)?)\s+(\d{4})[,;\s]+([^)(]*(?:\([^)]*\))*[^)(]*)\)/g;
+  // Handles: (Author year, Journal), (Author, year, Journal), O'Brien-style names, 29(1):116-135 volumes
+  const regex = /\(([A-Za-zÄÖÜäöüéèêàâčšžćđ']+(?:\s+et\s+al\.?)?(?:\s+&\s+[A-Za-z']+)?)[,;\s]+(\d{4})[,;\s]+([^)(]*(?:\([^)]*\))*[^)(]*)\)/g;
   const seen  = {};
   const out   = [];
   let m;
