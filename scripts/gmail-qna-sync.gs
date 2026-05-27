@@ -130,8 +130,13 @@ function _callGPT(question) {
 
 // ── GPT 답변에서 인용 파싱 ────────────────────────────────────
 function _extractCitations(text) {
-  // (Author 2005, Journal ...) 또는 (Author et al. 2005, Journal ...) 패턴
-  const regex = /\(([A-Za-zÄÖÜäöüéèêàâčšžćđ]+(?:\s+et\s+al\.?)?(?:\s+&\s+[A-Za-z]+)?)\s+(\d{4})[,;\s]+([^)]{3,80})\)/g;
+  // Normalize "Author et al.(year, Journal)" → "(Author year, Journal)"
+  text = text.replace(
+    /(?<!\()([A-Za-zÄÖÜäöüéèêàâčšžćđ]+(?:\s+et\s+al\.?)?(?:\s+&\s+[A-Za-z]+)?)\s*\(\s*((?:19|20)\d{2})\s*[,;]\s*([^)(]*(?:\([^)]*\))*[^)(]*)\)/g,
+    '($1 $2, $3)'
+  );
+  // Nested-paren support handles volumes like 29(1):116-135 or 23(Suppl):S268
+  const regex = /\(([A-Za-zÄÖÜäöüéèêàâčšžćđ]+(?:\s+et\s+al\.?)?(?:\s+&\s+[A-Za-z]+)?)\s+(\d{4})[,;\s]+([^)(]*(?:\([^)]*\))*[^)(]*)\)/g;
   const seen  = {};
   const out   = [];
   let m;
