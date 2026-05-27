@@ -65,7 +65,16 @@ function _renderWithCitations(text, refs) {
     ].filter(Boolean);
 
     const tip = parts.join(' ').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return `<sup class="cite-sup" data-n="${n + 1}" data-tip="${tip}">[${n + 1}]</sup>`;
+    const isTextbook = ref.journal === '교과서';
+    const href = ref.doi
+      ? `https://doi.org/${ref.doi}`
+      : ref.pmid
+        ? `https://pubmed.ncbi.nlm.nih.gov/${ref.pmid}/`
+        : (!isTextbook && ref.title)
+          ? `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(ref.title)}`
+          : '';
+    const hrefAttr = href ? ` data-href="${href.replace(/"/g, '&quot;')}"` : '';
+    return `<sup class="cite-sup" data-n="${n + 1}" data-tip="${tip}"${hrefAttr}>[${n + 1}]</sup>`;
   });
 
   return marked.parse(processed);
@@ -2458,6 +2467,11 @@ function _setupCiteTip() {
     const el = e.target.closest('.cite-sup');
     if (!el) { tip.style.display = 'none'; return; }
     e.stopPropagation();
+    if (el.dataset.href) {
+      window.open(el.dataset.href, '_blank', 'noopener');
+      return;
+    }
+    // 링크 없는 경우(교과서 등): 툴팁 토글
     if (tip.style.display === 'none' || tip.dataset.for !== el.dataset.n) {
       tip.dataset.for = el.dataset.n;
       show(el);

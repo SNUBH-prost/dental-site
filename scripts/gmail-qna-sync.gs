@@ -182,6 +182,7 @@ function _searchPubMed(author, year, source) {
       volume:   doc.volume  || '',
       pages:    doc.pages   || '',
       doi:      doi ? doi.value : '',
+      pmid:     pmid,
       abstract: '',
       abstractEn: '',
     };
@@ -442,6 +443,7 @@ function _addQnADoc(title, description, answer, photoUrls, references) {
           volume:     { stringValue: r.volume     || '' },
           pages:      { stringValue: r.pages      || '' },
           doi:        { stringValue: r.doi        || '' },
+          pmid:       { stringValue: r.pmid       || '' },
           abstract:   { stringValue: r.abstract   || '' },
           abstractEn: { stringValue: r.abstractEn || '' },
         },
