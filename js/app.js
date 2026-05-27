@@ -24,6 +24,46 @@ function _renderMath(el) {
   });
 }
 
+// ── 인용구 위첨자 변환 ────────────────────────────────────────
+function _renderWithCitations(text, refs) {
+  if (!text) return '';
+  if (!refs || !refs.length) return marked.parse(text);
+
+  const citeRe = /\(([A-Za-zÄÖÜäöüéèêàâčšžćđ]+(?:\s+et\s+al\.?)?(?:\s+&\s+[A-Za-z]+)?)\s+(\d{4})[,;\s]+([^)]{3,80})\)/g;
+
+  // 첫 등장 순서대로 번호 부여
+  const keyToIdx = {};
+  let nextIdx = 0;
+  let m;
+  while ((m = citeRe.exec(text)) !== null) {
+    const key = m[1].trim() + '_' + m[2].trim();
+    if (!(key in keyToIdx)) keyToIdx[key] = nextIdx++;
+  }
+
+  citeRe.lastIndex = 0;
+  const processed = text.replace(citeRe, (match, author, year) => {
+    const key = author.trim() + '_' + year.trim();
+    const n = keyToIdx[key];
+    if (n === undefined || n >= refs.length) return match;
+
+    const ref = refs[n];
+    const parts = [
+      ref.authors || author,
+      ref.year ? `(${ref.year}).` : `(${year}).`,
+      ref.title ? ref.title + '.' : '',
+      ref.journal && ref.journal !== '교과서'
+        ? ref.journal + (ref.volume ? ' ' + ref.volume : '') + (ref.pages ? ':' + ref.pages : '') + '.'
+        : (ref.title ? '' : (ref.journal || '')),
+      ref.doi ? `DOI: ${ref.doi}` : '',
+    ].filter(Boolean);
+
+    const tip = parts.join(' ').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<sup class="cite-sup" data-n="${n + 1}" data-tip="${tip}">[${n + 1}]</sup>`;
+  });
+
+  return marked.parse(processed);
+}
+
 // ── marked 커스텀 렌더러 (이미지 크기) ───────────────────────
 (function setupMarked() {
   const renderer = new marked.Renderer();
@@ -48,7 +88,7 @@ const DEPARTMENTS = [
   { id: "rpd",       name: "RPD",      iconImg: "/dental-site/icons/icon-rpd.svg" },
   { id: "cd",        name: "CD",       iconImg: "/dental-site/icons/icon-cd.svg" },
   { id: "materials", name: "재료",     icon: "🧪" },
-  { id: "qna",       name: "Q&A",      iconImg: "/dental-site/icons/icon-qna.svg" }
+  { id: "qna",       name: "Q&A",      icon: "💬" }
 ];
 
 let allCases = [];
@@ -70,7 +110,7 @@ let _modalPushed = false;
 const _CACHE_KEY_CASES    = 'dental_cache_cases';
 const _CACHE_KEY_CONTENTS = 'dental_cache_contents';
 const _CACHE_KEY_TS       = 'dental_cache_ts';
-const _CACHE_TTL          = 1 * 60 * 1000; // 1분
+const _CACHE_TTL          = 3 * 60 * 1000; // 3분
 
 // 간단한 debounce 유틸
 function _debounce(fn, ms) {
@@ -86,28 +126,44 @@ function _renderAll() {
   _injectPageBottomBtns();
 }
 
+function _createdAtMs(item) {
+  const c = item.createdAt;
+  if (!c) return new Date(item.date || 0).getTime();
+  if (typeof c.toDate === 'function') return c.toDate().getTime();
+  if (typeof c === 'object' && c.seconds) return c.seconds * 1000 + Math.floor((c.nanoseconds || 0) / 1e6);
+  if (typeof c === 'string') return new Date(c).getTime();
+  return new Date(item.date || 0).getTime();
+}
+
+function _sortContents(arr) {
+  return [...arr].sort((a, b) => {
+    const diff = _createdAtMs(b) - _createdAtMs(a);
+    if (diff !== 0) return diff;
+    return (b.date || '').localeCompare(a.date || '');
+  });
+}
+
 async function loadData() {
   const now = Date.now();
+  // 캐시가 있으면 즉시 표시 (빠른 초기 렌더)
   try {
     const cc = localStorage.getItem(_CACHE_KEY_CASES);
     const ct = localStorage.getItem(_CACHE_KEY_CONTENTS);
-    const ts = parseInt(localStorage.getItem(_CACHE_KEY_TS) || '0');
     if (cc && ct) {
       allCases    = JSON.parse(cc);
-      allContents = JSON.parse(ct);
+      allContents = _sortContents(JSON.parse(ct));
       _renderAll();
-      // 캐시가 TTL 이내이면 Firebase 호출 생략
-      if (now - ts < _CACHE_TTL) return;
     }
   } catch(e) {}
 
+  // 항상 Firestore에서 최신 데이터를 가져와 갱신
   const [casesSnap, contentsSnap] = await Promise.all([
     db.collection("cases").orderBy("date", "desc").get(),
-    db.collection("departmentContents").orderBy("date", "desc").get()
+    db.collection("departmentContents").orderBy("createdAt", "desc").get()
   ]);
 
   allCases    = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  allContents = contentsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allContents = _sortContents(contentsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
   try {
     localStorage.setItem(_CACHE_KEY_CASES,    JSON.stringify(allCases));
@@ -270,19 +326,27 @@ function openModal(id, type) {
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const descEl = document.getElementById('modal-description');
     descEl.innerHTML = marked.parse(item.description || '');
+    // KaTeX는 무거우므로 idle 타임에 처리 (모달 오픈 애니메이션 보호)
     if (typeof requestIdleCallback !== 'undefined') {
       requestIdleCallback(() => _renderMath(descEl), { timeout: 1500 });
     } else {
       setTimeout(() => _renderMath(descEl), 0);
     }
-    // AI 답변 섹션
-    const answerSection = document.getElementById('modal-answer-section');
-    const answerEl = document.getElementById('modal-answer');
-    if (item.answer) {
-      answerEl.innerHTML = marked.parse(item.answer);
-      answerSection.style.display = '';
-    } else {
-      answerSection.style.display = 'none';
+
+    const answerEl  = document.getElementById('modal-answer');
+    const answerSec = document.getElementById('modal-answer-section');
+    if (answerEl && answerSec) {
+      if (item.answer?.trim()) {
+        answerEl.innerHTML = _renderWithCitations(item.answer, item.references || []);
+        answerSec.style.display = '';
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(() => _renderMath(answerEl), { timeout: 1500 });
+        } else {
+          setTimeout(() => _renderMath(answerEl), 0);
+        }
+      } else {
+        answerSec.style.display = 'none';
+      }
     }
     document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>
       `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
@@ -308,11 +372,6 @@ function openModal(id, type) {
 function _toggleFocusMode() {
   const on = document.body.classList.toggle('focus-mode');
   document.getElementById('modal-focus-btn').textContent = on ? '⤡' : '⤢';
-}
-
-function _toggleEditorFocus() {
-  const on = document.body.classList.toggle('editor-focus-mode');
-  document.getElementById('editor-focus-btn').textContent = on ? '⤡' : '⤢';
 }
 
 function closeModal() {
@@ -567,14 +626,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     _isPopState = false;
   });
 
-  // mousedown 시작점이 오버레이일 때만 닫음 (모달 안에서 드래그 후 오버레이에서 놓아도 닫히지 않음)
-  let _overlayMouseDownTarget = null;
-  document.getElementById('modal-overlay').addEventListener('mousedown', e => {
-    _overlayMouseDownTarget = e.target;
-  });
   document.getElementById('modal-overlay').addEventListener('click', e => {
-    if (e.target.id === 'modal-overlay' && _overlayMouseDownTarget?.id === 'modal-overlay') closeModal();
-    _overlayMouseDownTarget = null;
+    if (e.target.id === 'modal-overlay') closeModal();
   });
   document.getElementById('editor-overlay').addEventListener('click', e => {
     if (e.target.id === 'editor-overlay') closeEditor();
@@ -608,6 +661,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderDeptPages();
     _injectAdminControls();
   });
+
+  // 인용 위첨자 툴팁
+  _setupCiteTip();
 });
 
 // ════════════════════════════════════════════════════════════════
@@ -901,21 +957,7 @@ async function deleteCardItem(id, type) {
   if (!confirm('정말 삭제하시겠습니까?')) return;
   const col = type === 'case' ? 'cases' : 'departmentContents';
   await db.collection(col).doc(id).delete();
-
-  // 로컬 배열에서 즉시 제거
-  if (type === 'case') {
-    allCases = allCases.filter(c => c.id !== id);
-  } else {
-    allContents = allContents.filter(c => c.id !== id);
-  }
-
-  // 캐시 무효화 후 화면 갱신
-  localStorage.removeItem(_CACHE_KEY_TS);
-  try {
-    localStorage.setItem(_CACHE_KEY_CASES,    JSON.stringify(allCases));
-    localStorage.setItem(_CACHE_KEY_CONTENTS, JSON.stringify(allContents));
-  } catch(e) {}
-  _renderAll();
+  await loadData();
 }
 
 // ── 에디터 열기 (기존 항목 편집) ────────────────────────────
@@ -940,9 +982,6 @@ function openEditorNew(type, deptId = '') {
 // ── 에디터 닫기 ──────────────────────────────────────────────
 function closeEditor() {
   document.getElementById('editor-overlay').classList.remove('open');
-  document.body.classList.remove('editor-focus-mode');
-  const fb = document.getElementById('editor-focus-btn');
-  if (fb) fb.textContent = '⤢';
   document.body.style.overflow = '';
   _edId = null; _edType = null; _edPhotos = []; _edTags = [];
 }
@@ -952,11 +991,6 @@ function _renderEditorForm(data = {}) {
   _edPhotos = (data.photos || []).map(p => ({ url: p.url, caption: p.caption || '', annotations: p.annotations || [] }));
   _edTags   = data.tags  ? [...data.tags]  : [];
   _edTeeth  = (data.teeth || []).map(t => typeof t === 'number' ? {n:t, type:'implant'} : t);
-  // answer 필드 복원 (폼 렌더 후 설정)
-  setTimeout(() => {
-    const ta = document.getElementById('ed-answer');
-    if (ta) ta.value = data.answer || '';
-  }, 0);
   document.getElementById('editor-form-title').textContent =
     _edId
       ? (_edType === 'case' ? '케이스 편집' : '자료 편집')
@@ -1042,10 +1076,6 @@ function _edFormHTML(d = {}) {
             <div class="ed-preview-pane modal-description" id="ed-preview-pane" style="display:none"></div>
           </div>
           <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem">이미지를 텍스트 영역으로 드래그하면 현재 커서 위치에 자동 삽입됩니다.</div>
-        </div>
-        <div class="form-group full" id="ed-answer-group">
-          <label>💡 AI 초안 답변 <span style="font-weight:400;font-size:0.72rem;color:var(--text-muted)">(선택, 마크다운 지원)</span></label>
-          <textarea id="ed-answer" rows="6" placeholder="AI가 생성한 답변 초안. 수정 후 저장하세요." style="min-height:120px"></textarea>
         </div>
         <div class="form-group full">
           <label>태그</label>
@@ -1566,7 +1596,6 @@ async function _edSave() {
       date:        document.getElementById('ed-date').value,
       summary:     document.getElementById('ed-summary').value.trim(),
       description: document.getElementById('ed-description').value.trim(),
-      answer:      (document.getElementById('ed-answer')?.value || '').trim(),
       photos,
       references:  _edCollectRefs(),
       tags:        [..._edTags],
@@ -1582,7 +1611,6 @@ async function _edSave() {
     }
     _edToast('저장되었습니다.');
     closeEditor();
-    localStorage.removeItem(_CACHE_KEY_TS); // 저장 후 캐시 무효화 → 강제 재조회
     await loadData();
   } catch(err) {
     _edToast('저장 실패: ' + err.message, 'error');
@@ -2210,6 +2238,7 @@ function _buildPresSlides(item) {
     slides.push({ type: 'photo', photo: p, photoIdx: i + 1, photoTotal: (item.photos||[]).length })
   );
   if (item.description?.trim()) slides.push({ type: 'desc', text: item.description });
+  if (item.answer?.trim()) slides.push({ type: 'answer', text: item.answer, refs: item.references || [] });
   const refs = (item.references || []).filter(r => r.title);
   if (refs.length) slides.push({ type: 'refs', refs });
   return slides;
@@ -2256,6 +2285,9 @@ function _renderPresSlide() {
   } else if (slide.type === 'desc') {
     el.innerHTML = `<div class="pres-desc-inner">${marked.parse(slide.text)}</div>`;
     _renderMath(el.querySelector('.pres-desc-inner'));
+  } else if (slide.type === 'answer') {
+    el.innerHTML = `<div class="pres-desc-inner pres-answer-inner">${_renderWithCitations(slide.text, slide.refs || [])}</div>`;
+    _renderMath(el.querySelector('.pres-answer-inner'));
   } else if (slide.type === 'refs') {
     el.innerHTML = `
       <div class="pres-section-label">참고 논문</div>
@@ -2385,6 +2417,48 @@ window.addEventListener('unhandledrejection', e => {
   const msg = e.reason?.message || String(e.reason) || '알 수 없는 오류';
   console.warn('[unhandled]', msg, e.reason);
 });
+
+// ── 인용 위첨자 툴팁 ──────────────────────────────────────────
+function _setupCiteTip() {
+  const tip = document.getElementById('cite-tip');
+  if (!tip) return;
+
+  function show(el) {
+    const text = el.dataset.tip || '';
+    if (!text) return;
+    tip.textContent = text;
+    tip.style.display = 'block';
+    const r = el.getBoundingClientRect();
+    const tw = tip.offsetWidth;
+    const th = tip.offsetHeight;
+    let left = r.left + window.scrollX + r.width / 2 - tw / 2;
+    let top  = r.top  + window.scrollY - th - 8;
+    if (left < 8) left = 8;
+    if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+    if (top < window.scrollY + 8) top = r.bottom + window.scrollY + 8;
+    tip.style.left = left + 'px';
+    tip.style.top  = top  + 'px';
+  }
+
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('.cite-sup');
+    if (el) show(el);
+  });
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest('.cite-sup')) tip.style.display = 'none';
+  });
+  document.addEventListener('click', e => {
+    const el = e.target.closest('.cite-sup');
+    if (!el) { tip.style.display = 'none'; return; }
+    e.stopPropagation();
+    if (tip.style.display === 'none' || tip.dataset.for !== el.dataset.n) {
+      tip.dataset.for = el.dataset.n;
+      show(el);
+    } else {
+      tip.style.display = 'none';
+    }
+  });
+}
 
 // ── Pull-to-refresh (모바일) ──────────────────────────────────
 (function _setupPTR() {

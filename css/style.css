@@ -1676,8 +1676,8 @@ body.focus-mode .modal {
 .pres-caption { font-size: 0.88rem; color: #94a3b8; text-align: center; max-width: 640px; }
 .pres-photo-num { font-size: 0.75rem; color: #475569; }
 
-/* Description */
-.pres-type-desc { align-items: flex-start; justify-content: flex-start; max-width: 800px; margin: 0 auto; width: 100%; }
+/* Description / Answer */
+.pres-type-desc, .pres-type-answer { align-items: flex-start; justify-content: flex-start; max-width: 800px; margin: 0 auto; width: 100%; }
 .pres-desc-inner {
   width: 100%;
   line-height: 1.85;
@@ -2100,6 +2100,37 @@ body.focus-mode .modal {
     display: flex;
     justify-content: space-between;
   }
+}
+
+/* ── 인용 위첨자 ─────────────────────────────────────────────── */
+.cite-sup {
+  color: #2563eb;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.72em;
+  vertical-align: super;
+  line-height: 0;
+  padding: 0 1px;
+  border-radius: 3px;
+  transition: background 0.1s;
+}
+.cite-sup:hover {
+  background: #dbeafe;
+}
+
+#cite-tip {
+  position: absolute;
+  z-index: 9999;
+  background: #1e293b;
+  color: #f1f5f9;
+  font-size: 0.74rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  max-width: 300px;
+  word-break: keep-all;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+  pointer-events: none;
 }
 
 /* ── Pull-to-refresh ─────────────────────────────────────────── */
