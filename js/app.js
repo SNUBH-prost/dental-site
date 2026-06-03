@@ -80,7 +80,8 @@ function _renderWithCitations(text, refs) {
   return marked.parse(processed);
 }
 
-// ── marked 커스텀 렌더러 (이미지 크기) ───────────────────────
+// ── marked 커스텀 렌더러 (이미지 크기 + Fig 자동 번호) ───────
+let _figNum = 0; // marked.parse 호출마다 리셋 (아래 래퍼)
 (function setupMarked() {
   const renderer = new marked.Renderer();
   const sizeMap  = { sm: '30%', md: '50%', lg: '75%' };
@@ -113,12 +114,28 @@ function _renderWithCitations(text, refs) {
     const w = sizeMap[sizeKey] || '100%';
     const imgTag = `<img src="${href}" alt="${escAttr(caption || sizeKey)}" style="width:${w};display:block;border-radius:8px;margin:0 auto;border:1px solid #e2e8f0;max-width:100%">`;
     if (caption) {
+      // 이미 Fig/그림/사진 라벨을 직접 붙였으면 그대로, 아니면 "Fig. N." 자동 부여
+      const hasLabel = /^\s*(fig\.?|figure|그림|사진)\s*\.?\s*\d/i.test(caption);
+      let capHtml;
+      if (hasLabel) {
+        capHtml = escAttr(caption);
+      } else {
+        _figNum++;
+        capHtml = `<b>Fig. ${_figNum}.</b> ${escAttr(caption)}`;
+      }
       return `<figure style="margin:0.75rem auto;text-align:center;max-width:100%">${imgTag}` +
-        `<figcaption style="margin-top:0.4rem;font-size:0.82rem;color:var(--text-muted,#64748b);line-height:1.5;word-break:keep-all">${escAttr(caption)}</figcaption></figure>`;
+        `<figcaption style="margin-top:0.4rem;font-size:0.82rem;color:var(--text-muted,#64748b);line-height:1.5;word-break:keep-all">${capHtml}</figcaption></figure>`;
     }
     return `<img src="${href}" alt="${escAttr(sizeKey)}" style="width:${w};display:block;border-radius:8px;margin:0.75rem 0;border:1px solid #e2e8f0;max-width:100%">`;
   };
   marked.setOptions({ renderer, breaks: true });
+
+  // marked.parse 호출 시작마다 Fig 카운터 리셋 (문서별 1번부터)
+  const _origParse = marked.parse.bind(marked);
+  marked.parse = function() {
+    _figNum = 0;
+    return _origParse.apply(this, arguments);
+  };
 })();
 
 const DEPARTMENTS = [
