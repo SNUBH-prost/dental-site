@@ -93,10 +93,23 @@ function _renderWithCitations(text, refs) {
     } else {
       href = hrefOrToken; alt = text;
     }
-    // alt 형식: "size|캡션" (예: "md|치아 협면 사진"). size 또는 캡션만 있어도 동작
-    const pipeIdx  = (alt || '').indexOf('|');
-    const sizeKey  = pipeIdx > -1 ? alt.slice(0, pipeIdx).trim() : (alt || '').trim();
-    const caption  = pipeIdx > -1 ? alt.slice(pipeIdx + 1).trim() : '';
+    // alt 형식 (모두 지원):
+    //   "md|치아 협면 사진" → size=md, 캡션=치아 협면 사진
+    //   "치아 협면 사진"     → size 없음(100%), 캡션=치아 협면 사진  ← 대괄호에 바로 적은 경우
+    //   "sm"                → size=sm, 캡션 없음
+    const raw = (alt || '').trim();
+    const pipeIdx = raw.indexOf('|');
+    let sizeKey, caption;
+    if (pipeIdx > -1) {
+      sizeKey = raw.slice(0, pipeIdx).trim();
+      caption = raw.slice(pipeIdx + 1).trim();
+    } else if (sizeMap[raw]) {
+      // 크기 키워드(sm/md/lg)만 적은 경우 → 캡션 없음
+      sizeKey = raw; caption = '';
+    } else {
+      // 일반 텍스트만 적은 경우 → 통째로 캡션 처리
+      sizeKey = ''; caption = raw;
+    }
     const w = sizeMap[sizeKey] || '100%';
     const imgTag = `<img src="${href}" alt="${escAttr(caption || sizeKey)}" style="width:${w};display:block;border-radius:8px;margin:0 auto;border:1px solid #e2e8f0;max-width:100%">`;
     if (caption) {
