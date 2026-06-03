@@ -485,6 +485,20 @@
   letter-spacing: 0.5px;
   margin-bottom: 0.75rem;
 }
+#ed-size-picker .sp-caption {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.7rem;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: #fff;
+  margin-bottom: 1rem;
+  outline: none;
+  transition: border-color 0.12s;
+}
+#ed-size-picker .sp-caption:focus { border-color: var(--primary); }
 #ed-size-picker .sp-btns { display: flex; gap: 0.4rem; justify-content: center; }
 #ed-size-picker .sp-btns button {
   flex: 1;

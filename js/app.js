@@ -84,6 +84,7 @@ function _renderWithCitations(text, refs) {
 (function setupMarked() {
   const renderer = new marked.Renderer();
   const sizeMap  = { sm: '30%', md: '50%', lg: '75%' };
+  const escAttr = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   // marked v5+ 는 객체 인수, v4 이하는 (href, title, text) 개별 인수
   renderer.image = function(hrefOrToken, title, text) {
     let href, alt;
@@ -92,8 +93,17 @@ function _renderWithCitations(text, refs) {
     } else {
       href = hrefOrToken; alt = text;
     }
-    const w = sizeMap[alt] || '100%';
-    return `<img src="${href}" alt="${alt || ''}" style="width:${w};display:block;border-radius:8px;margin:0.75rem 0;border:1px solid #e2e8f0;max-width:100%">`;
+    // alt 형식: "size|캡션" (예: "md|치아 협면 사진"). size 또는 캡션만 있어도 동작
+    const pipeIdx  = (alt || '').indexOf('|');
+    const sizeKey  = pipeIdx > -1 ? alt.slice(0, pipeIdx).trim() : (alt || '').trim();
+    const caption  = pipeIdx > -1 ? alt.slice(pipeIdx + 1).trim() : '';
+    const w = sizeMap[sizeKey] || '100%';
+    const imgTag = `<img src="${href}" alt="${escAttr(caption || sizeKey)}" style="width:${w};display:block;border-radius:8px;margin:0 auto;border:1px solid #e2e8f0;max-width:100%">`;
+    if (caption) {
+      return `<figure style="margin:0.75rem auto;text-align:center;max-width:100%">${imgTag}` +
+        `<figcaption style="margin-top:0.4rem;font-size:0.82rem;color:var(--text-muted,#64748b);line-height:1.5;word-break:keep-all">${escAttr(caption)}</figcaption></figure>`;
+    }
+    return `<img src="${href}" alt="${escAttr(sizeKey)}" style="width:${w};display:block;border-radius:8px;margin:0.75rem 0;border:1px solid #e2e8f0;max-width:100%">`;
   };
   marked.setOptions({ renderer, breaks: true });
 })();
@@ -1512,10 +1522,19 @@ function _edSetupTextareaDrop() {
     if (f) _edDropImage(ta, f, savedPos);
   });
   ta.addEventListener('paste', e => {
-    const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
-    if (!item) return;
+    const cd = e.clipboardData;
+    if (!cd) return;
+    let file = null;
+    // 1) 이미지를 캡처/복사한 경우 (clipboard items)
+    const item = Array.from(cd.items || []).find(i => i.type.startsWith('image/'));
+    if (item) file = item.getAsFile();
+    // 2) 이미지 파일 자체를 복사한 경우 (clipboard files)
+    if (!file && cd.files && cd.files.length) {
+      file = Array.from(cd.files).find(f => f.type.startsWith('image/'));
+    }
+    if (!file) return; // 이미지가 아니면 일반 텍스트 붙여넣기 그대로 진행
     e.preventDefault();
-    _edDropImage(ta, item.getAsFile(), ta.selectionStart);
+    _edDropImage(ta, file, ta.selectionStart);
   });
 }
 
@@ -1546,6 +1565,9 @@ function _edShowSizePicker(previewUrl) {
   el.id = 'ed-size-picker';
   el.innerHTML = `
     <div class="sp-preview"><img src="${previewUrl}" alt=""></div>
+    <div class="sp-label">이미지 캡션 (선택)</div>
+    <input type="text" id="ed-img-caption" class="sp-caption" placeholder="이미지 아래 표시될 설명"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();_edInsertImg('md');}">
     <div class="sp-label">이미지 크기 선택</div>
     <div class="sp-btns">
       <button onclick="_edInsertImg('sm')">◼<br>소<br><small>30%</small></button>
@@ -1555,14 +1577,20 @@ function _edShowSizePicker(previewUrl) {
     </div>
     <button class="sp-close" onclick="document.getElementById('ed-size-picker').remove()">✕</button>`;
   document.body.appendChild(el);
+  setTimeout(() => document.getElementById('ed-img-caption')?.focus(), 50);
 }
 
 function _edInsertImg(size) {
   if (!_edPendingImg) return;
   const { ta, url, insertPos } = _edPendingImg;
   _edPendingImg = null;
+  // 캡션은 픽커 제거 전에 읽어야 함. 마크다운 깨짐 방지로 []() 문자 정리
+  const caption = (document.getElementById('ed-img-caption')?.value || '')
+    .trim().replace(/[\[\]()|]/g, ' ').replace(/\s+/g, ' ');
   document.getElementById('ed-size-picker')?.remove();
-  const md = size === '' ? `![](${url})` : `![${size}](${url})`;
+  // alt = "size|캡션" 형식 (size 또는 캡션 한쪽만 있어도 동작)
+  const alt = caption ? `${size}|${caption}` : size;
+  const md  = alt === '' ? `![](${url})` : `![${alt}](${url})`;
   const before = ta.value.slice(0, insertPos), after = ta.value.slice(insertPos);
   const sep = (before.length > 0 && !before.endsWith('\n')) ? '\n' : '';
   ta.value = before + sep + md + '\n' + after;
