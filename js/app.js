@@ -1109,7 +1109,7 @@ async function _openDeptManager() {
   document.getElementById('dept-mgr-modal')?.remove();
   const ov = document.createElement('div');
   ov.id = 'dept-mgr-modal';
-  ov.className = 'modal-overlay active';
+  ov.className = 'modal-overlay open';
   ov.innerHTML = `
     <div class="modal" style="max-width:480px;padding:1.5rem">
       <button class="modal-close" onclick="document.getElementById('dept-mgr-modal').remove()">✕</button>
