@@ -169,6 +169,7 @@ let _modalPushed = false;
 // ── 데이터 로드 ───────────────────────────────────────────────
 const _CACHE_KEY_CASES    = 'dental_cache_cases';
 const _CACHE_KEY_CONTENTS = 'dental_cache_contents';
+const _CACHE_KEY_DEPTS    = 'dental_cache_depts';
 const _CACHE_KEY_TS       = 'dental_cache_ts';
 const _CACHE_TTL          = 3 * 60 * 1000; // 3분
 
@@ -211,9 +212,11 @@ async function loadData() {
   try {
     const cc = localStorage.getItem(_CACHE_KEY_CASES);
     const ct = localStorage.getItem(_CACHE_KEY_CONTENTS);
+    const cd = localStorage.getItem(_CACHE_KEY_DEPTS);
     if (cc && ct) {
       allCases    = JSON.parse(cc);
       allContents = _sortContents(JSON.parse(ct));
+      if (cd) _initDeptDOM(JSON.parse(cd));
       _renderAll();
       fromCache = true;
     }
@@ -228,17 +231,22 @@ async function loadData() {
 
   const freshCases    = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   const freshContents = _sortContents(contentsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+  const freshDepts    = deptsSnap?.docs.length
+    ? deptsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    : null;
 
   // 캐시와 내용이 달라졌을 때만 다시 렌더링
   const casesChanged    = JSON.stringify(freshCases)    !== JSON.stringify(allCases);
   const contentsChanged = JSON.stringify(freshContents) !== JSON.stringify(allContents);
-  const deptsChanged    = deptsSnap && deptsSnap.docs.length > 0;
+  const deptsChanged    = freshDepts
+    ? JSON.stringify(freshDepts) !== JSON.stringify(_departments)
+    : false;
 
   allCases    = freshCases;
   allContents = freshContents;
 
-  if (deptsChanged) {
-    _initDeptDOM(deptsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+  if (freshDepts && deptsChanged) {
+    _initDeptDOM(freshDepts);
   }
 
   if (!fromCache || casesChanged || contentsChanged || deptsChanged) {
@@ -248,6 +256,7 @@ async function loadData() {
   try {
     localStorage.setItem(_CACHE_KEY_CASES,    JSON.stringify(allCases));
     localStorage.setItem(_CACHE_KEY_CONTENTS, JSON.stringify(allContents));
+    if (freshDepts) localStorage.setItem(_CACHE_KEY_DEPTS, JSON.stringify(freshDepts));
     localStorage.setItem(_CACHE_KEY_TS,       String(now));
   } catch(e) {}
 }
@@ -404,7 +413,7 @@ function cardHTML(item, type) {
     ? `<div class="card-thumb"><img src="${_cldCard(firstPhoto.url)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span>🦷</span>'"></div>`
     : `<div class="card-thumb"><span>🦷</span></div>`;
   const tags = (item.tags || []).map(t =>
-    `<span class="tag" onclick="event.stopPropagation();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
+    `<span class="tag" onclick="event.stopPropagation();_filterByTag(this.dataset.tag)" data-tag="${_esc(t)}">${_esc(t)}</span>`
   ).join('');
   const isBm = _bookmarks.has(item.id);
   const bmBtn = `<button class="card-bm-btn${isBm?' active':''}" data-bm-id="${item.id}" onclick="event.stopPropagation();_toggleBookmark('${item.id}')" title="${isBm?'북마크 해제':'북마크'}">★</button>`;
@@ -494,7 +503,7 @@ function openModal(id, type) {
       }
     }
     document.getElementById('modal-tags').innerHTML = (item.tags||[]).map(t=>
-      `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t).replace(/"/g,'&quot;')}">${_esc(t)}</span>`
+      `<span class="tag" onclick="closeModal();_filterByTag(this.dataset.tag)" data-tag="${_esc(t)}">${_esc(t)}</span>`
     ).join('');
     renderRefs(item.references || []);
     const teethEl = document.getElementById('modal-teeth');
@@ -1326,7 +1335,6 @@ function _renderEditorForm(data = {}) {
 }
 
 function _edFormHTML(d = {}) {
-  function ea(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   const deptOpts = _departments.map(dept =>
     `<option value="${dept.id}"${d.department === dept.id ? ' selected' : ''}>${dept.name}</option>`
   ).join('');
@@ -1438,7 +1446,7 @@ function _edFormHTML(d = {}) {
         <button class="btn btn-outline btn-sm" onclick="_edAddRef()">+ 논문 추가</button>
       </div>
       <div id="ed-refs-container">
-        ${(d.references||[]).map((r,i) => _edRefBlockHTML(i, r, ea)).join('')}
+        ${(d.references||[]).map((r,i) => _edRefBlockHTML(i, r)).join('')}
       </div>
     </div>
 
@@ -1450,8 +1458,8 @@ function _edFormHTML(d = {}) {
     </div>`;
 }
 
-function _edRefBlockHTML(idx, r, ea) {
-  if (!ea) ea = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function _edRefBlockHTML(idx, r) {
+  const ea = _esc;
   const pagesVal   = (r.volume ? r.volume + ', ' : '') + (r.pages || '');
   const absSaved   = (r.abstract || r.abstractEn) ? '<div class="ref-abstract-saved">초록 저장됨 (영문+한글) ✓</div>' : '';
   return `
