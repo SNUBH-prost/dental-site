@@ -1091,7 +1091,21 @@ function _injectAdminControls() {
 }
 
 // ── 부문 관리 (동적 추가/삭제) ────────────────────────────────
-function _openDeptManager() {
+// Firestore departments 컬렉션이 비어있으면 현재 기본 부문을 시딩.
+// (시딩하지 않으면 새 부문 1개 추가 시 기본 부문들이 사라짐)
+async function _seedDepartmentsIfEmpty() {
+  const snap = await db.collection('departments').limit(1).get();
+  if (!snap.empty) return false;
+  const batch = db.batch();
+  _departments.forEach((d, i) => {
+    const { id, ...rest } = d;
+    batch.set(db.collection('departments').doc(id), { ...rest, order: i + 1 });
+  });
+  await batch.commit();
+  return true;
+}
+
+async function _openDeptManager() {
   document.getElementById('dept-mgr-modal')?.remove();
   const ov = document.createElement('div');
   ov.id = 'dept-mgr-modal';
@@ -1114,6 +1128,17 @@ function _openDeptManager() {
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   _renderDeptMgrList();
+
+  // 첫 사용 시 기본 부문을 Firestore에 시딩한 뒤 목록 갱신
+  try {
+    const seeded = await _seedDepartmentsIfEmpty();
+    if (seeded) {
+      const snap = await db.collection('departments').orderBy('order', 'asc').get();
+      _initDeptDOM(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      _renderAll();
+      _renderDeptMgrList();
+    }
+  } catch(e) { /* 시딩 실패 시 메모리 기본값으로 계속 동작 */ }
 }
 
 function _renderDeptMgrList() {

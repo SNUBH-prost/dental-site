@@ -3,7 +3,8 @@ firebase.initializeApp(firebaseConfig);
 const db   = firebase.firestore();
 const auth = firebase.auth();
 
-const DEPARTMENTS = [
+// 기본 부문 (Firestore에 departments 컬렉션이 없을 때 fallback)
+const DEFAULT_DEPARTMENTS = [
   { id: "fixed",     name: "고정성"   },
   { id: "implant",   name: "임플란트" },
   { id: "rpd",       name: "RPD"      },
@@ -11,6 +12,25 @@ const DEPARTMENTS = [
   { id: "materials", name: "재료"     },
   { id: "qna",       name: "Q&A"      }
 ];
+let DEPARTMENTS = [...DEFAULT_DEPARTMENTS];
+
+// Firestore에서 부문 로드 (메인 페이지에서 추가한 부문 반영)
+async function loadDepartments() {
+  try {
+    const snap = await db.collection('departments').orderBy('order', 'asc').get();
+    if (snap.docs.length) {
+      DEPARTMENTS = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+  } catch(e) { /* 권한/네트워크 오류 시 기본값 유지 */ }
+
+  // 과 코드 참조 목록 갱신
+  const codeList = document.getElementById('dept-code-list');
+  if (codeList) {
+    codeList.innerHTML = DEPARTMENTS.map(d =>
+      `<span><code>${escapeAttr(d.id)}</code> — ${escapeAttr(d.name)}</span>`
+    ).join('');
+  }
+}
 
 function escapeAttr(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -29,11 +49,12 @@ let caseTags    = [];
 let contentTags = [];
 
 // ── Auth ──────────────────────────────────────────────────────────
-function _showAdmin(user) {
+async function _showAdmin(user) {
   document.getElementById('auth-loading').style.display = 'none';
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('admin-screen').style.display = 'block';
   document.getElementById('user-email-display').textContent = user.email;
+  await loadDepartments();
   loadCasesList(); loadContentsList(); renderCaseForm(); renderContentForm();
 }
 
