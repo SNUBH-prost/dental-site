@@ -147,6 +147,9 @@ const DEPARTMENTS = [
   { id: "qna",       name: "Q&A",      icon: "💬" }
 ];
 
+// Runtime departments — overwritten by Firestore data after load
+let _departments = [...DEPARTMENTS];
+
 let allCases = [];
 let allContents = [];
 let currentPhotos = [];
@@ -213,13 +216,18 @@ async function loadData() {
   } catch(e) {}
 
   // 항상 Firestore에서 최신 데이터를 가져와 갱신
-  const [casesSnap, contentsSnap] = await Promise.all([
+  const [casesSnap, contentsSnap, deptsSnap] = await Promise.all([
     db.collection("cases").orderBy("date", "desc").get(),
-    db.collection("departmentContents").orderBy("createdAt", "desc").get()
+    db.collection("departmentContents").orderBy("createdAt", "desc").get(),
+    db.collection("departments").orderBy("order", "asc").get().catch(() => null)
   ]);
 
   allCases    = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   allContents = _sortContents(contentsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+  if (deptsSnap && deptsSnap.docs.length) {
+    _initDeptDOM(deptsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }
 
   try {
     localStorage.setItem(_CACHE_KEY_CASES,    JSON.stringify(allCases));
@@ -247,7 +255,7 @@ function showPage(pageId) {
 // ── Home ──────────────────────────────────────────────────────
 function renderHome() {
   const grid = document.getElementById('dept-grid-home');
-  grid.innerHTML = DEPARTMENTS.map(d => {
+  grid.innerHTML = _departments.map(d => {
     const count = allContents.filter(c => c.department === d.id).length;
     const iconHtml = d.iconImg
       ? `<img src="${d.iconImg}" alt="${d.name}" style="width:2.8rem;height:2.8rem;object-fit:contain;">`
@@ -283,7 +291,7 @@ function renderCases(filter = '', deptFilter = '') {
 
 // ── Department pages ───────────────────────────────────────────
 function renderDeptPages() {
-  DEPARTMENTS.forEach(d => {
+  _departments.forEach(d => {
     const container = document.getElementById(`dept-content-${d.id}`);
     if (!container) return;
     const items = allContents.filter(c => c.department === d.id);
@@ -306,9 +314,73 @@ function filterDept(deptId, filter = '') {
 const _filterDeptDebounced  = _debounce(filterDept,  200);
 const _renderCasesDebounced = _debounce(renderCases, 200);
 
+// ── Dynamic department DOM init ────────────────────────────────
+const _VT_BTNS = `
+  <div class="view-toggle-group">
+    <button data-mode="grid" class="view-toggle-btn" onclick="setViewMode('grid')" title="카드 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
+    <button data-mode="list" class="view-toggle-btn" onclick="setViewMode('list')" title="목록 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
+  </div>`;
+
+function _deptIconHtml(d) {
+  if (d.iconImg) return `<img src="${_esc(d.iconImg)}" style="width:1.2em;height:1.2em;vertical-align:middle;margin-right:0.3em">`;
+  return d.icon ? `${d.icon} ` : '📁 ';
+}
+
+function _initDeptDOM(depts) {
+  _departments = depts;
+
+  // Generate dept page divs
+  const pagesContainer = document.getElementById('dept-pages-container');
+  if (pagesContainer) {
+    const activeDeptId = _currentPage && _currentPage.startsWith('dept-') ? _currentPage : null;
+    pagesContainer.innerHTML = depts.map(d => `
+      <div id="page-dept-${d.id}" class="page${activeDeptId === 'dept-' + d.id ? ' active' : ''}">
+        <div class="section-header"><div class="section-title">${_deptIconHtml(d)}${_esc(d.name)}</div></div>
+        <div class="toolbar">
+          <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('${d.id}',this.value)">
+          ${_VT_BTNS}
+        </div>
+        <div class="card-grid" id="dept-content-${d.id}"></div>
+      </div>`).join('');
+  }
+
+  // Nav dropdown links
+  const navLinks = document.getElementById('nav-dept-links');
+  if (navLinks) {
+    navLinks.innerHTML = depts.map(d => {
+      const icon = d.iconImg
+        ? `<img src="${_esc(d.iconImg)}" class="nav-dept-icon"> `
+        : (d.icon ? `${d.icon} ` : '');
+      return `<a href="javascript:void(0)" data-page="dept-${d.id}" onclick="showPage('dept-${d.id}');closeDeptMenu()">${icon}${_esc(d.name)}</a>`;
+    }).join('');
+  }
+
+  // Mobile drawer links
+  const drawerLinks = document.getElementById('drawer-dept-links');
+  if (drawerLinks) {
+    drawerLinks.innerHTML = depts.map(d => {
+      const icon = d.iconImg
+        ? `<img src="${_esc(d.iconImg)}" class="drawer-dept-icon">`
+        : (d.icon || '📁');
+      return `<a href="javascript:void(0)" onclick="showPage('dept-${d.id}');toggleMobileMenu()"><span class="di">${icon}</span>${_esc(d.name)}</a>`;
+    }).join('');
+  }
+
+  // Case filter dropdown
+  const caseFilter = document.getElementById('case-dept-filter');
+  if (caseFilter) {
+    const cur = caseFilter.value;
+    caseFilter.innerHTML = '<option value="">전체</option>' +
+      depts.map(d => `<option value="${d.id}"${cur === d.id ? ' selected' : ''}>${_esc(d.name)}</option>`).join('');
+  }
+}
+
+// Initialize with defaults immediately (defer means DOM is ready)
+_initDeptDOM(DEPARTMENTS);
+
 // ── Card HTML ──────────────────────────────────────────────────
 function cardHTML(item, type) {
-  const dept = DEPARTMENTS.find(d => d.id === item.department);
+  const dept = _departments.find(d => d.id === item.department);
   const deptName = dept ? dept.name : '';
   const firstPhoto = item.photos && item.photos[0];
   const thumb = firstPhoto
@@ -350,7 +422,7 @@ function openModal(id, type) {
   if (!item) return;
   _currentModalItem = { item, type };
 
-  const dept = DEPARTMENTS.find(d => d.id === item.department);
+  const dept = _departments.find(d => d.id === item.department);
   currentPhotos = item.photos || [];
   currentPhotoIndex = 0;
   // 사진 프리로드 (네트워크만, decode 없이)
@@ -532,7 +604,7 @@ function updateGallery() {
 function printCase() {
   const item = _currentModalItem?.item;
   if (!item) return;
-  const dept = DEPARTMENTS.find(d => d.id === item.department);
+  const dept = _departments.find(d => d.id === item.department);
 
   const photosHTML = (item.photos || []).map(p => `
     <div class="print-photo-item">
@@ -988,6 +1060,16 @@ function _injectAdminControls() {
   document.querySelectorAll('.admin-inject').forEach(el => el.remove());
   if (!isAdmin) return;
 
+  // Home page — "부문 관리" button
+  const homeHeader = document.querySelector('#page-home .section-header');
+  if (homeHeader) {
+    const btn = document.createElement('button');
+    btn.className = 'admin-add-btn admin-inject';
+    btn.textContent = '⚙ 부문 관리';
+    btn.onclick = _openDeptManager;
+    homeHeader.appendChild(btn);
+  }
+
   const casesHeader = document.querySelector('#page-cases .section-header');
   if (casesHeader) {
     const btn = document.createElement('button');
@@ -997,7 +1079,7 @@ function _injectAdminControls() {
     casesHeader.appendChild(btn);
   }
 
-  DEPARTMENTS.forEach(d => {
+  _departments.forEach(d => {
     const header = document.querySelector(`#page-dept-${d.id} .section-header`);
     if (!header) return;
     const btn = document.createElement('button');
@@ -1006,6 +1088,96 @@ function _injectAdminControls() {
     btn.onclick = () => openEditorNew('content', d.id);
     header.appendChild(btn);
   });
+}
+
+// ── 부문 관리 (동적 추가/삭제) ────────────────────────────────
+function _openDeptManager() {
+  document.getElementById('dept-mgr-modal')?.remove();
+  const ov = document.createElement('div');
+  ov.id = 'dept-mgr-modal';
+  ov.className = 'modal-overlay active';
+  ov.innerHTML = `
+    <div class="modal" style="max-width:480px;padding:1.5rem">
+      <button class="modal-close" onclick="document.getElementById('dept-mgr-modal').remove()">✕</button>
+      <div style="font-size:1.05rem;font-weight:700;margin-bottom:1.2rem">부문 관리</div>
+      <div id="dept-mgr-list" style="margin-bottom:1rem"></div>
+      <div style="border-top:1.5px solid var(--border);padding-top:1rem">
+        <div style="font-weight:600;font-size:0.9rem;margin-bottom:0.7rem;color:var(--text-muted)">새 부문 추가</div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem">
+          <input id="dmf-id"   placeholder="ID (영문, 예: endo)"  style="flex:1;padding:0.5rem 0.7rem;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem">
+          <input id="dmf-name" placeholder="이름 (예: 근관치료)"  style="flex:1;padding:0.5rem 0.7rem;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem">
+        </div>
+        <input id="dmf-icon" placeholder="아이콘 (이모지 또는 이미지 URL, 예: 🦷)" style="width:100%;box-sizing:border-box;padding:0.5rem 0.7rem;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:0.85rem;margin-bottom:0.7rem">
+        <button onclick="_saveDeptNew()" style="padding:0.55rem 1.2rem;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:0.9rem;cursor:pointer;font-weight:600">+ 추가</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+  _renderDeptMgrList();
+}
+
+function _renderDeptMgrList() {
+  const el = document.getElementById('dept-mgr-list');
+  if (!el) return;
+  if (!_departments.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:0.9rem;padding:0.3rem 0">등록된 부문이 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = _departments.map(d => {
+    const iconHtml = d.iconImg
+      ? `<img src="${_esc(d.iconImg)}" style="width:1.2em;height:1.2em;vertical-align:middle">`
+      : (d.icon || '📁');
+    const count = allContents.filter(c => c.department === d.id).length;
+    return `
+      <div style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.7rem;border-radius:8px;background:var(--card-bg);margin-bottom:0.35rem">
+        <span style="font-size:1.1em;width:1.5em;text-align:center">${iconHtml}</span>
+        <span style="flex:1;font-weight:500">${_esc(d.name)}</span>
+        <span style="font-size:0.75rem;color:var(--text-muted);margin-right:0.2rem">${d.id} · ${count}건</span>
+        <button onclick="_deleteDept('${d.id}')" style="padding:0.3rem 0.65rem;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer">삭제</button>
+      </div>`;
+  }).join('');
+}
+
+async function _saveDeptNew() {
+  const raw  = (document.getElementById('dmf-id')?.value || '').trim();
+  const id   = raw.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  const name = (document.getElementById('dmf-name')?.value || '').trim();
+  const icon = (document.getElementById('dmf-icon')?.value || '').trim();
+  if (!id || !name) { alert('ID와 이름을 입력하세요.'); return; }
+  if (_departments.find(d => d.id === id)) { alert('이미 존재하는 ID입니다.'); return; }
+
+  const data = { name, order: _departments.length + 1 };
+  if (icon.startsWith('http')) data.iconImg = icon;
+  else data.icon = icon || '📁';
+
+  try {
+    await db.collection('departments').doc(id).set(data);
+    document.getElementById('dmf-id').value   = '';
+    document.getElementById('dmf-name').value = '';
+    document.getElementById('dmf-icon').value = '';
+    const snap = await db.collection('departments').orderBy('order', 'asc').get();
+    _initDeptDOM(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    _renderAll();
+    _renderDeptMgrList();
+  } catch(e) { alert('저장 실패: ' + e.message); }
+}
+
+async function _deleteDept(id) {
+  const d     = _departments.find(x => x.id === id);
+  const count = allContents.filter(c => c.department === id).length;
+  const msg   = count
+    ? `'${d?.name || id}' 부문을 삭제하시겠습니까?\n(해당 부문의 자료 ${count}건은 삭제되지 않습니다.)`
+    : `'${d?.name || id}' 부문을 삭제하시겠습니까?`;
+  if (!confirm(msg)) return;
+  try {
+    await db.collection('departments').doc(id).delete();
+    const snap  = await db.collection('departments').orderBy('order', 'asc').get();
+    const depts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _initDeptDOM(depts.length ? depts : DEPARTMENTS);
+    _renderAll();
+    _injectAdminControls();
+    _renderDeptMgrList();
+  } catch(e) { alert('삭제 실패: ' + e.message); }
 }
 
 // ── 삭제 ─────────────────────────────────────────────────────
@@ -1063,7 +1235,7 @@ function _renderEditorForm(data = {}) {
 
 function _edFormHTML(d = {}) {
   function ea(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  const deptOpts = DEPARTMENTS.map(dept =>
+  const deptOpts = _departments.map(dept =>
     `<option value="${dept.id}"${d.department === dept.id ? ' selected' : ''}>${dept.name}</option>`
   ).join('');
   return `
@@ -2139,7 +2311,7 @@ function _doSearch(q) {
   const results = all.filter(c =>
     c.title.includes(q) || (c.summary||'').includes(q) || (c.tags||[]).some(t => t.includes(q))
   ).slice(0, 20);
-  const dept = id => DEPARTMENTS.find(d => d.id === id);
+  const dept = id => _departments.find(d => d.id === id);
   document.getElementById('search-results-list').innerHTML = results.length
     ? results.map(c => `
         <div class="search-result-item" onclick="_closeSearch();setTimeout(()=>openModal('${c.id}','${c._type}'),200)">
@@ -2306,7 +2478,7 @@ function _openPresentation() {
 }
 
 function _buildPresSlides(item) {
-  const dept = DEPARTMENTS.find(d => d.id === item.department);
+  const dept = _departments.find(d => d.id === item.department);
   const slides = [{ type: 'cover', item, dept }];
   (item.photos || []).forEach((p, i) =>
     slides.push({ type: 'photo', photo: p, photoIdx: i + 1, photoTotal: (item.photos||[]).length })

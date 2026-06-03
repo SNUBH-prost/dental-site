@@ -51,13 +51,7 @@
         <button class="nav-group-btn" id="dept-btn" onclick="toggleDeptMenu(event)">
           부문별 자료 <span class="arrow">▾</span>
         </button>
-        <div class="nav-group-panel">
-          <a href="javascript:void(0)" data-page="dept-fixed"     onclick="showPage('dept-fixed');closeDeptMenu()">🦷 고정성</a>
-          <a href="javascript:void(0)" data-page="dept-implant"   onclick="showPage('dept-implant');closeDeptMenu()"><img src="/dental-site/icons/icon-implant.svg" class="nav-dept-icon"> 임플란트</a>
-          <a href="javascript:void(0)" data-page="dept-rpd"       onclick="showPage('dept-rpd');closeDeptMenu()"><img src="/dental-site/icons/icon-rpd.svg" class="nav-dept-icon"> RPD</a>
-          <a href="javascript:void(0)" data-page="dept-cd"        onclick="showPage('dept-cd');closeDeptMenu()"><img src="/dental-site/icons/icon-cd.svg" class="nav-dept-icon"> CD</a>
-          <a href="javascript:void(0)" data-page="dept-materials" onclick="showPage('dept-materials');closeDeptMenu()">🧪 재료</a>
-          <a href="javascript:void(0)" data-page="dept-qna"       onclick="showPage('dept-qna');closeDeptMenu()">💬 Q&amp;A</a>
+        <div class="nav-group-panel" id="nav-dept-links">
         </div>
       </div>
 
@@ -90,12 +84,7 @@
     <a href="javascript:void(0)" onclick="showPage('home');toggleMobileMenu()"><span class="di">🏠</span>홈</a>
     <a href="javascript:void(0)" onclick="showPage('cases');toggleMobileMenu()"><span class="di">📋</span>임상 케이스</a>
     <div class="drawer-section-label">부문별 자료</div>
-    <a href="javascript:void(0)" onclick="showPage('dept-fixed');toggleMobileMenu()"><span class="di">🦷</span>고정성</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-implant');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-implant.svg" class="drawer-dept-icon"></span>임플란트</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-rpd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-rpd.svg" class="drawer-dept-icon"></span>RPD</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-cd');toggleMobileMenu()"><span class="di"><img src="/dental-site/icons/icon-cd.svg" class="drawer-dept-icon"></span>CD</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-materials');toggleMobileMenu()"><span class="di">🧪</span>재료</a>
-    <a href="javascript:void(0)" onclick="showPage('dept-qna');toggleMobileMenu()"><span class="di">💬</span>Q&amp;A</a>
+    <div id="drawer-dept-links"></div>
     <div class="drawer-section-label">기타</div>
     <a href="admin.html?v=1"><span class="di">⚙</span>관리</a>
   </div>
@@ -153,12 +142,6 @@
       <select class="filter-select" id="case-dept-filter"
         onchange="renderCases(document.querySelector('#page-cases .search-input').value, this.value)">
         <option value="">전체</option>
-        <option value="fixed">고정성</option>
-        <option value="implant">임플란트</option>
-        <option value="rpd">RPD</option>
-        <option value="cd">CD</option>
-        <option value="materials">재료</option>
-        <option value="qna">Q&amp;A</option>
       </select>
       <div class="view-toggle-group">
         <button data-mode="grid" class="view-toggle-btn active" onclick="setViewMode('grid')" title="카드 보기">
@@ -172,83 +155,8 @@
     <div class="card-grid" id="cases-grid"></div>
   </div>
 
-  <!-- ── 고정성 ── -->
-  <div id="page-dept-fixed" class="page">
-    <div class="section-header"><div class="section-title">🦷 고정성</div></div>
-    <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('fixed',this.value)">
-      <div class="view-toggle-group">
-        <button data-mode="grid" class="view-toggle-btn" onclick="setViewMode('grid')" title="카드 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
-        <button data-mode="list" class="view-toggle-btn" onclick="setViewMode('list')" title="목록 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
-      </div>
-    </div>
-    <div class="card-grid" id="dept-content-fixed"></div>
-  </div>
-
-  <!-- ── 임플란트 ── -->
-  <div id="page-dept-implant" class="page">
-    <div class="section-header"><div class="section-title"><img src="/dental-site/icons/icon-implant.svg" style="width:1.2em;height:1.2em;vertical-align:middle;margin-right:0.3em"> 임플란트</div></div>
-    <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('implant',this.value)">
-      <div class="view-toggle-group">
-        <button data-mode="grid" class="view-toggle-btn" onclick="setViewMode('grid')" title="카드 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
-        <button data-mode="list" class="view-toggle-btn" onclick="setViewMode('list')" title="목록 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
-      </div>
-    </div>
-    <div class="card-grid" id="dept-content-implant"></div>
-  </div>
-
-  <!-- ── RPD ── -->
-  <div id="page-dept-rpd" class="page">
-    <div class="section-header"><div class="section-title"><img src="/dental-site/icons/icon-rpd.svg" style="width:1.2em;height:1.2em;vertical-align:middle;margin-right:0.3em"> RPD</div></div>
-    <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('rpd',this.value)">
-      <div class="view-toggle-group">
-        <button data-mode="grid" class="view-toggle-btn" onclick="setViewMode('grid')" title="카드 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
-        <button data-mode="list" class="view-toggle-btn" onclick="setViewMode('list')" title="목록 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
-      </div>
-    </div>
-    <div class="card-grid" id="dept-content-rpd"></div>
-  </div>
-
-  <!-- ── CD ── -->
-  <div id="page-dept-cd" class="page">
-    <div class="section-header"><div class="section-title"><img src="/dental-site/icons/icon-cd.svg" style="width:1.2em;height:1.2em;vertical-align:middle;margin-right:0.3em"> CD</div></div>
-    <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('cd',this.value)">
-      <div class="view-toggle-group">
-        <button data-mode="grid" class="view-toggle-btn" onclick="setViewMode('grid')" title="카드 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
-        <button data-mode="list" class="view-toggle-btn" onclick="setViewMode('list')" title="목록 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
-      </div>
-    </div>
-    <div class="card-grid" id="dept-content-cd"></div>
-  </div>
-
-  <!-- ── 재료 ── -->
-  <div id="page-dept-materials" class="page">
-    <div class="section-header"><div class="section-title">🧪 재료</div></div>
-    <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('materials',this.value)">
-      <div class="view-toggle-group">
-        <button data-mode="grid" class="view-toggle-btn" onclick="setViewMode('grid')" title="카드 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
-        <button data-mode="list" class="view-toggle-btn" onclick="setViewMode('list')" title="목록 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
-      </div>
-    </div>
-    <div class="card-grid" id="dept-content-materials"></div>
-  </div>
-
-  <!-- ── Q&A ── -->
-  <div id="page-dept-qna" class="page">
-    <div class="section-header"><div class="section-title">💬 Q&amp;A</div></div>
-    <div class="toolbar">
-      <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('qna',this.value)">
-      <div class="view-toggle-group">
-        <button data-mode="grid" class="view-toggle-btn" onclick="setViewMode('grid')" title="카드 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
-        <button data-mode="list" class="view-toggle-btn" onclick="setViewMode('list')" title="목록 보기"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg></button>
-      </div>
-    </div>
-    <div class="card-grid" id="dept-content-qna"></div>
-  </div>
+  <!-- dept pages injected dynamically by _initDeptDOM() in app.js -->
+  <div id="dept-pages-container"></div>
 </main>
 
 <!-- ── 케이스 상세 모달 ── -->
@@ -339,7 +247,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
 <script defer src="js/firebase-config.js?v=21"></script>
 <script defer src="js/cloudinary-config.js?v=21"></script>
-<script defer src="js/app.js?v=63"></script>
+<script defer src="js/app.js?v=64"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {
