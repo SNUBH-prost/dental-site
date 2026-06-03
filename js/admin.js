@@ -140,9 +140,9 @@ async function loadCasesList() {
     return `
       <div class="item-row">
         <div class="item-row-info">
-          <div class="item-row-dept">${dept ? dept.name : ''}</div>
-          <div class="item-row-title">${c.title}</div>
-          <div class="item-row-meta">${c.date || ''} · 사진 ${(c.photos||[]).length}장</div>
+          <div class="item-row-dept">${dept ? escapeAttr(dept.name) : ''}</div>
+          <div class="item-row-title">${escapeAttr(c.title)}</div>
+          <div class="item-row-meta">${escapeAttr(c.date || '')} · 사진 ${(c.photos||[]).length}장</div>
         </div>
         <div class="item-row-actions">
           <button class="btn btn-outline btn-sm" onclick="editCase('${d.id}')"> 편집</button>
@@ -163,9 +163,9 @@ async function loadContentsList() {
     return `
       <div class="item-row">
         <div class="item-row-info">
-          <div class="item-row-dept">${dept ? dept.name : ''}</div>
-          <div class="item-row-title">${c.title}</div>
-          <div class="item-row-meta">${c.date || ''} · 사진 ${(c.photos||[]).length}장</div>
+          <div class="item-row-dept">${dept ? escapeAttr(dept.name) : ''}</div>
+          <div class="item-row-title">${escapeAttr(c.title)}</div>
+          <div class="item-row-meta">${escapeAttr(c.date || '')} · 사진 ${(c.photos||[]).length}장</div>
         </div>
         <div class="item-row-actions">
           <button class="btn btn-outline btn-sm" onclick="editContent('${d.id}')"> 편집</button>

@@ -85,7 +85,6 @@ let _figNum = 0; // marked.parse 호출마다 리셋 (아래 래퍼)
 (function setupMarked() {
   const renderer = new marked.Renderer();
   const sizeMap  = { sm: '30%', md: '50%', lg: '75%' };
-  const escAttr = s => String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   // marked v5+ 는 객체 인수, v4 이하는 (href, title, text) 개별 인수
   renderer.image = function(hrefOrToken, title, text) {
     let href, alt;
@@ -112,21 +111,21 @@ let _figNum = 0; // marked.parse 호출마다 리셋 (아래 래퍼)
       sizeKey = ''; caption = raw;
     }
     const w = sizeMap[sizeKey] || '100%';
-    const imgTag = `<img src="${href}" alt="${escAttr(caption || sizeKey)}" style="width:${w};display:block;border-radius:8px;margin:0 auto;border:1px solid #e2e8f0;max-width:100%">`;
+    const imgTag = `<img src="${href}" alt="${_esc(caption || sizeKey)}" loading="lazy" onerror="this.style.opacity='0.3'" style="width:${w};display:block;border-radius:8px;margin:0 auto;border:1px solid #e2e8f0;max-width:100%">`;
     if (caption) {
       // 이미 Fig/그림/사진 라벨을 직접 붙였으면 그대로, 아니면 "Fig. N." 자동 부여
       const hasLabel = /^\s*(fig\.?|figure|그림|사진)\s*\.?\s*\d/i.test(caption);
       let capHtml;
       if (hasLabel) {
-        capHtml = escAttr(caption);
+        capHtml = _esc(caption);
       } else {
         _figNum++;
-        capHtml = `<b>Fig. ${_figNum}.</b> ${escAttr(caption)}`;
+        capHtml = `<b>Fig. ${_figNum}.</b> ${_esc(caption)}`;
       }
       return `<figure style="margin:0.75rem auto;text-align:center;max-width:100%">${imgTag}` +
         `<figcaption style="margin-top:0.4rem;font-size:0.82rem;color:var(--text-muted,#64748b);line-height:1.5;word-break:keep-all">${capHtml}</figcaption></figure>`;
     }
-    return `<img src="${href}" alt="${escAttr(sizeKey)}" style="width:${w};display:block;border-radius:8px;margin:0.75rem 0;border:1px solid #e2e8f0;max-width:100%">`;
+    return `<img src="${href}" alt="${_esc(sizeKey)}" loading="lazy" onerror="this.style.opacity='0.3'" style="width:${w};display:block;border-radius:8px;margin:0.75rem 0;border:1px solid #e2e8f0;max-width:100%">`;
   };
   marked.setOptions({ renderer, breaks: true });
 
@@ -204,6 +203,8 @@ function _sortContents(arr) {
 
 async function loadData() {
   const now = Date.now();
+  let fromCache = false;
+
   // 캐시가 있으면 즉시 표시 (빠른 초기 렌더)
   try {
     const cc = localStorage.getItem(_CACHE_KEY_CASES);
@@ -212,6 +213,7 @@ async function loadData() {
       allCases    = JSON.parse(cc);
       allContents = _sortContents(JSON.parse(ct));
       _renderAll();
+      fromCache = true;
     }
   } catch(e) {}
 
@@ -222,11 +224,23 @@ async function loadData() {
     db.collection("departments").orderBy("order", "asc").get().catch(() => null)
   ]);
 
-  allCases    = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  allContents = _sortContents(contentsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+  const freshCases    = casesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const freshContents = _sortContents(contentsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-  if (deptsSnap && deptsSnap.docs.length) {
+  // 캐시와 내용이 달라졌을 때만 다시 렌더링
+  const casesChanged    = JSON.stringify(freshCases)    !== JSON.stringify(allCases);
+  const contentsChanged = JSON.stringify(freshContents) !== JSON.stringify(allContents);
+  const deptsChanged    = deptsSnap && deptsSnap.docs.length > 0;
+
+  allCases    = freshCases;
+  allContents = freshContents;
+
+  if (deptsChanged) {
     _initDeptDOM(deptsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }
+
+  if (!fromCache || casesChanged || contentsChanged || deptsChanged) {
+    _renderAll();
   }
 
   try {
@@ -234,8 +248,6 @@ async function loadData() {
     localStorage.setItem(_CACHE_KEY_CONTENTS, JSON.stringify(allContents));
     localStorage.setItem(_CACHE_KEY_TS,       String(now));
   } catch(e) {}
-
-  _renderAll();
 }
 
 // ── Navigation ────────────────────────────────────────────────
@@ -659,7 +671,7 @@ function printCase() {
 }
 
 // ── References ─────────────────────────────────────────────────
-function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 function renderRefs(refs) {
   const el      = document.getElementById('modal-refs');
@@ -784,10 +796,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   firebase.auth().onAuthStateChanged(user => {
     isAdmin = !!user;
     _updateAdminBadge(user);
-    renderHome();
-    renderCases();
-    renderDeptPages();
-    _injectAdminControls();
+    _renderAll();
   });
 
   // 인용 위첨자 툴팁
@@ -1451,7 +1460,7 @@ function _edRenderPhotoPreview() {
     const cnt = (p.annotations||[]).length;
     return `
     <div class="photo-preview-item">
-      <img src="${p.url}" alt="">
+      <img src="${p.url}" alt="" loading="lazy">
       <button class="photo-remove" onclick="_edRemovePhoto(${i})">✕</button>
       <button class="photo-ann-btn" onclick="openAnnotationEditor(${i})" title="주석 편집">✏️${cnt > 0 ? `<span class="ann-count">${cnt}</span>` : ''}</button>
       <input class="caption-input" type="text" placeholder="사진 설명 (선택)"
@@ -2571,7 +2580,7 @@ function _renderPresSlide() {
   } else if (slide.type === 'photo') {
     el.innerHTML = `
       <div class="pres-photo-wrap">
-        <img src="${_cldGallery(slide.photo.url)}" alt="${_esc(slide.photo.caption || '')}">
+        <img src="${_cldGallery(slide.photo.url)}" alt="${_esc(slide.photo.caption || '')}" loading="lazy" onerror="this.style.opacity='0.3'">
       </div>
       ${slide.photo.caption ? `<div class="pres-caption">${_esc(slide.photo.caption)}</div>` : ''}
       ${slide.photoTotal > 1 ? `<div class="pres-photo-num">사진 ${slide.photoIdx} / ${slide.photoTotal}</div>` : ''}`;
