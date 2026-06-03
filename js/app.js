@@ -159,6 +159,7 @@ let isAdmin = false;
 let _bookmarks = new Set(JSON.parse(localStorage.getItem('dental-bm') || '[]'));
 let _showBmOnly = false;
 let _deptBmFilter = new Set(); // 북마크 필터가 켜진 부문 id 집합
+let _deptEditingId = null;     // 부문 관리에서 현재 편집 중인 부문 id
 let _gz = { s: 1, ox: 50, oy: 50, tx: 0, ty: 0 }; // gallery zoom state
 let _viewMode = localStorage.getItem('dental-view') || 'grid';
 let _currentPage = 'home';
@@ -1120,6 +1121,7 @@ async function _seedDepartmentsIfEmpty() {
 
 async function _openDeptManager() {
   document.getElementById('dept-mgr-modal')?.remove();
+  _deptEditingId = null;
   const ov = document.createElement('div');
   ov.id = 'dept-mgr-modal';
   ov.className = 'modal-overlay open';
@@ -1161,19 +1163,71 @@ function _renderDeptMgrList() {
     el.innerHTML = '<div style="color:var(--text-muted);font-size:0.9rem;padding:0.3rem 0">등록된 부문이 없습니다.</div>';
     return;
   }
+  const rowStyle = 'display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.7rem;border-radius:8px;background:var(--card-bg);margin-bottom:0.35rem';
+  const inStyle  = 'padding:0.4rem 0.55rem;border:1.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:0.83rem';
+  const btnStyle = 'padding:0.3rem 0.65rem;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer;color:#fff';
+
   el.innerHTML = _departments.map(d => {
+    const count = allContents.filter(c => c.department === d.id).length;
+
+    // 편집 모드
+    if (d.id === _deptEditingId) {
+      const iconVal = d.iconImg || d.icon || '';
+      return `
+        <div style="${rowStyle};flex-wrap:wrap">
+          <input id="dme-icon-${d.id}" value="${_esc(iconVal)}" placeholder="아이콘/URL" style="${inStyle};width:5.5em">
+          <input id="dme-name-${d.id}" value="${_esc(d.name)}" placeholder="이름" style="${inStyle};flex:1;min-width:6em">
+          <span style="font-size:0.72rem;color:var(--text-muted)">${d.id}</span>
+          <button onclick="_saveDeptEdit('${d.id}')" style="${btnStyle};background:var(--primary)">저장</button>
+          <button onclick="_cancelDeptEdit()" style="${btnStyle};background:#94a3b8">취소</button>
+        </div>`;
+    }
+
+    // 표시 모드
     const iconHtml = d.iconImg
       ? `<img src="${_esc(d.iconImg)}" style="width:1.2em;height:1.2em;vertical-align:middle">`
       : (d.icon || '📁');
-    const count = allContents.filter(c => c.department === d.id).length;
     return `
-      <div style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 0.7rem;border-radius:8px;background:var(--card-bg);margin-bottom:0.35rem">
+      <div style="${rowStyle}">
         <span style="font-size:1.1em;width:1.5em;text-align:center">${iconHtml}</span>
         <span style="flex:1;font-weight:500">${_esc(d.name)}</span>
         <span style="font-size:0.75rem;color:var(--text-muted);margin-right:0.2rem">${d.id} · ${count}건</span>
-        <button onclick="_deleteDept('${d.id}')" style="padding:0.3rem 0.65rem;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:0.78rem;cursor:pointer">삭제</button>
+        <button onclick="_editDept('${d.id}')" style="${btnStyle};background:var(--primary)">편집</button>
+        <button onclick="_deleteDept('${d.id}')" style="${btnStyle};background:#ef4444">삭제</button>
       </div>`;
   }).join('');
+}
+
+function _editDept(id) {
+  _deptEditingId = id;
+  _renderDeptMgrList();
+  setTimeout(() => document.getElementById(`dme-name-${id}`)?.focus(), 30);
+}
+
+function _cancelDeptEdit() {
+  _deptEditingId = null;
+  _renderDeptMgrList();
+}
+
+async function _saveDeptEdit(id) {
+  const name = (document.getElementById(`dme-name-${id}`)?.value || '').trim();
+  const icon = (document.getElementById(`dme-icon-${id}`)?.value || '').trim();
+  if (!name) { alert('이름을 입력하세요.'); return; }
+
+  // 아이콘: URL이면 iconImg, 그 외엔 icon (반대 필드는 삭제)
+  const del  = firebase.firestore.FieldValue.delete();
+  const data = { name };
+  if (icon.startsWith('http')) { data.iconImg = icon; data.icon = del; }
+  else { data.icon = icon || '📁'; data.iconImg = del; }
+
+  try {
+    await db.collection('departments').doc(id).update(data);
+    _deptEditingId = null;
+    const snap = await db.collection('departments').orderBy('order', 'asc').get();
+    _initDeptDOM(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    _renderAll();
+    _renderDeptMgrList();
+  } catch(e) { alert('저장 실패: ' + e.message); }
 }
 
 async function _saveDeptNew() {
