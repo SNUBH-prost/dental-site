@@ -158,6 +158,7 @@ let _currentModalItem = null;
 let isAdmin = false;
 let _bookmarks = new Set(JSON.parse(localStorage.getItem('dental-bm') || '[]'));
 let _showBmOnly = false;
+let _deptBmFilter = new Set(); // 북마크 필터가 켜진 부문 id 집합
 let _gz = { s: 1, ox: 50, oy: 50, tx: 0, ty: 0 }; // gallery zoom state
 let _viewMode = localStorage.getItem('dental-view') || 'grid';
 let _currentPage = 'home';
@@ -303,26 +304,28 @@ function renderCases(filter = '', deptFilter = '') {
 
 // ── Department pages ───────────────────────────────────────────
 function renderDeptPages() {
-  _departments.forEach(d => {
-    const container = document.getElementById(`dept-content-${d.id}`);
-    if (!container) return;
-    const items = allContents.filter(c => c.department === d.id);
-    container.className = _viewMode === 'list' ? 'card-grid list-view' : 'card-grid';
-    container.innerHTML = items.length ? items.map(c => cardHTML(c, 'content')).join('') :
-      '<div class="empty">등록된 자료가 없습니다.</div>';
-  });
+  _departments.forEach(d => renderDeptContent(d.id));
 }
 
-function filterDept(deptId, filter = '') {
-  const items = allContents.filter(c => {
-    const q = filter.trim();
-    return c.department === deptId && (!q || c.title.includes(q) || (c.summary||'').includes(q));
-  });
+// 한 부문의 카드 그리드를 렌더 (검색어 + 북마크 필터 반영)
+function renderDeptContent(deptId, filter = '') {
   const container = document.getElementById(`dept-content-${deptId}`);
+  if (!container) return;
+  const q = filter.trim();
+  const items = allContents.filter(c => {
+    if (c.department !== deptId) return false;
+    if (q && !c.title.includes(q) && !(c.summary||'').includes(q)) return false;
+    if (_deptBmFilter.has(deptId) && !_bookmarks.has(c.id)) return false;
+    return true;
+  });
   container.className = _viewMode === 'list' ? 'card-grid list-view' : 'card-grid';
+  const emptyMsg = (q || _deptBmFilter.has(deptId)) ? '검색 결과가 없습니다.' : '등록된 자료가 없습니다.';
   container.innerHTML = items.length ? items.map(c => cardHTML(c, 'content')).join('') :
-    '<div class="empty">검색 결과가 없습니다.</div>';
+    `<div class="empty">${emptyMsg}</div>`;
 }
+
+// 하위 호환 별칭
+function filterDept(deptId, filter = '') { renderDeptContent(deptId, filter); }
 const _filterDeptDebounced  = _debounce(filterDept,  200);
 const _renderCasesDebounced = _debounce(renderCases, 200);
 
@@ -350,6 +353,7 @@ function _initDeptDOM(depts) {
         <div class="section-header"><div class="section-title">${_deptIconHtml(d)}${_esc(d.name)}</div></div>
         <div class="toolbar">
           <input class="search-input" type="text" placeholder="자료 검색..." oninput="_filterDeptDebounced('${d.id}',this.value)">
+          <button class="bm-filter-btn" data-dept-bm="${d.id}" onclick="toggleDeptBookmarkFilter('${d.id}')">★ 북마크</button>
           ${_VT_BTNS}
         </div>
         <div class="card-grid" id="dept-content-${d.id}"></div>
@@ -2166,6 +2170,20 @@ function _toggleBookmark(id) {
       document.getElementById('case-dept-filter')?.value || ''
     );
   }
+  // 북마크 필터가 켜진 부문 페이지도 재렌더
+  _deptBmFilter.forEach(deptId => {
+    const input = document.querySelector(`#page-dept-${deptId} .search-input`);
+    renderDeptContent(deptId, input?.value || '');
+  });
+}
+
+function toggleDeptBookmarkFilter(deptId) {
+  if (_deptBmFilter.has(deptId)) _deptBmFilter.delete(deptId);
+  else _deptBmFilter.add(deptId);
+  const btn = document.querySelector(`.bm-filter-btn[data-dept-bm="${deptId}"]`);
+  if (btn) btn.classList.toggle('active', _deptBmFilter.has(deptId));
+  const input = document.querySelector(`#page-dept-${deptId} .search-input`);
+  renderDeptContent(deptId, input?.value || '');
 }
 
 function setViewMode(mode) {
