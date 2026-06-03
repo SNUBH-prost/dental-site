@@ -1294,6 +1294,8 @@ function _edFormHTML(d = {}) {
             <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('dl')" title="항목 목록">📋 항목</button>
             <button type="button" class="tb-btn tb-snippet" onclick="_edSnippet('details')" title="접이식 섹션">▶ 접기</button>
             <div class="tb-sep"></div>
+            <button type="button" class="tb-btn" onclick="_edTbInsertImg()" title="이미지 삽입">📷 이미지</button>
+            <div class="tb-sep"></div>
             <button type="button" class="tb-btn" id="ed-preview-toggle" onclick="_edTogglePreview()" title="미리보기">👁 미리보기</button>
           </div>
           <div class="ed-split" id="ed-split">
@@ -1303,7 +1305,7 @@ function _edFormHTML(d = {}) {
               oninput="_edUpdatePreview()"></textarea>
             <div class="ed-preview-pane modal-description" id="ed-preview-pane" style="display:none"></div>
           </div>
-          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem">이미지를 텍스트 영역으로 드래그하면 현재 커서 위치에 자동 삽입됩니다.</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem">📷 이미지 버튼 또는 드래그·붙여넣기로 이미지를 삽입할 수 있습니다.</div>
         </div>
         <div class="form-group full">
           <label>태그</label>
@@ -1738,6 +1740,26 @@ function _edSetupTextareaDrop() {
     e.preventDefault();
     _edDropImage(ta, file, ta.selectionStart);
   });
+}
+
+function _edTbInsertImg() {
+  const ta = document.getElementById('ed-description');
+  if (!ta) return;
+  // Snap insert position to end of current line to avoid splitting text mid-sentence
+  const pos  = ta.selectionStart;
+  const text = ta.value;
+  const eol  = text.indexOf('\n', pos);
+  const insertAt = eol === -1 ? text.length : eol;
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    _edDropImage(ta, file, insertAt);
+  };
+  input.click();
 }
 
 async function _edDropImage(ta, file, insertPos) {
