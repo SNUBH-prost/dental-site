@@ -598,7 +598,6 @@ main {
   font-size: 0.93rem;
   line-height: 1.85;
   color: var(--text);
-  max-width: 720px;
 }
 
 .modal-description h1,
