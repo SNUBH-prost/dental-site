@@ -161,6 +161,8 @@ let _showBmOnly = false;
 let _deptBmFilter = new Set(); // 북마크 필터가 켜진 부문 id 집합
 let _deptEditingId = null;     // 부문 관리에서 현재 편집 중인 부문 id
 let _gz = { s: 1, ox: 50, oy: 50, tx: 0, ty: 0 }; // gallery zoom state
+let _searchIndex  = null; // cached combined search array, nulled on data change
+let _tagCloudHTML = null; // cached tag cloud HTML, nulled on data change
 let _viewMode = localStorage.getItem('dental-view') || 'grid';
 let _currentPage = 'home';
 let _isPopState = false;
@@ -170,8 +172,6 @@ let _modalPushed = false;
 const _CACHE_KEY_CASES    = 'dental_cache_cases';
 const _CACHE_KEY_CONTENTS = 'dental_cache_contents';
 const _CACHE_KEY_DEPTS    = 'dental_cache_depts';
-const _CACHE_KEY_TS       = 'dental_cache_ts';
-const _CACHE_TTL          = 3 * 60 * 1000; // 3분
 
 // 간단한 debounce 유틸
 function _debounce(fn, ms) {
@@ -205,7 +205,6 @@ function _sortContents(arr) {
 }
 
 async function loadData() {
-  const now = Date.now();
   let fromCache = false;
 
   // 캐시가 있으면 즉시 표시 (빠른 초기 렌더)
@@ -257,8 +256,9 @@ async function loadData() {
     localStorage.setItem(_CACHE_KEY_CASES,    JSON.stringify(allCases));
     localStorage.setItem(_CACHE_KEY_CONTENTS, JSON.stringify(allContents));
     if (freshDepts) localStorage.setItem(_CACHE_KEY_DEPTS, JSON.stringify(freshDepts));
-    localStorage.setItem(_CACHE_KEY_TS,       String(now));
   } catch(e) {}
+  _searchIndex = null;
+  _tagCloudHTML = null;
 }
 
 // ── Navigation ────────────────────────────────────────────────
@@ -808,9 +808,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
   firebase.auth().onAuthStateChanged(user => {
-    isAdmin = !!user;
+    const nowAdmin = !!user;
     _updateAdminBadge(user);
-    _renderAll();
+    if (isAdmin !== nowAdmin) {
+      isAdmin = nowAdmin;
+      _renderAll();
+    }
   });
 
   // 인용 위첨자 툴팁
@@ -2407,13 +2410,17 @@ function _closeSearch() {
 }
 
 function _renderTagCloud() {
-  const all = [...allCases, ...allContents];
-  const freq = {};
-  all.forEach(item => (item.tags || []).forEach(t => { freq[t] = (freq[t] || 0) + 1; }));
-  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]);
-  document.getElementById('search-tag-cloud').innerHTML = sorted.map(([t]) =>
-    `<button class="search-tag-chip" onclick="_searchByTag('${_esc(t).replace(/'/g,"\\'")}')">🏷 ${_esc(t)}</button>`
-  ).join('');
+  if (!_tagCloudHTML) {
+    const freq = {};
+    [...allCases, ...allContents].forEach(item =>
+      (item.tags || []).forEach(t => { freq[t] = (freq[t] || 0) + 1; })
+    );
+    _tagCloudHTML = Object.entries(freq)
+      .sort((a, b) => b[1] - a[1])
+      .map(([t]) => `<button class="search-tag-chip" onclick="_searchByTag('${_esc(t).replace(/'/g,"\\'")}')">🏷 ${_esc(t)}</button>`)
+      .join('');
+  }
+  document.getElementById('search-tag-cloud').innerHTML = _tagCloudHTML;
 }
 
 function _searchByTag(tag) {
@@ -2440,11 +2447,13 @@ function _doSearch(q) {
   }
   tagSec.style.display = 'none';
   resSec.style.display = '';
-  const all = [
-    ...allCases.map(c => ({ ...c, _type: 'case' })),
-    ...allContents.map(c => ({ ...c, _type: 'content' }))
-  ];
-  const results = all.filter(c =>
+  if (!_searchIndex) {
+    _searchIndex = [
+      ...allCases.map(c => ({ ...c, _type: 'case' })),
+      ...allContents.map(c => ({ ...c, _type: 'content' }))
+    ];
+  }
+  const results = _searchIndex.filter(c =>
     c.title.includes(q) || (c.summary||'').includes(q) || (c.tags||[]).some(t => t.includes(q))
   ).slice(0, 20);
   const dept = id => _departments.find(d => d.id === id);
