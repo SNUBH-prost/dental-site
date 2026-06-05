@@ -97,28 +97,44 @@ function _callGPTBatch(question) {
       'Content-Type': 'application/json',
     },
     payload: JSON.stringify({
-      model:      'gpt-4o',
-      max_tokens: 16384,
+      model:       'gpt-4o',
+      max_tokens:  16384,
+      temperature: 0,
       messages: [
         { role: 'system',    content: systemPrompt },
         { role: 'user',      content: fewShotUser },
         { role: 'assistant', content: fewShotAssistant },
-        { role: 'user',      content: question + '\n\n[Q1부터 Q10까지 정확히 10개만 작성할 것]' },
+        { role: 'user',      content: question + '\n\n[Q1부터 Q10까지 정확히 10개만 작성할 것. Q11 이상 출력 절대 금지.]' },
       ],
     }),
     muteHttpExceptions: true,
   });
 
   const result = JSON.parse(res.getContentText());
-  const text = result?.choices?.[0]?.message?.content;
-  if (!text) throw new Error('GPT 응답 실패: ' + res.getContentText());
-  Logger.log('[GPT Q1-Q10 생성 완료]');
-  return text.trim();
+  const rawText = result?.choices?.[0]?.message?.content;
+  if (!rawText) throw new Error('GPT 응답 실패: ' + res.getContentText());
+
+  // Q10 이후 내용 강제 제거 (GPT가 10개 초과 생성할 경우 대비)
+  const text = _trimAfterQ10(rawText.trim());
+  const qCount = (text.match(/\*\*Q\d+\./g) || []).length;
+  Logger.log('[GPT Q&A 생성 완료] 질문 수: ' + qCount);
+  return text;
 }
 
 // ── OpenAI GPT → Q1~Q10 단일 호출 ───────────────────────────────
 function _callGPT(question) {
   return _callGPTBatch(question);
+}
+
+// ── Q10 이후 내용 강제 제거 ───────────────────────────────────────
+function _trimAfterQ10(text) {
+  // **Q11. 이나 ## Q11 등 Q11 이상 패턴이 나오면 그 앞에서 자름
+  const m = text.match(/(\*{0,2}Q1[1-9]\.|#{1,3}\s*Q1[1-9]\.)/);
+  if (m) {
+    text = text.slice(0, m.index).trimEnd();
+    Logger.log('[Q&A 후처리] Q11 이후 내용 ' + (text.length) + '자에서 잘라냄');
+  }
+  return text;
 }
 
 // ── GPT 답변에서 인용 파싱 ────────────────────────────────────
