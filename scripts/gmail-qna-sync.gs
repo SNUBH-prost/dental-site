@@ -388,8 +388,18 @@ function _analyzeImagesWithVision(attachments) {
 
 // ── Cloudinary 이미지 업로드 → URL ───────────────────────────────
 function _uploadToCloudinary(attachment) {
+  // content-type이 octet-stream이면 확장자에서 추론
+  let ct = attachment.getContentType() || '';
+  if (!ct.startsWith('image/')) {
+    const ext = (attachment.getName() || '').split('.').pop().toLowerCase();
+    const extMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+                     gif: 'image/gif', webp: 'image/webp', heic: 'image/heic',
+                     bmp: 'image/bmp', tif: 'image/tiff', tiff: 'image/tiff' };
+    ct = extMap[ext] || 'image/jpeg';
+  }
+
   const base64  = Utilities.base64Encode(attachment.getBytes());
-  const dataUri = 'data:' + attachment.getContentType() + ';base64,' + base64;
+  const dataUri = 'data:' + ct + ';base64,' + base64;
   const url     = 'https://api.cloudinary.com/v1_1/' + CONFIG.CLOUDINARY_CLOUD_NAME + '/image/upload';
 
   // 파일명의 슬래시·특수문자 제거 → public_id에 명시해 Cloudinary 오류 방지
@@ -403,8 +413,8 @@ function _uploadToCloudinary(attachment) {
   });
 
   const result = JSON.parse(res.getContentText());
-  if (!result.secure_url) throw new Error('Cloudinary 업로드 실패: ' + res.getContentText());
-  Logger.log('[이미지 업로드] ' + result.secure_url);
+  if (!result.secure_url) throw new Error('Cloudinary 업로드 실패 (' + ct + '): ' + res.getContentText().slice(0, 300));
+  Logger.log('[이미지 업로드 완료] ' + attachment.getName() + ' → ' + result.secure_url);
   return result.secure_url;
 }
 
@@ -500,14 +510,23 @@ function checkQnAEmails() {
 
       Logger.log('[처리 시작] 부문=' + dept + ' / 제목=' + title);
 
-      // 이미지 첨부파일 → Cloudinary 업로드
-      const imageAtts = msg.getAttachments().filter(function(a) {
-        return a.getContentType().startsWith('image/');
+      // 첨부파일 수집 — includeInlineImages:true 로 본문 인라인 이미지도 포함
+      const allAtts = msg.getAttachments({ includeInlineImages: true, includeAttachments: true });
+      Logger.log('[첨부파일] 총 ' + allAtts.length + '개 / 타입: ' + allAtts.map(function(a) { return a.getName() + '(' + a.getContentType() + ')'; }).join(', '));
+
+      const imageAtts = allAtts.filter(function(a) {
+        const ct = a.getContentType() || '';
+        if (ct.startsWith('image/')) return true;
+        // content-type이 octet-stream으로 오는 경우 확장자로 판별
+        const name = (a.getName() || '').toLowerCase();
+        return /\.(jpe?g|png|gif|webp|heic|bmp|tiff?)$/.test(name);
       });
+      Logger.log('[이미지] ' + imageAtts.length + '개 감지');
+
       const photoUrls = [];
       imageAtts.forEach(function(att) {
         try { photoUrls.push(_uploadToCloudinary(att)); }
-        catch(e) { Logger.log('[이미지 업로드 오류] ' + e.message); }
+        catch(e) { Logger.log('[이미지 업로드 오류] ' + att.getName() + ' — ' + e.message); }
       });
 
       // GPT-4o Vision 이미지 해설 (첨부 이미지 있을 때만, 모든 부문 공통)
