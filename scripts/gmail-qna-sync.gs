@@ -11,8 +11,24 @@ const CONFIG = {
   CLOUDINARY_CLOUD_NAME:    'dg7aas4ky',
   CLOUDINARY_UPLOAD_PRESET: 'dental_clinic',
 
-  SEARCH_QUERY:    'subject:[QnA] is:unread',
-  PROCESSED_LABEL: 'QnA-완료',
+  // 메일 제목 접두어 → Firestore department ID 매핑
+  // 새 부문 추가 시 여기에만 줄 추가
+  DEPT_MAP: {
+    'QnA':    'qna',
+    '고정성': 'fixed',
+    '임플란트': 'implant',
+    'RPD':    'rpd',
+    'CD':     'cd',
+    '재료':   'materials',
+  },
+
+  // QnA 부문만 GPT Q1~Q10 생성; 나머지는 이미지+본문 단순 업로드
+  // 여기에 부문 ID를 추가하면 해당 부문도 GPT Q&A 처리
+  GPT_QA_DEPTS: ['qna'],
+
+  // 검색 쿼리: 위 DEPT_MAP의 접두어 전부 포함 (자동 생성 안되므로 수동으로 맞춤)
+  SEARCH_QUERY:    '(subject:[QnA] OR subject:[고정성] OR subject:[임플란트] OR subject:[RPD] OR subject:[CD] OR subject:[재료]) is:unread',
+  PROCESSED_LABEL: '덴탈-완료',
 };
 
 // ── Firebase Auth → ID 토큰 ──────────────────────────────────────
@@ -392,10 +408,11 @@ function _uploadToCloudinary(attachment) {
   return result.secure_url;
 }
 
-// ── Firestore에 Q&A 문서 저장 ────────────────────────────────────
-function _addQnADoc(title, description, answer, photoUrls, references) {
+// ── Firestore에 문서 저장 ────────────────────────────────────────
+function _addQnADoc(title, description, answer, photoUrls, references, department) {
   const token   = _getIdToken();
   const dateStr = new Date().toISOString().slice(0, 10);
+  const dept    = department || 'qna';
 
   const photoValues = photoUrls.map(function(u) {
     return {
@@ -434,7 +451,7 @@ function _addQnADoc(title, description, answer, photoUrls, references) {
       description: { stringValue: description },
       summary:     { stringValue: description.slice(0, 120) },
       answer:      { stringValue: answer },
-      department:  { stringValue: 'qna' },
+      department:  { stringValue: dept },
       date:        { stringValue: dateStr },
       createdAt:   { timestampValue: new Date().toISOString() },
       photos:      { arrayValue: { values: photoValues } },
@@ -461,20 +478,29 @@ function _getOrCreateLabel(name) {
   return GmailApp.getUserLabelByName(name) || GmailApp.createLabel(name);
 }
 
-// ── 메인: 이메일 → 이미지 업로드 → GPT 공부가이드 → Q&A 저장 ─────
+// ── 메인: 이메일 → 이미지 업로드 → (QnA면 GPT) → Firestore 저장 ──
 function checkQnAEmails() {
   const threads = GmailApp.search(CONFIG.SEARCH_QUERY, 0, 20);
-  if (!threads.length) { Logger.log('새 QnA 이메일 없음'); return; }
+  if (!threads.length) { Logger.log('새 이메일 없음'); return; }
 
   const doneLabel = _getOrCreateLabel(CONFIG.PROCESSED_LABEL);
 
   threads.forEach(function(thread) {
     try {
-      const msg   = thread.getMessages()[0];
-      const title = msg.getSubject().replace(/^\[QnA\]\s*/i, '').trim() || '(제목 없음)';
-      const body  = msg.getPlainBody().trim();
+      const msg     = thread.getMessages()[0];
+      const subject = msg.getSubject();
 
-      // 이미지 첨부파일: Vision 분석 + Cloudinary 업로드
+      // 제목에서 [부문] 접두어 파싱 → 부문 ID 결정
+      // 예) "[고정성] 세라믹 수복 케이스" → prefix="고정성", dept="fixed"
+      const prefixMatch = subject.match(/^\[([^\]]+)\]/);
+      const prefix = prefixMatch ? prefixMatch[1] : '';
+      const dept   = CONFIG.DEPT_MAP[prefix] || 'qna';
+      const title  = subject.replace(/^\[[^\]]+\]\s*/, '').trim() || '(제목 없음)';
+      const body   = msg.getPlainBody().trim();
+
+      Logger.log('[처리 시작] 부문=' + dept + ' / 제목=' + title);
+
+      // 이미지 첨부파일 → Cloudinary 업로드
       const imageAtts = msg.getAttachments().filter(function(a) {
         return a.getContentType().startsWith('image/');
       });
@@ -484,20 +510,19 @@ function checkQnAEmails() {
         catch(e) { Logger.log('[이미지 업로드 오류] ' + e.message); }
       });
 
-      // GPT-4o Vision 이미지 해설 (첨부 이미지가 있을 때만)
+      // GPT-4o Vision 이미지 해설 (첨부 이미지 있을 때만, 모든 부문 공통)
       let visionNote = '';
       if (CONFIG.OPENAI_API_KEY && imageAtts.length > 0) {
         try { visionNote = _analyzeImagesWithVision(imageAtts); }
         catch(e) { Logger.log('[Vision 오류] ' + e.message); }
       }
 
-      // GPT Q&A 생성 + PubMed 검증
       let answer = '';
       let references = [];
-      if (CONFIG.OPENAI_API_KEY) {
+
+      if (CONFIG.GPT_QA_DEPTS.indexOf(dept) !== -1 && CONFIG.OPENAI_API_KEY) {
+        // ── GPT Q&A 생성 부문 (기본: QnA) ──────────────────────────
         try {
-          // Q&A 생성용 컨텍스트: 제목 + 본문 + Vision 소견 통합
-          // Vision 소견이 있으면 이미지 케이스 임을 명시해 few-shot 오염 방지
           let qnaContext = '주제: ' + title;
           if (body) qnaContext += '\n\n' + body;
           if (visionNote) {
@@ -506,21 +531,23 @@ function checkQnAEmails() {
           } else {
             qnaContext += '\n\n위 주제에 대한 깊이 있는 Q&A를 작성해주세요.';
           }
-
-          const raw = _callGPT(qnaContext);
+          const raw    = _callGPT(qnaContext);
           const parsed = _parseAndVerify(raw);
-          // Vision 소견을 Q&A 본문 앞에 삽입
-          answer = visionNote ? visionNote + '\n\n---\n\n' + parsed.answer : parsed.answer;
+          answer     = visionNote ? visionNote + '\n\n---\n\n' + parsed.answer : parsed.answer;
           references = parsed.references;
           Logger.log('[PubMed 검증 완료 — 레퍼런스 ' + references.length + '개]');
         } catch(e) {
           Logger.log('[GPT 오류] ' + e.message);
         }
+      } else {
+        // ── 단순 업로드 부문: Vision 소견만 answer에 포함 ──────────
+        answer = visionNote; // 이미지 없으면 '' → answer 필드 비어 있음
       }
 
-      _addQnADoc(title, body, answer, photoUrls, references);
+      _addQnADoc(title, body, answer, photoUrls, references, dept);
       thread.markRead();
       thread.addLabel(doneLabel);
+      Logger.log('[완료] ' + dept + ' / ' + title + ' / 사진 ' + photoUrls.length + '장');
     } catch(e) {
       Logger.log('[오류] ' + e.message);
     }
