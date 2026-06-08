@@ -12,7 +12,7 @@ const CONFIG = {
   CLOUDINARY_UPLOAD_PRESET: 'dental_clinic',
 
   // 메일 제목 접두어 → Firestore department ID 매핑
-  // 새 부문 추가 시 여기에만 줄 추가
+  // 새 부문 추가 시 여기에만 줄 추가 — SEARCH_QUERY는 아래에서 자동 생성
   DEPT_MAP: {
     'QnA':    'qna',
     '고정성': 'fixed',
@@ -26,10 +26,13 @@ const CONFIG = {
   // 여기에 부문 ID를 추가하면 해당 부문도 GPT Q&A 처리
   GPT_QA_DEPTS: ['qna'],
 
-  // 검색 쿼리: 위 DEPT_MAP의 접두어 전부 포함 (자동 생성 안되므로 수동으로 맞춤)
-  SEARCH_QUERY:    '(subject:[QnA] OR subject:[고정성] OR subject:[임플란트] OR subject:[RPD] OR subject:[CD] OR subject:[재료]) is:unread',
   PROCESSED_LABEL: '덴탈-완료',
 };
+
+// SEARCH_QUERY: DEPT_MAP 키에서 자동 생성 (수동으로 맞출 필요 없음)
+CONFIG.SEARCH_QUERY = '(' + Object.keys(CONFIG.DEPT_MAP).map(function(k) {
+  return 'subject:[' + k + ']';
+}).join(' OR ') + ') is:unread';
 
 // ── Firebase Auth → ID 토큰 ──────────────────────────────────────
 function _getIdToken() {
@@ -128,11 +131,13 @@ function _callGPT(question) {
 
 // ── Q10 이후 내용 강제 제거 ───────────────────────────────────────
 function _trimAfterQ10(text) {
-  // **Q11. 이나 ## Q11 등 Q11 이상 패턴이 나오면 그 앞에서 자름
-  const m = text.match(/(\*{0,2}Q1[1-9]\.|#{1,3}\s*Q1[1-9]\.)/);
-  if (m) {
-    text = text.slice(0, m.index).trimEnd();
-    Logger.log('[Q&A 후처리] Q11 이후 내용 ' + (text.length) + '자에서 잘라냄');
+  // Q11 이상 (**Q11. / ## Q11. / Q20. 등 모두) → 그 앞에서 자름
+  // Q1[1-9] 는 Q11-Q19만 커버 → [2-9]\d 로 Q20+ 도 처리
+  const pos = text.search(/(\*{0,2}|#{1,3}\s*)Q(?:1[1-9]|[2-9]\d|\d{3,})\./);
+  if (pos !== -1) {
+    const trimmed = text.slice(0, pos).trimEnd();
+    Logger.log('[Q&A 후처리] Q11 이후 내용 제거 (' + (text.length - trimmed.length) + '자)');
+    return trimmed;
   }
   return text;
 }
@@ -402,17 +407,24 @@ function _analyzeImagesWithVision(attachments) {
   return deepAnalysis.trim();
 }
 
+// ── 이미지 MIME 타입 해석 헬퍼 ───────────────────────────────────
+// content-type이 image/* 면 그대로, octet-stream 등이면 확장자로 추론.
+// 이미지가 아니면 null 반환.
+var _IMAGE_EXT_MAP = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+  gif: 'image/gif',  webp: 'image/webp', heic: 'image/heic',
+  bmp: 'image/bmp',  tif:  'image/tiff', tiff: 'image/tiff',
+};
+function _getImageMimeType(att) {
+  var ct = att.getContentType() || '';
+  if (ct.startsWith('image/')) return ct;
+  var ext = (att.getName() || '').split('.').pop().toLowerCase();
+  return _IMAGE_EXT_MAP[ext] || null;
+}
+
 // ── Cloudinary 이미지 업로드 → URL ───────────────────────────────
 function _uploadToCloudinary(attachment) {
-  // content-type이 octet-stream이면 확장자에서 추론
-  let ct = attachment.getContentType() || '';
-  if (!ct.startsWith('image/')) {
-    const ext = (attachment.getName() || '').split('.').pop().toLowerCase();
-    const extMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
-                     gif: 'image/gif', webp: 'image/webp', heic: 'image/heic',
-                     bmp: 'image/bmp', tif: 'image/tiff', tiff: 'image/tiff' };
-    ct = extMap[ext] || 'image/jpeg';
-  }
+  const ct = _getImageMimeType(attachment) || 'image/jpeg';
 
   const base64  = Utilities.base64Encode(attachment.getBytes());
   const dataUri = 'data:' + ct + ';base64,' + base64;
@@ -435,8 +447,8 @@ function _uploadToCloudinary(attachment) {
 }
 
 // ── Firestore에 문서 저장 ────────────────────────────────────────
-function _addQnADoc(title, description, answer, photoUrls, references, department) {
-  const token   = _getIdToken();
+function _addQnADoc(title, description, answer, photoUrls, references, department, cachedToken) {
+  const token   = cachedToken || _getIdToken();
   const dateStr = new Date().toISOString().slice(0, 10);
   const dept    = department || 'qna';
 
@@ -510,6 +522,7 @@ function checkQnAEmails() {
   if (!threads.length) { Logger.log('새 이메일 없음'); return; }
 
   const doneLabel = _getOrCreateLabel(CONFIG.PROCESSED_LABEL);
+  const idToken   = _getIdToken(); // 루프 밖에서 1회만 인증
 
   threads.forEach(function(thread) {
     try {
@@ -530,13 +543,7 @@ function checkQnAEmails() {
       const allAtts = msg.getAttachments({ includeInlineImages: true, includeAttachments: true });
       Logger.log('[첨부파일] 총 ' + allAtts.length + '개 / 타입: ' + allAtts.map(function(a) { return a.getName() + '(' + a.getContentType() + ')'; }).join(', '));
 
-      const imageAtts = allAtts.filter(function(a) {
-        const ct = a.getContentType() || '';
-        if (ct.startsWith('image/')) return true;
-        // content-type이 octet-stream으로 오는 경우 확장자로 판별
-        const name = (a.getName() || '').toLowerCase();
-        return /\.(jpe?g|png|gif|webp|heic|bmp|tiff?)$/.test(name);
-      });
+      const imageAtts = allAtts.filter(function(a) { return !!_getImageMimeType(a); });
       Logger.log('[이미지] ' + imageAtts.length + '개 감지');
 
       const photoUrls = [];
@@ -579,7 +586,7 @@ function checkQnAEmails() {
         answer = visionNote; // 이미지 없으면 '' → answer 필드 비어 있음
       }
 
-      _addQnADoc(title, body, answer, photoUrls, references, dept);
+      _addQnADoc(title, body, answer, photoUrls, references, dept, idToken);
       thread.markRead();
       thread.addLabel(doneLabel);
       Logger.log('[완료] ' + dept + ' / ' + title + ' / 사진 ' + photoUrls.length + '장');
