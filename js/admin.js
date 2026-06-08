@@ -592,13 +592,9 @@ async function uploadPhotos(type) {
 
   progWrap.style.display = 'block';
   let done = 0;
-  const results = [];
-
-  for (const photo of photos) {
-    if (!photo.file) {
-      results.push({ url: photo.url, caption: photo.caption });
-      continue;
-    }
+  // 순서 유지하며 병렬 업로드 (이미 업로드된 사진은 그대로, 새 파일만 fetch)
+  const results = await Promise.all(photos.map(async photo => {
+    if (!photo.file) return { url: photo.url, caption: photo.caption };
     const formData = new FormData();
     formData.append('file', photo.file);
     formData.append('upload_preset', cloudinaryConfig.uploadPreset);
@@ -610,10 +606,10 @@ async function uploadPhotos(type) {
     const data = await res.json();
     if (!data.secure_url) throw new Error(data.error?.message || '업로드 실패');
 
-    results.push({ url: data.secure_url, caption: photo.caption });
     done++;
     progBar.style.width = `${Math.round((done / toUpload.length) * 100)}%`;
-  }
+    return { url: data.secure_url, caption: photo.caption };
+  }));
 
   progWrap.style.display = 'none';
   progBar.style.width    = '0%';

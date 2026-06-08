@@ -148,6 +148,8 @@ const DEPARTMENTS = [
 
 // Runtime departments — overwritten by Firestore data after load
 let _departments = [...DEPARTMENTS];
+// O(1) id→dept 조회 맵 (_initDeptDOM에서 갱신). hot path의 .find() 대체
+let _deptById = Object.fromEntries(_departments.map(d => [d.id, d]));
 
 let allCases = [];
 let allContents = [];
@@ -278,8 +280,11 @@ function showPage(pageId) {
 // ── Home ──────────────────────────────────────────────────────
 function renderHome() {
   const grid = document.getElementById('dept-grid-home');
+  // 부문별 자료 수를 1패스로 집계 (부문마다 filter 돌리는 O(부문×자료) 회피)
+  const counts = {};
+  allContents.forEach(c => { counts[c.department] = (counts[c.department] || 0) + 1; });
   grid.innerHTML = _departments.map(d => {
-    const count = allContents.filter(c => c.department === d.id).length;
+    const count = counts[d.id] || 0;
     const iconHtml = d.iconImg
       ? `<img src="${d.iconImg}" alt="${d.name}" style="width:2.8rem;height:2.8rem;object-fit:contain;">`
       : d.icon;
@@ -353,6 +358,7 @@ function _deptIconHtml(d) {
 
 function _initDeptDOM(depts) {
   _departments = depts;
+  _deptById = Object.fromEntries(depts.map(d => [d.id, d]));
 
   // Generate dept page divs
   const pagesContainer = document.getElementById('dept-pages-container');
@@ -406,7 +412,7 @@ _initDeptDOM(DEPARTMENTS);
 
 // ── Card HTML ──────────────────────────────────────────────────
 function cardHTML(item, type) {
-  const dept = _departments.find(d => d.id === item.department);
+  const dept = _deptById[item.department];
   const deptName = dept ? dept.name : '';
   const firstPhoto = item.photos && item.photos[0];
   const thumb = firstPhoto
@@ -448,7 +454,7 @@ function openModal(id, type) {
   if (!item) return;
   _currentModalItem = { item, type };
 
-  const dept = _departments.find(d => d.id === item.department);
+  const dept = _deptById[item.department];
   currentPhotos = item.photos || [];
   currentPhotoIndex = 0;
   // 사진 프리로드 (네트워크만, decode 없이)
@@ -630,7 +636,7 @@ function updateGallery() {
 function printCase() {
   const item = _currentModalItem?.item;
   if (!item) return;
-  const dept = _departments.find(d => d.id === item.department);
+  const dept = _deptById[item.department];
 
   const photosHTML = (item.photos || []).map(p => `
     <div class="print-photo-item">
@@ -913,12 +919,7 @@ function _setupTcDrag() {
     _updateMultiBar();
   });
 
-  document.addEventListener('mouseup', () => {
-    if (_tcDragging) {
-      _tcDragging = false;
-      if (_tcDragMoved && _tcMultiSel.size > 0) _updateMultiBar();
-    }
-  });
+  _setupTcDragGlobal();
 
   // Touch support
   wrap.addEventListener('touchstart', e => {
@@ -943,7 +944,19 @@ function _setupTcDrag() {
     addToSel(n);
     _updateMultiBar();
   }, { passive: true });
+}
 
+// document 레벨 드래그 종료 리스너 — 1회만 등록 (에디터 재오픈마다 누적 방지)
+let _tcGlobalSetup = false;
+function _setupTcDragGlobal() {
+  if (_tcGlobalSetup) return;
+  _tcGlobalSetup = true;
+  document.addEventListener('mouseup', () => {
+    if (_tcDragging) {
+      _tcDragging = false;
+      if (_tcDragMoved && _tcMultiSel.size > 0) _updateMultiBar();
+    }
+  });
   document.addEventListener('touchend', () => { _tcDragging = false; });
 }
 
@@ -1926,7 +1939,7 @@ function _edInsertImg(size) {
   _edToast('삽입 완료!');
 }
 
-// ── Cloudinary 업로드 ─────────────────────────────────────────
+// ── Cloudinary 업로드 (병렬) ──────────────────────────────────
 async function _edUploadPhotos() {
   const progWrap = document.getElementById('ed-progress');
   const progBar  = document.getElementById('ed-progress-bar');
@@ -1934,19 +1947,19 @@ async function _edUploadPhotos() {
   if (!toUpload.length) return _edPhotos.map(p => ({ url: p.url, caption: p.caption, annotations: p.annotations||[] }));
   progWrap.style.display = 'block';
   let done = 0;
-  const results = [];
-  for (const photo of _edPhotos) {
-    if (!photo.file) { results.push({ url: photo.url, caption: photo.caption, annotations: photo.annotations||[] }); continue; }
+  // 순서 유지하며 병렬 업로드 (이미 업로드된 사진은 그대로, 새 파일만 fetch)
+  const results = await Promise.all(_edPhotos.map(async photo => {
+    if (!photo.file) return { url: photo.url, caption: photo.caption, annotations: photo.annotations||[] };
     const fd = new FormData();
     fd.append('file', photo.file);
     fd.append('upload_preset', cloudinaryConfig.uploadPreset);
     const res  = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`, { method: 'POST', body: fd });
     const data = await res.json();
     if (!data.secure_url) throw new Error(data.error?.message || '업로드 실패');
-    results.push({ url: data.secure_url, caption: photo.caption, annotations: photo.annotations||[] });
     done++;
     progBar.style.width = `${Math.round(done / toUpload.length * 100)}%`;
-  }
+    return { url: data.secure_url, caption: photo.caption, annotations: photo.annotations||[] };
+  }));
   progWrap.style.display = 'none';
   progBar.style.width = '0%';
   return results;
@@ -2456,7 +2469,7 @@ function _doSearch(q) {
   const results = _searchIndex.filter(c =>
     c.title.includes(q) || (c.summary||'').includes(q) || (c.tags||[]).some(t => t.includes(q))
   ).slice(0, 20);
-  const dept = id => _departments.find(d => d.id === id);
+  const dept = id => _deptById[id];
   document.getElementById('search-results-list').innerHTML = results.length
     ? results.map(c => `
         <div class="search-result-item" onclick="_closeSearch();setTimeout(()=>openModal('${c.id}','${c._type}'),200)">
@@ -2623,7 +2636,7 @@ function _openPresentation() {
 }
 
 function _buildPresSlides(item) {
-  const dept = _departments.find(d => d.id === item.department);
+  const dept = _deptById[item.department];
   const slides = [{ type: 'cover', item, dept }];
   (item.photos || []).forEach((p, i) =>
     slides.push({ type: 'photo', photo: p, photoIdx: i + 1, photoTotal: (item.photos||[]).length })
