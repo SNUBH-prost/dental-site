@@ -74,7 +74,10 @@ function _renderWithCitations(text, refs) {
           ? `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(ref.title)}`
           : '';
     const hrefAttr = href ? ` data-href="${href.replace(/"/g, '&quot;')}"` : '';
-    return `<sup class="cite-sup" data-n="${n + 1}" data-tip="${tip}"${hrefAttr}>[${n + 1}]</sup>`;
+    const inner = href
+      ? `<a class="cite-link" href="${href.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">[${n + 1}]</a>`
+      : `[${n + 1}]`;
+    return `<sup class="cite-sup" data-n="${n + 1}" data-tip="${tip}"${hrefAttr}>${inner}</sup>`;
   });
 
   return marked.parse(processed);
@@ -2854,9 +2857,10 @@ function _setupCiteTip() {
   document.addEventListener('click', e => {
     const el = e.target.closest('.cite-sup');
     if (!el) { tip.style.display = 'none'; return; }
+    // <a> handles navigation; stopPropagation prevents modal/overlay close
     e.stopPropagation();
     if (el.dataset.href) {
-      window.open(el.dataset.href, '_blank', 'noopener');
+      tip.style.display = 'none';
       return;
     }
     // 링크 없는 경우(교과서 등): 툴팁 토글

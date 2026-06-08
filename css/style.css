@@ -2116,6 +2116,11 @@ body.focus-mode .modal {
 .cite-sup:hover {
   background: #dbeafe;
 }
+.cite-sup a.cite-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 1px;
+}
 
 #cite-tip {
   position: absolute;
