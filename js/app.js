@@ -2915,7 +2915,7 @@ function _buildCalGrid() {
     const chips = evs.slice(0, 3).map(ev => {
       const label = ev.treatment || ev.patient || '일정';
       const col   = _schedColor(ev.treatment || ev.dept || label);
-      return `<div class="cal-chip${ev.done ? ' cal-chip-done' : ''}"><span class="cal-dot" style="background:${col}"></span><span class="cal-chip-label">${_esc(label)}</span></div>`;
+      return `<div class="cal-chip${ev.done ? ' cal-chip-done' : ''}" style="background:${col}1a;color:${col};border-left:3px solid ${col}"><span class="cal-chip-label">${_esc(label)}</span></div>`;
     }).join('');
     const more = evs.length > 3 ? `<div class="cal-more">+${evs.length - 3}</div>` : '';
 

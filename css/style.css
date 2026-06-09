@@ -2235,28 +2235,17 @@ body.focus-mode .modal {
   color: #fff;
   font-weight: 700;
 }
-.cal-chips { display: flex; flex-direction: column; gap: 2px; }
+.cal-chips { display: flex; flex-direction: column; gap: 3px; }
 .cal-chip {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
   font-size: 0.7rem;
-  font-weight: 500;
-  padding: 2px 5px;
-  border-radius: 5px;
-  background: var(--bg);
-  color: var(--text);
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
   white-space: nowrap;
   overflow: hidden;
-  line-height: 1.4;
+  line-height: 1.45;
 }
-.cal-chip .cal-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.cal-chip .cal-chip-label { overflow: hidden; text-overflow: ellipsis; }
+.cal-chip .cal-chip-label { display: block; overflow: hidden; text-overflow: ellipsis; }
 .cal-chip.cal-chip-done { opacity: 0.5; }
 .cal-chip.cal-chip-done .cal-chip-label { text-decoration: line-through; }
 .cal-more { font-size: 0.66rem; color: var(--text-muted); padding-left: 2px; font-weight: 600; }
@@ -2405,8 +2394,7 @@ body.focus-mode .modal {
 @media (max-width: 600px) {
   .cal-cell { min-height: 5rem; padding: 0.3rem 0.32rem; }
   .cal-title { font-size: 1.25rem; }
-  .cal-chip { font-size: 0.62rem; padding: 1px 4px; gap: 0.25rem; }
-  .cal-chip .cal-dot { width: 5px; height: 5px; }
+  .cal-chip { font-size: 0.62rem; padding: 1px 4px; }
   .cal-daynum { font-size: 0.75rem; width: 1.5rem; height: 1.5rem; }
   .cal-weekdays span { padding: 0.5rem 0.4rem; font-size: 0.64rem; }
   .cal-field-row { flex-direction: column; gap: 0; }
