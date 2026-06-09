@@ -304,6 +304,8 @@ function renderHome() {
   document.getElementById('recent-cases').innerHTML =
     recent.length ? recent.map(c => cardHTML(c, 'case')).join('') :
     '<div class="empty">등록된 케이스가 없습니다.</div>';
+
+  renderHomeCalendar();
 }
 
 // ── Clinical Cases ─────────────────────────────────────────────
@@ -2906,23 +2908,28 @@ function _buildCalGrid() {
   if (titleEl) titleEl.textContent = `${_calYear}년 ${_calMonth + 1}월`;
 
   const grid = document.getElementById('cal-grid');
-  if (!grid) return;
+  if (grid) grid.innerHTML = _calCellsHTML(_calYear, _calMonth);
 
-  // 날짜별 일정 그룹화
+  const today    = new Date();
+  const todayStr = _dateStr(today.getFullYear(), today.getMonth(), today.getDate());
+  _buildCalAgenda(todayStr);
+}
+
+// 한 달치 셀 HTML 생성 (캘린더 페이지·홈 미니 캘린더 공용)
+function _calCellsHTML(y, m) {
   const byDate = {};
   _schedules.forEach(s => { (byDate[s.date] = byDate[s.date] || []).push(s); });
 
-  const firstDow   = new Date(_calYear, _calMonth, 1).getDay(); // 0=일
-  const daysInMon  = new Date(_calYear, _calMonth + 1, 0).getDate();
+  const firstDow   = new Date(y, m, 1).getDay(); // 0=일
+  const daysInMon  = new Date(y, m + 1, 0).getDate();
   const today      = new Date();
   const todayStr   = _dateStr(today.getFullYear(), today.getMonth(), today.getDate());
 
   let cells = '';
-  // 앞쪽 빈 칸
   for (let i = 0; i < firstDow; i++) cells += '<div class="cal-cell cal-empty"></div>';
 
   for (let d = 1; d <= daysInMon; d++) {
-    const ds   = _dateStr(_calYear, _calMonth, d);
+    const ds   = _dateStr(y, m, d);
     const dow  = (firstDow + d - 1) % 7;
     const evs  = byDate[ds] || [];
     const isToday = ds === todayStr;
@@ -2945,9 +2952,23 @@ function _buildCalGrid() {
   // 마지막 주를 채워 직사각형 그리드 유지 (노션식 정렬)
   const trailing = (7 - ((firstDow + daysInMon) % 7)) % 7;
   for (let i = 0; i < trailing; i++) cells += '<div class="cal-cell cal-empty"></div>';
-  grid.innerHTML = cells;
+  return cells;
+}
 
-  _buildCalAgenda(todayStr);
+// 홈 화면 하단 미니 캘린더 (항상 이번 달)
+async function renderHomeCalendar() {
+  const grid = document.getElementById('cal-grid-home');
+  if (!grid) return;
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  if (_calYear == null) { _calYear = y; _calMonth = m; }
+  if (_schedMonthKey !== `${y}-${m}`) {
+    await loadSchedules(y, m);
+    _calYear = y; _calMonth = m;
+  }
+  const titleEl = document.getElementById('cal-title-home');
+  if (titleEl) titleEl.textContent = `${y}년 ${m + 1}월`;
+  grid.innerHTML = _calCellsHTML(y, m);
 }
 
 // ── 그리드 아래 어젠다(시간순 목록) ────────────────────────────

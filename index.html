@@ -130,6 +130,15 @@
       <a href="javascript:void(0)" onclick="showPage('cases')" style="font-size:0.85rem;color:var(--primary-light);">전체 보기</a>
     </div>
     <div class="card-grid" id="recent-cases"></div>
+
+    <div class="section-header">
+      <div class="section-title">이번 달 일정</div>
+      <a href="javascript:void(0)" onclick="showPage('calendar')" style="font-size:0.85rem;color:var(--primary-light);">전체 보기</a>
+    </div>
+    <div class="cal-weekdays">
+      <span class="cal-sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="cal-sat">토</span>
+    </div>
+    <div class="cal-grid" id="cal-grid-home"></div>
   </div>
 
   <!-- ── Clinical Cases ── -->
@@ -276,7 +285,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
 <script defer src="js/firebase-config.js?v=21"></script>
 <script defer src="js/cloudinary-config.js?v=21"></script>
-<script defer src="js/app.js?v=79"></script>
+<script defer src="js/app.js?v=80"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {
