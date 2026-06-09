@@ -2264,6 +2264,69 @@ body.focus-mode .modal {
   font-variant-numeric: tabular-nums;
 }
 
+/* 그리드 아래 어젠다(시간순 목록) */
+.cal-agenda { margin-top: 1.6rem; }
+.cal-agenda-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.7rem;
+}
+.cal-ag-date {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 1rem 0 0.4rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+.cal-ag-date:first-of-type { margin-top: 0; }
+.cal-ag-date span { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+.cal-ag-date.cal-ag-today { color: var(--primary); }
+.cal-ag-date.cal-ag-today span { color: var(--primary); }
+.cal-ag-date.cal-ag-past { opacity: 0.5; }
+.cal-ag-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.cal-ag-row:hover { background: var(--primary-pale); }
+.cal-ag-row.cal-ag-past { opacity: 0.55; }
+.cal-ag-done .cal-ag-label { text-decoration: line-through; }
+.cal-ag-time {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 3rem;
+  font-variant-numeric: tabular-nums;
+}
+.cal-ag-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cal-ag-label { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+.cal-ag-sub { font-size: 0.8rem; color: var(--text-muted); }
+.cal-ag-dept {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 0.12rem 0.5rem;
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .cal-ag-sub { display: none; }
+  .cal-ag-time { min-width: 2.6rem; font-size: 0.78rem; }
+}
+
 /* 날짜 상세 모달 */
 .cal-day-modal { max-width: 540px; }
 .cal-day-title {

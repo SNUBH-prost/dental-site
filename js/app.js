@@ -2946,6 +2946,47 @@ function _buildCalGrid() {
   const trailing = (7 - ((firstDow + daysInMon) % 7)) % 7;
   for (let i = 0; i < trailing; i++) cells += '<div class="cal-cell cal-empty"></div>';
   grid.innerHTML = cells;
+
+  _buildCalAgenda(todayStr);
+}
+
+// ── 그리드 아래 어젠다(시간순 목록) ────────────────────────────
+function _buildCalAgenda(todayStr) {
+  const wrap = document.getElementById('cal-agenda');
+  if (!wrap) return;
+
+  const evs = [..._schedules].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return (a.time || '99').localeCompare(b.time || '99');
+  });
+
+  if (!evs.length) { wrap.innerHTML = ''; return; }
+
+  const dows = ['일','월','화','수','목','금','토'];
+  let html = '<div class="cal-agenda-title">이번 달 일정</div>';
+  let lastDate = null;
+  evs.forEach(ev => {
+    const past = ev.date < todayStr;
+    if (ev.date !== lastDate) {
+      const [y, m, d] = ev.date.split('-').map(Number);
+      const dow = dows[new Date(y, m - 1, d).getDay()];
+      const cls = (past ? ' cal-ag-past' : '') + (ev.date === todayStr ? ' cal-ag-today' : '');
+      html += `<div class="cal-ag-date${cls}">${m}/${d} <span>(${dow})</span></div>`;
+      lastDate = ev.date;
+    }
+    const col   = _schedColor(ev.treatment || ev.dept || ev.patient || '일정');
+    const label = ev.treatment || ev.patient || '일정';
+    const dept  = ev.dept ? _deptById[ev.dept] : null;
+    html += `
+      <div class="cal-ag-row${ev.done ? ' cal-ag-done' : ''}${past ? ' cal-ag-past' : ''}" onclick="openDayModal('${ev.date}')">
+        <span class="cal-ag-time">${ev.time ? _esc(ev.time) : ''}</span>
+        <span class="cal-ag-dot" style="background:${col}"></span>
+        <span class="cal-ag-label">${_esc(label)}</span>
+        ${ev.patient && ev.treatment ? `<span class="cal-ag-sub">${_esc(ev.patient)}</span>` : ''}
+        ${dept ? `<span class="cal-ag-dept">${_esc(dept.name)}</span>` : ''}
+      </div>`;
+  });
+  wrap.innerHTML = html;
 }
 
 // ── 날짜 상세 모달 ─────────────────────────────────────────────
