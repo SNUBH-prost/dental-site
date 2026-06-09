@@ -2237,6 +2237,9 @@ body.focus-mode .modal {
 }
 .cal-chips { display: flex; flex-direction: column; gap: 3px; }
 .cal-chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
   font-size: 0.7rem;
   font-weight: 600;
   padding: 1px 5px;
@@ -2246,9 +2249,20 @@ body.focus-mode .modal {
   line-height: 1.45;
 }
 .cal-chip .cal-chip-label { display: block; overflow: hidden; text-overflow: ellipsis; }
+.cal-chip-time { opacity: 0.75; font-weight: 500; flex-shrink: 0; }
+.cal-chip-label { overflow: hidden; text-overflow: ellipsis; }
 .cal-chip.cal-chip-done { opacity: 0.5; }
 .cal-chip.cal-chip-done .cal-chip-label { text-decoration: line-through; }
 .cal-more { font-size: 0.66rem; color: var(--text-muted); padding-left: 2px; font-weight: 600; }
+.cal-ev-time {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-radius: 5px;
+  padding: 0.05rem 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
 
 /* 날짜 상세 모달 */
 .cal-day-modal { max-width: 540px; }

@@ -2915,7 +2915,8 @@ function _buildCalGrid() {
     const chips = evs.slice(0, 3).map(ev => {
       const label = ev.treatment || ev.patient || '일정';
       const col   = _schedColor(ev.treatment || ev.dept || label);
-      return `<div class="cal-chip${ev.done ? ' cal-chip-done' : ''}" style="background:${col}1a;color:${col};border-left:3px solid ${col}"><span class="cal-chip-label">${_esc(label)}</span></div>`;
+      const timeStr = ev.time ? `<span class="cal-chip-time">${_esc(ev.time)}</span>` : '';
+      return `<div class="cal-chip${ev.done ? ' cal-chip-done' : ''}" style="background:${col}1a;color:${col};border-left:3px solid ${col}">${timeStr}<span class="cal-chip-label">${_esc(label)}</span></div>`;
     }).join('');
     const more = evs.length > 3 ? `<div class="cal-more">+${evs.length - 3}</div>` : '';
 
@@ -2964,7 +2965,12 @@ function _renderDayList() {
   if (!list) return;
   const evs = _schedules
     .filter(s => s.date === _schedDayStr)
-    .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+    .sort((a, b) => {
+      if (a.time && b.time) return a.time.localeCompare(b.time);
+      if (a.time) return -1;
+      if (b.time) return 1;
+      return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+    });
 
   const addBtn = isAdmin
     ? `<button class="cal-add-btn" onclick="_schedOpenForm()">+ 일정 추가</button>`
@@ -2986,7 +2992,11 @@ function _renderDayList() {
     return `
       <div class="cal-ev${ev.done ? ' cal-ev-done' : ''}" style="border-left:4px solid ${col}">
         <div class="cal-ev-head">
-          <div class="cal-ev-title">${ev.treatment ? `<span class="cal-ev-treat" style="color:${col}">${_esc(ev.treatment)}</span>` : ''}${ev.patient ? `<span class="cal-ev-patient">${_esc(ev.patient)}</span>` : ''}</div>
+          <div class="cal-ev-title">
+            ${ev.time ? `<span class="cal-ev-time">${_esc(ev.time)}</span>` : ''}
+            ${ev.treatment ? `<span class="cal-ev-treat" style="color:${col}">${_esc(ev.treatment)}</span>` : ''}
+            ${ev.patient ? `<span class="cal-ev-patient">${_esc(ev.patient)}</span>` : ''}
+          </div>
           ${adminBtns}
         </div>
         ${dept ? `<div class="cal-ev-dept">${_deptIconHtml(dept)}${_esc(dept.name)}</div>` : ''}
@@ -3008,9 +3018,15 @@ function _schedOpenForm(id) {
   const form = document.getElementById('cal-edit-form');
   form.innerHTML = `
     <div class="cal-form-title">${id ? '✎ 일정 편집' : '＋ 새 일정'}</div>
-    <div class="cal-field">
-      <label class="cal-field-label">진료 종류</label>
-      <input id="sf-treatment" class="cal-input" placeholder="예: 임플란트 2차" value="${ev ? _esc(ev.treatment || '') : ''}">
+    <div class="cal-field-row">
+      <div class="cal-field" style="flex:2">
+        <label class="cal-field-label">진료 종류</label>
+        <input id="sf-treatment" class="cal-input" placeholder="예: 임플란트 2차" value="${ev ? _esc(ev.treatment || '') : ''}">
+      </div>
+      <div class="cal-field" style="flex:1">
+        <label class="cal-field-label">시간</label>
+        <input id="sf-time" type="time" class="cal-input" value="${ev ? _esc(ev.time || '') : ''}">
+      </div>
     </div>
     <div class="cal-field-row">
       <div class="cal-field">
@@ -3044,6 +3060,7 @@ function _schedHideForm() {
 async function _schedSave() {
   if (!isAdmin) return;
   const treatment = document.getElementById('sf-treatment').value.trim();
+  const time      = document.getElementById('sf-time').value.trim();
   const patient   = document.getElementById('sf-patient').value.trim();
   const dept      = document.getElementById('sf-dept').value;
   const notes     = document.getElementById('sf-notes').value.trim();
@@ -3054,7 +3071,7 @@ async function _schedSave() {
     return;
   }
 
-  const data = { date: _schedDayStr, treatment, patient, dept, notes, done };
+  const data = { date: _schedDayStr, treatment, time, patient, dept, notes, done };
   try {
     if (_schedEditId) {
       data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
