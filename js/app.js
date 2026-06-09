@@ -2849,6 +2849,21 @@ function _schedColor(s) {
 function _pad2(n) { return n < 10 ? '0' + n : '' + n; }
 function _dateStr(y, m, d) { return `${y}-${_pad2(m + 1)}-${_pad2(d)}`; }
 
+// 시간 입력: 숫자만 받아 HH:MM(24h)로 자동 포맷
+function _onSchedTimeInput(el) {
+  let v = el.value.replace(/\D/g, '').slice(0, 4);
+  if (v.length >= 3) v = v.slice(0, 2) + ':' + v.slice(2);
+  el.value = v;
+}
+// 저장 시 24h HH:MM으로 정규화. 유효하지 않으면 '' 반환
+function _normTime(str) {
+  const m = (str || '').match(/^(\d{1,2}):?(\d{2})$/);
+  if (!m) return '';
+  let h = +m[1], mm = +m[2];
+  if (h > 23 || mm > 59) return '';
+  return _pad2(h) + ':' + _pad2(mm);
+}
+
 // 현재 달의 일정을 Firestore에서 로드 (날짜 문자열 범위 쿼리, 복합 인덱스 불필요)
 async function loadSchedules(y, m) {
   const start = _dateStr(y, m, 1);
@@ -3024,8 +3039,8 @@ function _schedOpenForm(id) {
         <input id="sf-treatment" class="cal-input" placeholder="예: 임플란트 2차" value="${ev ? _esc(ev.treatment || '') : ''}">
       </div>
       <div class="cal-field" style="flex:1">
-        <label class="cal-field-label">시간</label>
-        <input id="sf-time" type="time" class="cal-input" value="${ev ? _esc(ev.time || '') : ''}">
+        <label class="cal-field-label">시간 (24h)</label>
+        <input id="sf-time" class="cal-input" inputmode="numeric" maxlength="5" placeholder="예: 1430" value="${ev ? _esc(ev.time || '') : ''}" oninput="_onSchedTimeInput(this)">
       </div>
     </div>
     <div class="cal-field-row">
@@ -3060,7 +3075,12 @@ function _schedHideForm() {
 async function _schedSave() {
   if (!isAdmin) return;
   const treatment = document.getElementById('sf-treatment').value.trim();
-  const time      = document.getElementById('sf-time').value.trim();
+  const timeRaw   = document.getElementById('sf-time').value.trim();
+  const time      = _normTime(timeRaw);
+  if (timeRaw && !time) {
+    _edToast('시간은 24시간제(예: 1430 또는 14:30)로 입력하세요.', 'error');
+    return;
+  }
   const patient   = document.getElementById('sf-patient').value.trim();
   const dept      = document.getElementById('sf-dept').value;
   const notes     = document.getElementById('sf-notes').value.trim();
