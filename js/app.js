@@ -2915,7 +2915,7 @@ function _buildCalGrid() {
     const chips = evs.slice(0, 3).map(ev => {
       const label = ev.treatment || ev.patient || '일정';
       const col   = _schedColor(ev.treatment || ev.dept || label);
-      return `<div class="cal-chip" style="background:${col}1a;color:${col};border-left:3px solid ${col}">${_esc(label)}</div>`;
+      return `<div class="cal-chip${ev.done ? ' cal-chip-done' : ''}"><span class="cal-dot" style="background:${col}"></span><span class="cal-chip-label">${_esc(label)}</span></div>`;
     }).join('');
     const more = evs.length > 3 ? `<div class="cal-more">+${evs.length - 3}</div>` : '';
 
@@ -2926,6 +2926,9 @@ function _buildCalGrid() {
         <div class="cal-chips">${chips}${more}</div>
       </div>`;
   }
+  // 마지막 주를 채워 직사각형 그리드 유지 (노션식 정렬)
+  const trailing = (7 - ((firstDow + daysInMon) % 7)) % 7;
+  for (let i = 0; i < trailing; i++) cells += '<div class="cal-cell cal-empty"></div>';
   grid.innerHTML = cells;
 }
 
@@ -3004,11 +3007,25 @@ function _schedOpenForm(id) {
 
   const form = document.getElementById('cal-edit-form');
   form.innerHTML = `
-    <div class="cal-form-title">${id ? '일정 편집' : '새 일정'}</div>
-    <input id="sf-treatment" class="cal-input" placeholder="진료 종류 (예: 임플란트 2차)" value="${ev ? _esc(ev.treatment || '') : ''}">
-    <input id="sf-patient" class="cal-input" placeholder="환자 (식별 최소, 예: K.H.M / 32세)" value="${ev ? _esc(ev.patient || '') : ''}">
-    <select id="sf-dept" class="cal-input">${deptOpts}</select>
-    <textarea id="sf-notes" class="cal-input cal-textarea" placeholder="챙길 점 (마크다운 가능)">${ev ? _esc(ev.notes || '') : ''}</textarea>
+    <div class="cal-form-title">${id ? '✎ 일정 편집' : '＋ 새 일정'}</div>
+    <div class="cal-field">
+      <label class="cal-field-label">진료 종류</label>
+      <input id="sf-treatment" class="cal-input" placeholder="예: 임플란트 2차" value="${ev ? _esc(ev.treatment || '') : ''}">
+    </div>
+    <div class="cal-field-row">
+      <div class="cal-field">
+        <label class="cal-field-label">환자</label>
+        <input id="sf-patient" class="cal-input" placeholder="식별 최소 (예: K.H.M / 32세)" value="${ev ? _esc(ev.patient || '') : ''}">
+      </div>
+      <div class="cal-field">
+        <label class="cal-field-label">부문</label>
+        <select id="sf-dept" class="cal-input">${deptOpts}</select>
+      </div>
+    </div>
+    <div class="cal-field">
+      <label class="cal-field-label">챙길 점 · 메모</label>
+      <textarea id="sf-notes" class="cal-input cal-textarea" placeholder="마크다운 사용 가능 (예: - 골이식 부위 확인&#10;- 봉합사 제거)">${ev ? _esc(ev.notes || '') : ''}</textarea>
+    </div>
     <label class="cal-done-row"><input type="checkbox" id="sf-done"${ev && ev.done ? ' checked' : ''}> 완료 표시</label>
     <div class="cal-form-btns">
       <button class="cal-save-btn" onclick="_schedSave()">저장</button>
