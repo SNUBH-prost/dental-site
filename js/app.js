@@ -275,6 +275,7 @@ function showPage(pageId) {
   if (navLink) navLink.classList.add('active');
   window.scrollTo(0, 0);
   _currentPage = pageId;
+  if (pageId === 'calendar') renderCalendar();
   if (!_isPopState) {
     history.pushState({ page: pageId }, '');
   }
@@ -750,6 +751,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fsOv = document.getElementById('fs-gallery');
     const fsOpen = fsOv && fsOv.classList.contains('open');
 
+    // 날짜 상세 모달 열린 상태에서 뒤로가기 → 모달만 닫기
+    const calDayOv = document.getElementById('cal-day-overlay');
+    if (calDayOv && calDayOv.classList.contains('open')) {
+      _calDayPushed = false;
+      calDayOv.classList.remove('open');
+      document.body.style.overflow = '';
+      return;
+    }
+
     // 검색 오버레이 열린 상태에서 뒤로가기 → 검색 닫기
     const searchOv = document.getElementById('search-overlay');
     if (searchOv && searchOv.classList.contains('open')) {
@@ -803,7 +813,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (e.key === 'ArrowRight') _presGo(1);
       return;
     }
-    if (e.key === 'Escape') { _closeSearch(); closeModal(); closeEditor(); _annCancel(); }
+    if (e.key === 'Escape') { _closeSearch(); closeModal(); closeEditor(); closeDayModal(); _annCancel(); }
     if (document.getElementById('modal-overlay').classList.contains('open')) {
       if (e.key === 'ArrowLeft')  changePhoto(-1);
       if (e.key === 'ArrowRight') changePhoto(1);
@@ -2817,6 +2827,247 @@ function _edToast(msg, type = 'success') {
   t.className = 'show' + (type === 'error' ? ' error' : '');
   clearTimeout(t._timer);
   t._timer = setTimeout(() => { t.className = ''; }, 3000);
+}
+
+// ════════════════════════════════════════════════════════════════
+// 진료 일정 (달력)
+// ════════════════════════════════════════════════════════════════
+let _calYear, _calMonth;          // _calMonth: 0-indexed
+let _schedules = [];              // 현재 표시 중인 달의 일정 목록
+let _schedMonthKey = null;        // 로드된 달 식별자 "YYYY-M"
+let _schedEditId = null;          // 편집 중인 일정 id (null이면 신규)
+let _schedDayStr = null;          // 현재 열린 날짜 모달의 날짜 "YYYY-MM-DD"
+let _calDayPushed = false;        // 날짜 모달 히스토리 push 여부
+
+const _SCHED_COLORS = ['#2563eb','#f97316','#059669','#9f1239','#7c3aed','#0891b2','#b45309','#db2777'];
+function _schedColor(s) {
+  let h = 0;
+  for (let i = 0; i < (s || '').length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return _SCHED_COLORS[h % _SCHED_COLORS.length];
+}
+
+function _pad2(n) { return n < 10 ? '0' + n : '' + n; }
+function _dateStr(y, m, d) { return `${y}-${_pad2(m + 1)}-${_pad2(d)}`; }
+
+// 현재 달의 일정을 Firestore에서 로드 (날짜 문자열 범위 쿼리, 복합 인덱스 불필요)
+async function loadSchedules(y, m) {
+  const start = _dateStr(y, m, 1);
+  const end   = `${y}-${_pad2(m + 1)}-32`; // 해당 월의 모든 날짜 포함
+  try {
+    const snap = await db.collection('schedules')
+      .where('date', '>=', start).where('date', '<=', end)
+      .get();
+    _schedules = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    _schedules = [];
+    console.warn('[schedules]', e);
+  }
+  _schedMonthKey = `${y}-${m}`;
+}
+
+async function renderCalendar() {
+  const now = new Date();
+  if (_calYear == null) { _calYear = now.getFullYear(); _calMonth = now.getMonth(); }
+  await loadSchedules(_calYear, _calMonth);
+  _buildCalGrid();
+}
+
+function _calShift(delta) {
+  _calMonth += delta;
+  if (_calMonth < 0)  { _calMonth = 11; _calYear--; }
+  if (_calMonth > 11) { _calMonth = 0;  _calYear++; }
+  renderCalendar();
+}
+
+function _calToday() {
+  const now = new Date();
+  _calYear = now.getFullYear();
+  _calMonth = now.getMonth();
+  renderCalendar();
+}
+
+function _buildCalGrid() {
+  const titleEl = document.getElementById('cal-title');
+  if (titleEl) titleEl.textContent = `${_calYear}년 ${_calMonth + 1}월`;
+
+  const grid = document.getElementById('cal-grid');
+  if (!grid) return;
+
+  // 날짜별 일정 그룹화
+  const byDate = {};
+  _schedules.forEach(s => { (byDate[s.date] = byDate[s.date] || []).push(s); });
+
+  const firstDow   = new Date(_calYear, _calMonth, 1).getDay(); // 0=일
+  const daysInMon  = new Date(_calYear, _calMonth + 1, 0).getDate();
+  const today      = new Date();
+  const todayStr   = _dateStr(today.getFullYear(), today.getMonth(), today.getDate());
+
+  let cells = '';
+  // 앞쪽 빈 칸
+  for (let i = 0; i < firstDow; i++) cells += '<div class="cal-cell cal-empty"></div>';
+
+  for (let d = 1; d <= daysInMon; d++) {
+    const ds   = _dateStr(_calYear, _calMonth, d);
+    const dow  = (firstDow + d - 1) % 7;
+    const evs  = byDate[ds] || [];
+    const isToday = ds === todayStr;
+
+    const chips = evs.slice(0, 3).map(ev => {
+      const label = ev.treatment || ev.patient || '일정';
+      const col   = _schedColor(ev.treatment || ev.dept || label);
+      return `<div class="cal-chip" style="background:${col}1a;color:${col};border-left:3px solid ${col}">${_esc(label)}</div>`;
+    }).join('');
+    const more = evs.length > 3 ? `<div class="cal-more">+${evs.length - 3}</div>` : '';
+
+    cells += `
+      <div class="cal-cell${isToday ? ' cal-today' : ''}${dow === 0 ? ' cal-sun' : dow === 6 ? ' cal-sat' : ''}"
+           onclick="openDayModal('${ds}')">
+        <div class="cal-daynum">${d}</div>
+        <div class="cal-chips">${chips}${more}</div>
+      </div>`;
+  }
+  grid.innerHTML = cells;
+}
+
+// ── 날짜 상세 모달 ─────────────────────────────────────────────
+function openDayModal(ds) {
+  _schedDayStr = ds;
+  _schedEditId = null;
+  const ov = document.getElementById('cal-day-overlay');
+  if (!ov) return;
+  const [y, m, d] = ds.split('-').map(Number);
+  const dow = ['일','월','화','수','목','금','토'][new Date(y, m - 1, d).getDay()];
+  document.getElementById('cal-day-title').textContent = `${y}년 ${m}월 ${d}일 (${dow})`;
+  _renderDayList();
+  _schedHideForm();
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  if (!_isPopState) { history.pushState({ calDay: ds }, ''); _calDayPushed = true; }
+}
+
+function closeDayModal() {
+  const ov = document.getElementById('cal-day-overlay');
+  if (!ov || !ov.classList.contains('open')) return;
+  if (_calDayPushed) {
+    history.back(); // popstate 핸들러가 실제로 닫음
+  } else {
+    ov.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+}
+
+function _renderDayList() {
+  const list = document.getElementById('cal-day-list');
+  if (!list) return;
+  const evs = _schedules
+    .filter(s => s.date === _schedDayStr)
+    .sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+
+  const addBtn = isAdmin
+    ? `<button class="cal-add-btn" onclick="_schedOpenForm()">+ 일정 추가</button>`
+    : '';
+
+  if (!evs.length) {
+    list.innerHTML = `<div class="cal-day-empty">등록된 일정이 없습니다.</div>${addBtn}`;
+    return;
+  }
+
+  list.innerHTML = evs.map(ev => {
+    const col  = _schedColor(ev.treatment || ev.dept || ev.patient || '일정');
+    const dept = ev.dept ? _deptById[ev.dept] : null;
+    const adminBtns = isAdmin ? `
+      <div class="cal-ev-actions">
+        <button onclick="event.stopPropagation();_schedOpenForm('${ev.id}')" title="편집">✎</button>
+        <button onclick="event.stopPropagation();_schedDelete('${ev.id}')" title="삭제">🗑</button>
+      </div>` : '';
+    return `
+      <div class="cal-ev${ev.done ? ' cal-ev-done' : ''}" style="border-left:4px solid ${col}">
+        <div class="cal-ev-head">
+          <div class="cal-ev-title">${ev.treatment ? `<span class="cal-ev-treat" style="color:${col}">${_esc(ev.treatment)}</span>` : ''}${ev.patient ? `<span class="cal-ev-patient">${_esc(ev.patient)}</span>` : ''}</div>
+          ${adminBtns}
+        </div>
+        ${dept ? `<div class="cal-ev-dept">${_deptIconHtml(dept)}${_esc(dept.name)}</div>` : ''}
+        ${ev.notes ? `<div class="cal-ev-notes">${marked.parse(ev.notes)}</div>` : ''}
+      </div>`;
+  }).join('') + addBtn;
+}
+
+// ── 일정 추가/편집 폼 ──────────────────────────────────────────
+function _schedOpenForm(id) {
+  if (!isAdmin) return;
+  _schedEditId = id || null;
+  const ev = id ? _schedules.find(s => s.id === id) : null;
+  const deptOpts = ['<option value="">부문 선택 (선택)</option>']
+    .concat(_departments.map(dp =>
+      `<option value="${dp.id}"${ev && ev.dept === dp.id ? ' selected' : ''}>${_esc(dp.name)}</option>`))
+    .join('');
+
+  const form = document.getElementById('cal-edit-form');
+  form.innerHTML = `
+    <div class="cal-form-title">${id ? '일정 편집' : '새 일정'}</div>
+    <input id="sf-treatment" class="cal-input" placeholder="진료 종류 (예: 임플란트 2차)" value="${ev ? _esc(ev.treatment || '') : ''}">
+    <input id="sf-patient" class="cal-input" placeholder="환자 (식별 최소, 예: K.H.M / 32세)" value="${ev ? _esc(ev.patient || '') : ''}">
+    <select id="sf-dept" class="cal-input">${deptOpts}</select>
+    <textarea id="sf-notes" class="cal-input cal-textarea" placeholder="챙길 점 (마크다운 가능)">${ev ? _esc(ev.notes || '') : ''}</textarea>
+    <label class="cal-done-row"><input type="checkbox" id="sf-done"${ev && ev.done ? ' checked' : ''}> 완료 표시</label>
+    <div class="cal-form-btns">
+      <button class="cal-save-btn" onclick="_schedSave()">저장</button>
+      <button class="cal-cancel-btn" onclick="_schedHideForm()">취소</button>
+    </div>`;
+  form.style.display = 'block';
+  document.getElementById('sf-treatment').focus();
+}
+
+function _schedHideForm() {
+  const form = document.getElementById('cal-edit-form');
+  if (form) { form.style.display = 'none'; form.innerHTML = ''; }
+  _schedEditId = null;
+}
+
+async function _schedSave() {
+  if (!isAdmin) return;
+  const treatment = document.getElementById('sf-treatment').value.trim();
+  const patient   = document.getElementById('sf-patient').value.trim();
+  const dept      = document.getElementById('sf-dept').value;
+  const notes     = document.getElementById('sf-notes').value.trim();
+  const done      = document.getElementById('sf-done').checked;
+
+  if (!treatment && !patient && !notes) {
+    _edToast('내용을 입력하세요.', 'error');
+    return;
+  }
+
+  const data = { date: _schedDayStr, treatment, patient, dept, notes, done };
+  try {
+    if (_schedEditId) {
+      data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('schedules').doc(_schedEditId).update(data);
+    } else {
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('schedules').add(data);
+    }
+    await loadSchedules(_calYear, _calMonth);
+    _buildCalGrid();
+    _renderDayList();
+    _schedHideForm();
+    _edToast('저장되었습니다.');
+  } catch (e) {
+    _edToast('저장 실패: ' + (e.message || e), 'error');
+  }
+}
+
+async function _schedDelete(id) {
+  if (!isAdmin) return;
+  if (!confirm('이 일정을 삭제할까요?')) return;
+  try {
+    await db.collection('schedules').doc(id).delete();
+    await loadSchedules(_calYear, _calMonth);
+    _buildCalGrid();
+    _renderDayList();
+    _edToast('삭제되었습니다.');
+  } catch (e) {
+    _edToast('삭제 실패: ' + (e.message || e), 'error');
+  }
 }
 
 // ── 글로벌 에러 핸들러 ────────────────────────────────────────

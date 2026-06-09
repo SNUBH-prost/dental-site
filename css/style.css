@@ -2122,6 +2122,231 @@ body.focus-mode .modal {
   text-underline-offset: 1px;
 }
 
+/* ── 진료 일정 (달력) ───────────────────────────────────────── */
+.cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.cal-monthnav { display: flex; align-items: center; gap: 0.75rem; }
+.cal-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  min-width: 8.5rem;
+  text-align: center;
+}
+.cal-arrow {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.12s, border-color 0.12s;
+}
+.cal-arrow:hover { border-color: var(--primary-light); color: var(--primary); }
+.cal-today {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cal-today:hover { background: var(--primary-light); }
+
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.cal-weekdays span {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.3rem 0;
+}
+.cal-weekdays .cal-sun { color: #dc2626; }
+.cal-weekdays .cal-sat { color: #2563eb; }
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.cal-cell {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  min-height: 6.2rem;
+  padding: 0.4rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  overflow: hidden;
+}
+.cal-cell:hover { border-color: var(--primary-light); box-shadow: 0 2px 8px rgba(37,99,235,0.1); }
+.cal-cell.cal-empty {
+  background: transparent;
+  border: none;
+  cursor: default;
+  box-shadow: none;
+  min-height: 0;
+}
+.cal-cell.cal-today { border-color: var(--primary); border-width: 2px; }
+.cal-daynum { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.cal-cell.cal-sun .cal-daynum { color: #dc2626; }
+.cal-cell.cal-sat .cal-daynum { color: #2563eb; }
+.cal-cell.cal-today .cal-daynum { color: var(--primary); }
+.cal-chips { display: flex; flex-direction: column; gap: 3px; }
+.cal-chip {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.45;
+}
+.cal-more { font-size: 0.66rem; color: var(--text-muted); padding-left: 3px; }
+
+/* 날짜 상세 모달 */
+.cal-day-modal { max-width: 540px; }
+.cal-day-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  padding: 1.4rem 1.6rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+#cal-day-list { padding: 1rem 1.6rem 1.6rem; }
+.cal-day-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 1rem 0;
+  text-align: center;
+}
+.cal-ev {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  margin-bottom: 0.7rem;
+}
+.cal-ev-done { opacity: 0.55; }
+.cal-ev-done .cal-ev-treat { text-decoration: line-through; }
+.cal-ev-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+.cal-ev-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+.cal-ev-treat { font-weight: 700; font-size: 0.95rem; }
+.cal-ev-patient { font-size: 0.82rem; color: var(--text-muted); }
+.cal-ev-dept {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+}
+.cal-ev-dept img { width: 1rem; height: 1rem; object-fit: contain; }
+.cal-ev-notes { font-size: 0.86rem; margin-top: 0.5rem; line-height: 1.55; }
+.cal-ev-notes p { margin: 0.3rem 0; }
+.cal-ev-actions { display: flex; gap: 0.2rem; flex-shrink: 0; }
+.cal-ev-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 5px;
+  opacity: 0.6;
+}
+.cal-ev-actions button:hover { opacity: 1; background: var(--border); }
+
+.cal-add-btn {
+  width: 100%;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0.65rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.3rem;
+}
+.cal-add-btn:hover { background: var(--primary-light); }
+
+/* 일정 추가/편집 폼 */
+#cal-edit-form {
+  padding: 1rem 1.6rem 1.6rem;
+  border-top: 1px solid var(--border);
+}
+.cal-form-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.8rem; }
+.cal-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  margin-bottom: 0.7rem;
+  font-family: inherit;
+}
+.cal-input:focus { outline: none; border-color: var(--primary); }
+.cal-textarea { min-height: 5rem; resize: vertical; line-height: 1.5; }
+.cal-done-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: 0.9rem;
+  cursor: pointer;
+}
+.cal-form-btns { display: flex; gap: 0.6rem; }
+.cal-save-btn {
+  flex: 1;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0.6rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cal-save-btn:hover { background: var(--primary-light); }
+.cal-cancel-btn {
+  background: var(--surface);
+  color: var(--text);
+  border: 1.5px solid var(--border);
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .cal-cell { min-height: 4.6rem; padding: 0.3rem; border-radius: 8px; }
+  .cal-grid, .cal-weekdays { gap: 4px; }
+  .cal-chip { font-size: 0.6rem; padding: 1px 3px; }
+  .cal-daynum { font-size: 0.78rem; }
+  .cal-day-title, #cal-day-list, #cal-edit-form { padding-left: 1.1rem; padding-right: 1.1rem; }
+}
+
 #cite-tip {
   position: absolute;
   z-index: 9999;

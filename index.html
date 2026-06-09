@@ -55,6 +55,7 @@
         </div>
       </div>
 
+      <a href="javascript:void(0)" data-page="calendar" class="nav-link" onclick="showPage('calendar')">일정</a>
       <a href="admin.html?v=1" class="nav-link nav-admin">관리</a>
     </nav>
 
@@ -86,6 +87,7 @@
     <div class="drawer-section-label">부문별 자료</div>
     <div id="drawer-dept-links"></div>
     <div class="drawer-section-label">기타</div>
+    <a href="javascript:void(0)" onclick="showPage('calendar');toggleMobileMenu()"><span class="di">📅</span>일정</a>
     <a href="admin.html?v=1"><span class="di">⚙</span>관리</a>
   </div>
 </div>
@@ -157,7 +159,33 @@
 
   <!-- dept pages injected dynamically by _initDeptDOM() in app.js -->
   <div id="dept-pages-container"></div>
+
+  <!-- ── 진료 일정 (달력) ── -->
+  <div id="page-calendar" class="page">
+    <div class="cal-toolbar">
+      <div class="cal-monthnav">
+        <button class="cal-arrow" onclick="_calShift(-1)" aria-label="이전 달">◀</button>
+        <h2 class="cal-title" id="cal-title">달력</h2>
+        <button class="cal-arrow" onclick="_calShift(1)" aria-label="다음 달">▶</button>
+      </div>
+      <button class="cal-today" onclick="_calToday()">오늘</button>
+    </div>
+    <div class="cal-weekdays">
+      <span class="cal-sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="cal-sat">토</span>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
 </main>
+
+<!-- ── 날짜 상세 모달 ── -->
+<div id="cal-day-overlay" class="modal-overlay" onclick="if(event.target.id==='cal-day-overlay')closeDayModal()">
+  <div class="modal cal-day-modal">
+    <button class="modal-close" onclick="closeDayModal()">✕</button>
+    <div class="cal-day-title" id="cal-day-title"></div>
+    <div id="cal-day-list"></div>
+    <div id="cal-edit-form" style="display:none"></div>
+  </div>
+</div>
 
 <!-- ── 케이스 상세 모달 ── -->
 <div id="modal-overlay" class="modal-overlay">
@@ -247,7 +275,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
 <script defer src="js/firebase-config.js?v=21"></script>
 <script defer src="js/cloudinary-config.js?v=21"></script>
-<script defer src="js/app.js?v=73"></script>
+<script defer src="js/app.js?v=74"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {
