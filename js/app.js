@@ -735,14 +735,30 @@ function renderRefs(refs) {
   if (!refs.length) { section.style.display = 'none'; return; }
   section.style.display = 'block';
   el.innerHTML = refs.map((r, i) => {
-    const doiLink  = r.doi ? `<a href="https://doi.org/${r.doi}" target="_blank" class="ref-doi-link">DOI ↗</a>` : '';
+    const href = r.doi
+      ? `https://doi.org/${r.doi}`
+      : r.pmid
+        ? `https://pubmed.ncbi.nlm.nih.gov/${r.pmid}/`
+        : (r.title && r.journal !== '교과서')
+          ? `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(r.title)}`
+          : '';
+    const titleHtml = href
+      ? `<a href="${_esc(href)}" target="_blank" rel="noopener" class="ref-title-link">${_esc(r.title)}</a>`
+      : `${_esc(r.title)}`;
+    const badge = r.doi
+      ? `<span class="ref-badge ref-badge-doi">DOI</span>`
+      : r.pmid
+        ? `<span class="ref-badge ref-badge-pmid">PubMed</span>`
+        : href
+          ? `<span class="ref-badge ref-badge-search">검색</span>`
+          : '';
     const hasAbs   = r.abstract || r.abstractEn;
     const absBtn   = hasAbs ? `<button class="ref-abs-toggle" onclick="toggleRefAbs(this,'ref-abs-${i}')">초록 ▼</button>` : '';
     let absContent = '';
     if (r.abstractEn) absContent += `<div class="ref-abs-section"><div class="ref-abs-label">영문</div><div>${_esc(r.abstractEn).replace(/\n/g,'<br>')}</div></div>`;
     if (r.abstract)   absContent += `<div class="ref-abs-section"><div class="ref-abs-label">한글</div><div>${_esc(r.abstract).replace(/\n/g,'<br>')}</div></div>`;
     const absBlock = hasAbs ? `<div class="ref-abstract-text" id="ref-abs-${i}" style="display:none">${absContent}</div>` : '';
-    return `<li><div class="ref-main"><strong>${_esc(r.authors)}</strong> (${_esc(r.year)}). ${_esc(r.title)}. <em>${_esc(r.journal)}</em>${r.volume?', '+_esc(r.volume):''}${r.pages?', '+_esc(r.pages):''}. ${doiLink}${absBtn}</div>${absBlock}</li>`;
+    return `<li><div class="ref-main"><strong>${_esc(r.authors)}</strong> (${_esc(r.year)}). ${titleHtml}. <em>${_esc(r.journal)}</em>${r.volume?', '+_esc(r.volume):''}${r.pages?', '+_esc(r.pages):''}. ${badge}${absBtn}</div>${absBlock}</li>`;
   }).join('');
 }
 

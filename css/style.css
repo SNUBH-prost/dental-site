@@ -857,7 +857,36 @@ main {
   margin-left: 0.5rem;
 }
 
-.ref-doi-link { color: var(--primary); font-size: 0.78rem; margin-left: 0.4rem; }
+.ref-title-link {
+  color: var(--text);
+  font-size: inherit;
+  margin-left: 0;
+  text-decoration: underline;
+  text-decoration-color: var(--primary-light);
+  text-underline-offset: 2px;
+  transition: color 0.12s, text-decoration-color 0.12s;
+}
+.ref-title-link:hover {
+  color: var(--primary);
+  text-decoration-color: var(--primary);
+}
+
+.ref-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.07rem 0.42rem;
+  border-radius: 4px;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+}
+.ref-badge-doi    { background: #dbeafe; color: #1d4ed8; }
+.ref-badge-pmid   { background: #dcfce7; color: #15803d; }
+.ref-badge-search { background: #f3f4f6; color: #6b7280; }
+[data-theme="dark"] .ref-badge-doi    { background: rgba(37,99,235,0.2); color: #93c5fd; }
+[data-theme="dark"] .ref-badge-pmid   { background: rgba(21,128,61,0.2); color: #86efac; }
+[data-theme="dark"] .ref-badge-search { background: rgba(107,114,128,0.15); color: #9ca3af; }
 
 .ref-abs-toggle {
   background: none;
