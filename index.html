@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=65">
+  <link rel="stylesheet" href="css/style.css?v=66">
   <link rel="stylesheet" href="css/editor.css?v=27">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -150,6 +150,7 @@
       <input class="search-input" type="text" placeholder="케이스 검색..."
         oninput="_renderCasesDebounced(this.value, document.getElementById('case-dept-filter').value)">
       <button id="bm-filter-btn" class="bm-filter-btn" onclick="toggleBookmarkFilter()">★ 북마크</button>
+      <button id="status-filter-btn" class="bm-filter-btn" onclick="toggleStatusFilter()">🔵 진행중</button>
       <select class="filter-select" id="case-dept-filter"
         onchange="renderCases(document.querySelector('#page-cases .search-input').value, this.value)">
         <option value="">전체</option>
@@ -285,7 +286,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
 <script defer src="js/firebase-config.js?v=21"></script>
 <script defer src="js/cloudinary-config.js?v=21"></script>
-<script defer src="js/app.js?v=81"></script>
+<script defer src="js/app.js?v=82"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {

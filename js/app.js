@@ -162,6 +162,7 @@ let _currentModalItem = null;
 let isAdmin = false;
 let _bookmarks = new Set(JSON.parse(localStorage.getItem('dental-bm') || '[]'));
 let _showBmOnly = false;
+let _showOngoing = false;       // 진행중 케이스만 필터
 let _deptBmFilter = new Set(); // 북마크 필터가 켜진 부문 id 집합
 let _deptEditingId = null;     // 부문 관리에서 현재 편집 중인 부문 id
 let _gz = { s: 1, ox: 50, oy: 50, tx: 0, ty: 0 }; // gallery zoom state
@@ -311,10 +312,11 @@ function renderHome() {
 function renderCases(filter = '', deptFilter = '') {
   const list = allCases.filter(c => {
     const q = filter.trim();
-    const matchText = !q || c.title.includes(q) || (c.summary||'').includes(q) || (c.tags||[]).some(t => t.includes(q));
-    const matchDept = !deptFilter || c.department === deptFilter;
-    const matchBm   = !_showBmOnly || _bookmarks.has(c.id);
-    return matchText && matchDept && matchBm;
+    const matchText    = !q || c.title.includes(q) || (c.summary||'').includes(q) || (c.tags||[]).some(t => t.includes(q));
+    const matchDept    = !deptFilter || c.department === deptFilter;
+    const matchBm      = !_showBmOnly || _bookmarks.has(c.id);
+    const matchOngoing = !_showOngoing || c.status === 'ongoing';
+    return matchText && matchDept && matchBm && matchOngoing;
   });
   const el = document.getElementById('cases-grid');
   el.className = _viewMode === 'list' ? 'card-grid list-view' : 'card-grid';
@@ -428,6 +430,9 @@ function cardHTML(item, type) {
   ).join('');
   const isBm = _bookmarks.has(item.id);
   const bmBtn = `<button class="card-bm-btn${isBm?' active':''}" data-bm-id="${item.id}" onclick="event.stopPropagation();_toggleBookmark('${item.id}')" title="${isBm?'북마크 해제':'북마크'}">★</button>`;
+  const statusBadge = type === 'case' && item.status
+    ? `<span class="case-status-badge case-status-${item.status}">${item.status === 'ongoing' ? '진행중' : '완료'}</span>`
+    : '';
   const adminBtns = isAdmin ? `
     <div class="card-admin-row" onclick="event.stopPropagation()">
       <button class="card-admin-btn edit" onclick="openEditorFor('${item.id}','${type}')">✏️<span class="btn-label"> 편집</span></button>
@@ -438,7 +443,7 @@ function cardHTML(item, type) {
       ${thumb}
       ${bmBtn}
       <div class="card-body">
-        <div class="card-dept">${deptName}</div>
+        <div class="card-dept">${deptName}${statusBadge}</div>
         <div class="card-title">${item.title}</div>
         <div class="card-summary">${item.summary || ''}</div>
         <div class="card-meta">
@@ -1358,6 +1363,9 @@ function _renderEditorForm(data = {}) {
   document.getElementById('ed-title').value       = data.title || '';
   document.getElementById('ed-summary').value     = data.summary || '';
   document.getElementById('ed-description').value = data.description || '';
+  // 진행 상태는 케이스 전용
+  const statusGrp = document.getElementById('ed-status-group');
+  if (statusGrp) statusGrp.style.display = _edType === 'case' ? '' : 'none';
   _edRenderPhotoPreview();
   _edRenderTagChips();
   _edSetupTextareaDrop();
@@ -1382,6 +1390,14 @@ function _edFormHTML(d = {}) {
         <div class="form-group">
           <label>날짜</label>
           <input type="date" id="ed-date" value="${d.date || new Date().toISOString().split('T')[0]}">
+        </div>
+        <div class="form-group" id="ed-status-group">
+          <label>진행 상태</label>
+          <select id="ed-status">
+            <option value=""${!d.status ? ' selected' : ''}>— 없음</option>
+            <option value="ongoing"${d.status === 'ongoing' ? ' selected' : ''}>🔵 진행중</option>
+            <option value="done"${d.status === 'done' ? ' selected' : ''}>✅ 완료</option>
+          </select>
         </div>
         <div class="form-group full">
           <label>한 줄 요약</label>
@@ -1988,6 +2004,7 @@ async function _edSave() {
   btn.disabled = true;
   try {
     const photos = await _edUploadPhotos();
+    const statusEl = document.getElementById('ed-status');
     const docData = {
       title,
       department:  document.getElementById('ed-dept').value,
@@ -2000,6 +2017,7 @@ async function _edSave() {
       teeth:       [..._edTeeth],
       updatedAt:   firebase.firestore.FieldValue.serverTimestamp()
     };
+    if (_edType === 'case') docData.status = statusEl ? statusEl.value : '';
     const col = _edType === 'case' ? 'cases' : 'departmentContents';
     if (_edId) {
       await db.collection(col).doc(_edId).update(docData);
@@ -2293,6 +2311,16 @@ function toggleBookmarkFilter() {
   _showBmOnly = !_showBmOnly;
   const btn = document.getElementById('bm-filter-btn');
   if (btn) btn.classList.toggle('active', _showBmOnly);
+  renderCases(
+    document.querySelector('#page-cases .search-input')?.value || '',
+    document.getElementById('case-dept-filter')?.value || ''
+  );
+}
+
+function toggleStatusFilter() {
+  _showOngoing = !_showOngoing;
+  const btn = document.getElementById('status-filter-btn');
+  if (btn) btn.classList.toggle('active', _showOngoing);
   renderCases(
     document.querySelector('#page-cases .search-input')?.value || '',
     document.getElementById('case-dept-filter')?.value || ''
@@ -3090,6 +3118,7 @@ function _renderDayList() {
         </div>
         ${dept ? `<div class="cal-ev-dept">${_deptIconHtml(dept)}${_esc(dept.name)}</div>` : ''}
         ${ev.notes ? `<div class="cal-ev-notes">${marked.parse(ev.notes)}</div>` : ''}
+        ${ev.caseId ? `<button class="cal-ev-case-btn" onclick="event.stopPropagation();closeDayModal();openModal('${ev.caseId}','case')">📋 관련 케이스 보기</button>` : ''}
       </div>`;
   }).join('') + addBtn;
 }
@@ -3102,6 +3131,10 @@ function _schedOpenForm(id) {
   const deptOpts = ['<option value="">부문 선택 (선택)</option>']
     .concat(_departments.map(dp =>
       `<option value="${dp.id}"${ev && ev.dept === dp.id ? ' selected' : ''}>${_esc(dp.name)}</option>`))
+    .join('');
+  const caseOpts = ['<option value="">케이스 연결 (선택)</option>']
+    .concat(allCases.map(c =>
+      `<option value="${c.id}"${ev && ev.caseId === c.id ? ' selected' : ''}>${_esc(c.date || '')} ${_esc(c.title)}</option>`))
     .join('');
 
   const form = document.getElementById('cal-edit-form');
@@ -3131,6 +3164,10 @@ function _schedOpenForm(id) {
       <label class="cal-field-label">챙길 점 · 메모</label>
       <textarea id="sf-notes" class="cal-input cal-textarea" placeholder="마크다운 사용 가능 (예: - 골이식 부위 확인&#10;- 봉합사 제거)">${ev ? _esc(ev.notes || '') : ''}</textarea>
     </div>
+    <div class="cal-field">
+      <label class="cal-field-label">관련 케이스</label>
+      <select id="sf-case" class="cal-input">${caseOpts}</select>
+    </div>
     <label class="cal-done-row"><input type="checkbox" id="sf-done"${ev && ev.done ? ' checked' : ''}> 완료 표시</label>
     <div class="cal-form-btns">
       <button class="cal-save-btn" onclick="_schedSave()">저장</button>
@@ -3159,13 +3196,14 @@ async function _schedSave() {
   const dept      = document.getElementById('sf-dept').value;
   const notes     = document.getElementById('sf-notes').value.trim();
   const done      = document.getElementById('sf-done').checked;
+  const caseId    = document.getElementById('sf-case').value;
 
   if (!treatment && !patient && !notes) {
     _edToast('내용을 입력하세요.', 'error');
     return;
   }
 
-  const data = { date: _schedDayStr, treatment, time, patient, dept, notes, done };
+  const data = { date: _schedDayStr, treatment, time, patient, dept, notes, done, caseId };
   try {
     if (_schedEditId) {
       data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();

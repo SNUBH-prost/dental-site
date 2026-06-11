@@ -421,7 +421,20 @@ main {
 .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
 .card-body { padding: 1rem 1.1rem 1.1rem; }
-.card-dept { font-size: 0.73rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 0.3rem; }
+.card-dept { font-size: 0.73rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap; }
+.case-status-badge {
+  display: inline-block;
+  font-size: 0.67rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  border-radius: 20px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.case-status-ongoing { background: #dbeafe; color: #1d4ed8; }
+.case-status-done    { background: #dcfce7; color: #15803d; }
+[data-theme="dark"] .case-status-ongoing { background: rgba(37,99,235,0.2); color: #93c5fd; }
+[data-theme="dark"] .case-status-done    { background: rgba(21,128,61,0.2);  color: #86efac; }
 .card-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem; line-height: 1.4; }
 .card-summary { font-size: 0.82rem; color: var(--text-muted); line-height: 1.55; margin-bottom: 0.65rem; }
 .card-meta { font-size: 0.76rem; color: var(--text-muted); display: flex; gap: 0.75rem; }
@@ -2374,6 +2387,22 @@ body.focus-mode .modal {
 .cal-ev-dept img { width: 1rem; height: 1rem; object-fit: contain; }
 .cal-ev-notes { font-size: 0.86rem; margin-top: 0.55rem; line-height: 1.55; color: var(--text); }
 .cal-ev-notes p { margin: 0.3rem 0; }
+.cal-ev-case-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.6rem;
+  padding: 0.3rem 0.75rem;
+  background: var(--primary-pale);
+  color: var(--primary);
+  border: 1px solid var(--primary-light);
+  border-radius: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.cal-ev-case-btn:hover { background: var(--primary); color: #fff; }
 .cal-ev-actions { display: flex; gap: 0.2rem; flex-shrink: 0; }
 .cal-ev-actions button {
   background: none;
