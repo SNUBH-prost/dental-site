@@ -73,11 +73,10 @@ function _renderWithCitations(text, refs) {
         : (!isTextbook && ref.title)
           ? `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(ref.title)}`
           : '';
-    const hrefAttr = href ? ` data-href="${href.replace(/"/g, '&quot;')}"` : '';
     const inner = href
       ? `<a class="cite-link" href="${href.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">[${n + 1}]</a>`
       : `[${n + 1}]`;
-    return `<sup class="cite-sup" data-n="${n + 1}" data-tip="${tip}"${hrefAttr}>${inner}</sup>`;
+    return `<sup class="cite-sup" data-n="${n + 1}" data-tip="${tip}">${inner}</sup>`;
   });
 
   return marked.parse(processed);
@@ -2842,14 +2841,20 @@ let _schedDayStr = null;          // 현재 열린 날짜 모달의 날짜 "YYYY
 let _calDayPushed = false;        // 날짜 모달 히스토리 push 여부
 
 const _SCHED_COLORS = ['#2563eb','#f97316','#059669','#9f1239','#7c3aed','#0891b2','#b45309','#db2777'];
+const _DOWS = ['일','월','화','수','목','금','토'];
 function _schedColor(s) {
   let h = 0;
   for (let i = 0; i < (s || '').length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
   return _SCHED_COLORS[h % _SCHED_COLORS.length];
 }
+function _schedEvColor(ev) { return _schedColor(ev.treatment || ev.dept || ev.patient || '일정'); }
 
 function _pad2(n) { return n < 10 ? '0' + n : '' + n; }
 function _dateStr(y, m, d) { return `${y}-${_pad2(m + 1)}-${_pad2(d)}`; }
+function _todayStr() {
+  const t = new Date();
+  return _dateStr(t.getFullYear(), t.getMonth(), t.getDate());
+}
 
 // 시간 입력: 숫자만 받아 HH:MM(24h)로 자동 포맷
 function _onSchedTimeInput(el) {
@@ -2867,7 +2872,9 @@ function _normTime(str) {
 }
 
 // 현재 달의 일정을 Firestore에서 로드 (날짜 문자열 범위 쿼리, 복합 인덱스 불필요)
-async function loadSchedules(y, m) {
+// 이미 로드된 달이면 스킵. 저장/삭제 후에는 force로 강제 갱신
+async function loadSchedules(y, m, force) {
+  if (!force && _schedMonthKey === `${y}-${m}`) return;
   const start = _dateStr(y, m, 1);
   const end   = `${y}-${_pad2(m + 1)}-32`; // 해당 월의 모든 날짜 포함
   try {
@@ -2910,9 +2917,7 @@ function _buildCalGrid() {
   const grid = document.getElementById('cal-grid');
   if (grid) grid.innerHTML = _calCellsHTML(_calYear, _calMonth);
 
-  const today    = new Date();
-  const todayStr = _dateStr(today.getFullYear(), today.getMonth(), today.getDate());
-  _buildCalAgenda(todayStr);
+  _buildCalAgenda(_todayStr());
 }
 
 // 한 달치 셀 HTML 생성 (캘린더 페이지·홈 미니 캘린더 공용)
@@ -2922,8 +2927,7 @@ function _calCellsHTML(y, m) {
 
   const firstDow   = new Date(y, m, 1).getDay(); // 0=일
   const daysInMon  = new Date(y, m + 1, 0).getDate();
-  const today      = new Date();
-  const todayStr   = _dateStr(today.getFullYear(), today.getMonth(), today.getDate());
+  const todayStr   = _todayStr();
 
   let cells = '';
   for (let i = 0; i < firstDow; i++) cells += '<div class="cal-cell cal-empty"></div>';
@@ -2936,7 +2940,7 @@ function _calCellsHTML(y, m) {
 
     const chips = evs.slice(0, 3).map(ev => {
       const label = ev.treatment || ev.patient || '일정';
-      const col   = _schedColor(ev.treatment || ev.dept || label);
+      const col   = _schedEvColor(ev);
       const timeStr = ev.time ? `<span class="cal-chip-time">${_esc(ev.time)}</span>` : '';
       return `<div class="cal-chip${ev.done ? ' cal-chip-done' : ''}" style="background:${col}1a;color:${col};border-left:3px solid ${col}">${timeStr}<span class="cal-chip-label">${_esc(label)}</span></div>`;
     }).join('');
@@ -2955,6 +2959,17 @@ function _calCellsHTML(y, m) {
   return cells;
 }
 
+// 캘린더 페이지 + 홈 미니 캘린더를 함께 갱신 (저장/삭제 후)
+function _refreshCalViews() {
+  _buildCalGrid();
+  const homeGrid = document.getElementById('cal-grid-home');
+  const now = new Date();
+  // 홈은 항상 이번 달만 보여주므로, 보고 있던 달이 이번 달일 때만 갱신
+  if (homeGrid && _calYear === now.getFullYear() && _calMonth === now.getMonth()) {
+    homeGrid.innerHTML = _calCellsHTML(_calYear, _calMonth);
+  }
+}
+
 // 홈 화면 하단 미니 캘린더 (항상 이번 달)
 async function renderHomeCalendar() {
   const grid = document.getElementById('cal-grid-home');
@@ -2966,8 +2981,6 @@ async function renderHomeCalendar() {
     await loadSchedules(y, m);
     _calYear = y; _calMonth = m;
   }
-  const titleEl = document.getElementById('cal-title-home');
-  if (titleEl) titleEl.textContent = `${y}년 ${m + 1}월`;
   grid.innerHTML = _calCellsHTML(y, m);
 }
 
@@ -2983,19 +2996,18 @@ function _buildCalAgenda(todayStr) {
 
   if (!evs.length) { wrap.innerHTML = ''; return; }
 
-  const dows = ['일','월','화','수','목','금','토'];
   let html = '<div class="cal-agenda-title">이번 달 일정</div>';
   let lastDate = null;
   evs.forEach(ev => {
     const past = ev.date < todayStr;
     if (ev.date !== lastDate) {
       const [y, m, d] = ev.date.split('-').map(Number);
-      const dow = dows[new Date(y, m - 1, d).getDay()];
+      const dow = _DOWS[new Date(y, m - 1, d).getDay()];
       const cls = (past ? ' cal-ag-past' : '') + (ev.date === todayStr ? ' cal-ag-today' : '');
       html += `<div class="cal-ag-date${cls}">${m}/${d} <span>(${dow})</span></div>`;
       lastDate = ev.date;
     }
-    const col   = _schedColor(ev.treatment || ev.dept || ev.patient || '일정');
+    const col   = _schedEvColor(ev);
     const label = ev.treatment || ev.patient || '일정';
     const dept  = ev.dept ? _deptById[ev.dept] : null;
     html += `
@@ -3017,7 +3029,7 @@ function openDayModal(ds) {
   const ov = document.getElementById('cal-day-overlay');
   if (!ov) return;
   const [y, m, d] = ds.split('-').map(Number);
-  const dow = ['일','월','화','수','목','금','토'][new Date(y, m - 1, d).getDay()];
+  const dow = _DOWS[new Date(y, m - 1, d).getDay()];
   document.getElementById('cal-day-title').textContent = `${y}년 ${m}월 ${d}일 (${dow})`;
   _renderDayList();
   _schedHideForm();
@@ -3059,7 +3071,7 @@ function _renderDayList() {
   }
 
   list.innerHTML = evs.map(ev => {
-    const col  = _schedColor(ev.treatment || ev.dept || ev.patient || '일정');
+    const col  = _schedEvColor(ev);
     const dept = ev.dept ? _deptById[ev.dept] : null;
     const adminBtns = isAdmin ? `
       <div class="cal-ev-actions">
@@ -3162,8 +3174,8 @@ async function _schedSave() {
       data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
       await db.collection('schedules').add(data);
     }
-    await loadSchedules(_calYear, _calMonth);
-    _buildCalGrid();
+    await loadSchedules(_calYear, _calMonth, true);
+    _refreshCalViews();
     _renderDayList();
     _schedHideForm();
     _edToast('저장되었습니다.');
@@ -3177,8 +3189,8 @@ async function _schedDelete(id) {
   if (!confirm('이 일정을 삭제할까요?')) return;
   try {
     await db.collection('schedules').doc(id).delete();
-    await loadSchedules(_calYear, _calMonth);
-    _buildCalGrid();
+    await loadSchedules(_calYear, _calMonth, true);
+    _refreshCalViews();
     _renderDayList();
     _edToast('삭제되었습니다.');
   } catch (e) {
@@ -3224,9 +3236,9 @@ function _setupCiteTip() {
   document.addEventListener('click', e => {
     const el = e.target.closest('.cite-sup');
     if (!el) { tip.style.display = 'none'; return; }
-    // <a> handles navigation; stopPropagation prevents modal/overlay close
+    // <a> 자식이 있으면 네이티브 링크가 이동을 처리; stopPropagation은 모달 닫힘 방지
     e.stopPropagation();
-    if (el.dataset.href) {
+    if (el.querySelector('a')) {
       tip.style.display = 'none';
       return;
     }

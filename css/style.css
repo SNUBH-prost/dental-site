@@ -2250,7 +2250,6 @@ body.focus-mode .modal {
   overflow: hidden;
   line-height: 1.45;
 }
-.cal-chip .cal-chip-label { display: block; overflow: hidden; text-overflow: ellipsis; }
 .cal-chip-time { opacity: 0.75; font-weight: 500; flex-shrink: 0; }
 .cal-chip-label { overflow: hidden; text-overflow: ellipsis; }
 .cal-chip.cal-chip-done { opacity: 0.5; }
