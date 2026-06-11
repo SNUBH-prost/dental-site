@@ -1967,6 +1967,7 @@ body.focus-mode .modal {
     padding-bottom: 0.7rem;
     margin-bottom: 1.4rem;
   }
+  .print-header-top { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; flex-wrap: wrap; }
   .print-dept-tag {
     display: inline-block;
     background: #2563eb;
@@ -1975,9 +1976,17 @@ body.focus-mode .modal {
     font-weight: 700;
     padding: 0.15rem 0.55rem;
     border-radius: 4px;
-    margin-bottom: 0.4rem;
     letter-spacing: 0.02em;
   }
+  .print-status {
+    display: inline-block;
+    font-size: 8pt;
+    font-weight: 700;
+    padding: 0.15rem 0.55rem;
+    border-radius: 99px;
+  }
+  .print-status-ongoing { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .print-status-done    { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
   .print-title {
     font-size: 20pt;
     font-weight: 800;
@@ -1986,6 +1995,7 @@ body.focus-mode .modal {
     color: #0f172a;
   }
   .print-date { font-size: 9pt; color: #64748b; margin-top: 0.15rem; }
+  .print-answer { border-left: 3px solid #2563eb; padding-left: 0.9rem; background: #f8faff; border-radius: 0 6px 6px 0; margin-top: 0; }
   .print-section-label {
     font-size: 7.5pt;
     font-weight: 700;

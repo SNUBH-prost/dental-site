@@ -1,4 +1,4 @@
-const CACHE = 'dental-v16';
+const CACHE = 'dental-v17';
 // JS/HTML/CSS는 캐시하지 않고 항상 네트워크에서 가져옴
 const STATIC = [
   '/dental-site/icons/icon.svg'

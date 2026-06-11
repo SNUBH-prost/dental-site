@@ -647,6 +647,11 @@ function printCase() {
   const item = _currentModalItem?.item;
   if (!item) return;
   const dept = _deptById[item.department];
+  const refs = item.references || [];
+
+  const statusLabel = item.status === 'ongoing' ? '진행중' : item.status === 'done' ? '완료' : '';
+  const statusHTML  = statusLabel
+    ? `<span class="print-status print-status-${item.status}">${statusLabel}</span>` : '';
 
   const photosHTML = (item.photos || []).map(p => `
     <div class="print-photo-item">
@@ -657,12 +662,12 @@ function printCase() {
   const tagsHTML = (item.tags || []).map(t =>
     `<span class="print-tag">${_esc(t)}</span>`).join('');
 
-  const refsHTML = (item.references || []).length
+  const refsHTML = refs.length
     ? `<div class="print-section-label">참고 논문</div>
-       <ol class="print-refs">${(item.references||[]).map(r => {
+       <ol class="print-refs">${refs.map(r => {
          const title = r.title ? `<strong>${_esc(r.title)}</strong>` : '';
-         const doi   = r.doi   ? ` — <a href="https://doi.org/${_esc(r.doi)}" target="_blank">doi:${_esc(r.doi)}</a>` : '';
-         const url   = (!r.doi && r.url) ? ` — <a href="${_esc(r.url)}" target="_blank">${_esc(r.url)}</a>` : '';
+         const doi   = r.doi   ? ` — <a href="https://doi.org/${_esc(r.doi)}">doi:${_esc(r.doi)}</a>` : '';
+         const url   = (!r.doi && r.url) ? ` — <a href="${_esc(r.url)}">${_esc(r.url)}</a>` : '';
          return `<li>${title}${doi}${url}</li>`;
        }).join('')}</ol>` : '';
 
@@ -673,12 +678,20 @@ function printCase() {
   const descText = (item.description || '').trim();
   const descHTML = descText
     ? `<div class="print-section-label">설명</div>
-       <div class="print-desc">${marked.parse(descText)}</div>` : '';
+       <div class="print-desc">${_renderWithCitations(descText, refs)}</div>` : '';
+
+  const answerText = (item.answer || '').trim();
+  const answerHTML = answerText
+    ? `<div class="print-section-label">AI Q&amp;A</div>
+       <div class="print-desc print-answer">${_renderWithCitations(answerText, refs)}</div>` : '';
 
   const printArea = document.getElementById('print-area');
   printArea.innerHTML = `
     <div class="print-header">
-      ${dept ? `<div class="print-dept-tag">${_esc(dept.name)}</div>` : ''}
+      <div class="print-header-top">
+        ${dept ? `<div class="print-dept-tag">${_esc(dept.name)}</div>` : ''}
+        ${statusHTML}
+      </div>
       <div class="print-title">${_esc(item.title)}</div>
       ${item.date ? `<div class="print-date">${_esc(item.date)}</div>` : ''}
     </div>
@@ -686,6 +699,7 @@ function printCase() {
     ${photosHTML ? `<div class="print-section-label">사진 (${(item.photos||[]).length}장)</div>
        <div class="print-photos">${photosHTML}</div>` : ''}
     ${descHTML}
+    ${answerHTML}
     ${tagsHTML ? `<div class="print-tags">${tagsHTML}</div>` : ''}
     ${refsHTML}
     <div class="print-footer">
