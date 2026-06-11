@@ -3118,9 +3118,25 @@ function _renderDayList() {
         </div>
         ${dept ? `<div class="cal-ev-dept">${_deptIconHtml(dept)}${_esc(dept.name)}</div>` : ''}
         ${ev.notes ? `<div class="cal-ev-notes">${marked.parse(ev.notes)}</div>` : ''}
-        ${ev.caseId ? `<button class="cal-ev-case-btn" onclick="event.stopPropagation();closeDayModal();openModal('${ev.caseId}','case')">📋 관련 케이스 보기</button>` : ''}
+        ${_schedCaseIds(ev).map(cid => {
+          const c = allCases.find(x => x.id === cid);
+          return `<button class="cal-ev-case-btn" onclick="event.stopPropagation();closeDayModal();openModal('${cid}','case')">📋 ${c ? _esc(c.title) : '관련 케이스 보기'}</button>`;
+        }).join('')}
       </div>`;
   }).join('') + addBtn;
+}
+
+// 구버전 단일 caseId 데이터 호환
+function _schedCaseIds(ev) {
+  if (Array.isArray(ev.caseIds)) return ev.caseIds;
+  return ev.caseId ? [ev.caseId] : [];
+}
+
+function _filterCaseList(input) {
+  const q = input.value.trim().toLowerCase();
+  document.querySelectorAll('#sf-case-list .cal-case-item').forEach(item => {
+    item.style.display = !q || item.dataset.label.includes(q) ? '' : 'none';
+  });
 }
 
 // ── 일정 추가/편집 폼 ──────────────────────────────────────────
@@ -3132,10 +3148,12 @@ function _schedOpenForm(id) {
     .concat(_departments.map(dp =>
       `<option value="${dp.id}"${ev && ev.dept === dp.id ? ' selected' : ''}>${_esc(dp.name)}</option>`))
     .join('');
-  const caseOpts = ['<option value="">케이스 연결 (선택)</option>']
-    .concat(allCases.map(c =>
-      `<option value="${c.id}"${ev && ev.caseId === c.id ? ' selected' : ''}>${_esc(c.date || '')} ${_esc(c.title)}</option>`))
-    .join('');
+  const linked = ev ? _schedCaseIds(ev) : [];
+  const caseChecks = allCases.map(c => `
+    <label class="cal-case-item" data-label="${_esc(((c.date || '') + ' ' + c.title).toLowerCase())}">
+      <input type="checkbox" class="sf-case-cb" value="${c.id}"${linked.includes(c.id) ? ' checked' : ''}>
+      <span>${_esc(c.date || '')} ${_esc(c.title)}</span>
+    </label>`).join('');
 
   const form = document.getElementById('cal-edit-form');
   form.innerHTML = `
@@ -3165,8 +3183,9 @@ function _schedOpenForm(id) {
       <textarea id="sf-notes" class="cal-input cal-textarea" placeholder="마크다운 사용 가능 (예: - 골이식 부위 확인&#10;- 봉합사 제거)">${ev ? _esc(ev.notes || '') : ''}</textarea>
     </div>
     <div class="cal-field">
-      <label class="cal-field-label">관련 케이스</label>
-      <select id="sf-case" class="cal-input">${caseOpts}</select>
+      <label class="cal-field-label">관련 케이스 (복수 선택 가능)</label>
+      <input class="cal-input cal-case-filter" placeholder="🔍 케이스 검색" oninput="_filterCaseList(this)">
+      <div class="cal-case-list" id="sf-case-list">${caseChecks || '<div class="cal-day-empty">케이스가 없습니다.</div>'}</div>
     </div>
     <label class="cal-done-row"><input type="checkbox" id="sf-done"${ev && ev.done ? ' checked' : ''}> 완료 표시</label>
     <div class="cal-form-btns">
@@ -3196,16 +3215,17 @@ async function _schedSave() {
   const dept      = document.getElementById('sf-dept').value;
   const notes     = document.getElementById('sf-notes').value.trim();
   const done      = document.getElementById('sf-done').checked;
-  const caseId    = document.getElementById('sf-case').value;
+  const caseIds   = Array.from(document.querySelectorAll('.sf-case-cb:checked')).map(cb => cb.value);
 
   if (!treatment && !patient && !notes) {
     _edToast('내용을 입력하세요.', 'error');
     return;
   }
 
-  const data = { date: _schedDayStr, treatment, time, patient, dept, notes, done, caseId };
+  const data = { date: _schedDayStr, treatment, time, patient, dept, notes, done, caseIds };
   try {
     if (_schedEditId) {
+      data.caseId = firebase.firestore.FieldValue.delete(); // 구버전 단일 필드 정리
       data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
       await db.collection('schedules').doc(_schedEditId).update(data);
     } else {

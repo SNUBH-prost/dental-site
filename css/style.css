@@ -2464,6 +2464,29 @@ body.focus-mode .modal {
 }
 .cal-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-pale); }
 .cal-textarea { min-height: 5rem; resize: vertical; line-height: 1.5; }
+.cal-case-filter { margin-bottom: 0.4rem; }
+.cal-case-list {
+  max-height: 10.5rem;
+  overflow-y: auto;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 0.3rem;
+}
+.cal-case-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.87rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.cal-case-item:hover { background: var(--bg); }
+.cal-case-item input { flex-shrink: 0; accent-color: var(--primary); }
+.cal-case-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cal-done-row {
   display: flex;
   align-items: center;
