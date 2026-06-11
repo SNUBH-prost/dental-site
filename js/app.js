@@ -643,11 +643,13 @@ function updateGallery() {
 }
 
 // ── PDF 인쇄 ────────────────────────────────────────────────────
-function printCase() {
+async function printCase() {
   const item = _currentModalItem?.item;
   if (!item) return;
   const dept = _deptById[item.department];
   const refs = item.references || [];
+  // 인쇄용 최적화 이미지 (원본보다 빠르고 충분한 해상도)
+  const _printImg = u => _cld(u, 'w_1400,q_auto:good,f_auto');
 
   const statusLabel = item.status === 'ongoing' ? '진행중' : item.status === 'done' ? '완료' : '';
   const statusHTML  = statusLabel
@@ -655,7 +657,7 @@ function printCase() {
 
   const photosHTML = (item.photos || []).map(p => `
     <div class="print-photo-item">
-      <img src="${_esc(p.url)}" alt="${_esc(p.caption||'')}">
+      <img src="${_esc(_printImg(p.url))}" alt="${_esc(p.caption||'')}">
       ${p.caption ? `<div class="print-caption">${_esc(p.caption)}</div>` : ''}
     </div>`).join('');
 
@@ -710,6 +712,16 @@ function printCase() {
   // details 요소 인쇄 시 모두 펼치기
   printArea.querySelectorAll('details').forEach(d => d.open = true);
   _renderMath(printArea);
+
+  // 사진이 다 로드되기 전에 인쇄하면 빈 칸으로 나오므로 대기 (최대 8초)
+  const imgs = Array.from(printArea.querySelectorAll('img')).filter(im => !im.complete);
+  if (imgs.length) {
+    _edToast(`사진 ${imgs.length}장 로딩 중…`);
+    await Promise.race([
+      Promise.all(imgs.map(im => new Promise(res => { im.onload = im.onerror = res; }))),
+      new Promise(res => setTimeout(res, 8000)),
+    ]);
+  }
 
   window.print();
 }
