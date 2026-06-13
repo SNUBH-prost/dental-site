@@ -2161,9 +2161,10 @@ body.focus-mode .modal {
   font-size: 0.72em;
   vertical-align: super;
   line-height: 0;
-  padding: 0 1px;
+  padding: 2px 3px;
   border-radius: 3px;
   transition: background 0.1s;
+  -webkit-tap-highlight-color: transparent;
 }
 .cite-sup:hover {
   background: #dbeafe;

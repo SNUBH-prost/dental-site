@@ -3339,10 +3339,12 @@ function _setupCiteTip() {
   document.addEventListener('click', e => {
     const el = e.target.closest('.cite-sup');
     if (!el) { tip.style.display = 'none'; return; }
-    // <a> 자식이 있으면 네이티브 링크가 이동을 처리; stopPropagation은 모달 닫힘 방지
     e.stopPropagation();
-    if (el.querySelector('a')) {
+    const link = el.querySelector('a');
+    if (link) {
       tip.style.display = 'none';
+      // 모바일에서 <sup> 영역을 탭하면 <a>에 안 닿는 경우가 많으므로 직접 이동
+      if (!e.target.closest('a')) window.open(link.href, '_blank', 'noopener,noreferrer');
       return;
     }
     // 링크 없는 경우(교과서 등): 툴팁 토글
