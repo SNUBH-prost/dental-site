@@ -1567,6 +1567,7 @@ function _edRefBlockHTML(idx, r) {
           <div class="pubmed-results" id="ed-ref-results-${idx}"></div>
           <input type="hidden" id="ed-ref-abstract-en-${idx}" value="${ea(r.abstractEn)}">
           <input type="hidden" id="ed-ref-abstract-${idx}" value="${ea(r.abstract)}">
+          <input type="hidden" id="ed-ref-pmid-${idx}" value="${ea(r.pmid)}">
           ${absSaved}
         </div>
         <div class="form-group"><label>저널명</label>
@@ -1637,7 +1638,7 @@ function _edRemoveRef(idx) {
     block.querySelector('.ref-remove').setAttribute('onclick', `_edRemoveRef(${i})`);
     const pb = block.querySelector('.pubmed-search-btn');
     if (pb) pb.setAttribute('onclick', `_edPubMedSearch(${i})`);
-    ['authors','year','title','journal','pages','doi','abstract','abstract-en','results'].forEach(f => {
+    ['authors','year','title','journal','pages','doi','pmid','abstract','abstract-en','results'].forEach(f => {
       const el = block.querySelector(`[id*="-ref-${f}-"]`);
       if (el) el.id = `ed-ref-${f}-${i}`;
     });
@@ -1653,6 +1654,7 @@ function _edCollectRefs() {
       volume: dash > -1 ? pages.slice(0, dash) : '',
       pages:  dash > -1 ? pages.slice(dash + 2) : pages,
       doi: g('doi'),
+      pmid: g('pmid'),
       abstract: g('abstract'),
       abstractEn: g('abstract-en')
     };
@@ -1737,6 +1739,7 @@ async function _edSelectPubMed(idx, itemIdx) {
 
   set('title', title); set('authors', authors); set('year', year);
   set('journal', item.source); set('pages', pages); set('doi', doi);
+  set('pmid', item.uid || '');
 
   // 초록 가져오기 → 한국어 번역
   _edToast('초록을 가져오는 중...');
