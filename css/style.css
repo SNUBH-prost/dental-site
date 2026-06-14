@@ -2169,10 +2169,15 @@ body.focus-mode .modal {
 .cite-sup:hover {
   background: #dbeafe;
 }
-.cite-sup a.cite-link {
+/* <a>가 <sup> 바깥에 위치하므로 링크 스타일은 a.cite-link에 적용 */
+a.cite-link {
   color: inherit;
+  text-decoration: none;
+}
+a.cite-link .cite-sup {
   text-decoration: underline;
   text-underline-offset: 1px;
+  text-decoration-color: #93c5fd;
 }
 
 /* ── 진료 일정 (달력) · Notion 스타일 ──────────────────────── */

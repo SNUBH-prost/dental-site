@@ -73,10 +73,10 @@ function _renderWithCitations(text, refs) {
         : (!isTextbook && ref.title)
           ? `https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(ref.title)}`
           : '';
-    const inner = href
-      ? `<a class="cite-link" href="${href.replace(/"/g, '&quot;')}" target="_blank" rel="noopener">[${n + 1}]</a>`
-      : `[${n + 1}]`;
-    return `<sup class="cite-sup" data-n="${n + 1}" data-tip="${tip}">${inner}</sup>`;
+    const sup = `<sup class="cite-sup" data-n="${n + 1}" data-tip="${tip}">[${n + 1}]</sup>`;
+    return href
+      ? `<a class="cite-link" href="${href.replace(/"/g, '&quot;')}" target="_blank" rel="noopener noreferrer">${sup}</a>`
+      : sup;
   });
 
   return marked.parse(processed);
@@ -3340,13 +3340,8 @@ function _setupCiteTip() {
     const el = e.target.closest('.cite-sup');
     if (!el) { tip.style.display = 'none'; return; }
     e.stopPropagation();
-    const link = el.querySelector('a');
-    if (link) {
-      tip.style.display = 'none';
-      // 모바일에서 <sup> 영역을 탭하면 <a>에 안 닿는 경우가 많으므로 직접 이동
-      if (!e.target.closest('a')) window.open(link.href, '_blank', 'noopener,noreferrer');
-      return;
-    }
+    // 링크 있는 경우: <a>가 바깥에 있으므로 네이티브 링크가 이미 처리함 → 툴팁만 닫기
+    if (el.closest('a.cite-link')) { tip.style.display = 'none'; return; }
     // 링크 없는 경우(교과서 등): 툴팁 토글
     if (tip.style.display === 'none' || tip.dataset.for !== el.dataset.n) {
       tip.dataset.for = el.dataset.n;
