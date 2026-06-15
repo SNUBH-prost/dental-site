@@ -1149,6 +1149,8 @@ main {
 }
 .card-grid.list-view .card-summary { display: none; }
 .card-grid.list-view .modal-tags { display: none; }
+/* 리스트뷰에서 상태 배지는 숨김 — dept 컬럼이 좁아야 제목이 잘림 없이 보임 */
+.card-grid.list-view .case-status-badge { display: none; }
 .card-grid.list-view .card-meta {
   font-size: 0.7rem;
   color: var(--text-muted);

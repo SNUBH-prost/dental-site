@@ -2365,7 +2365,8 @@ function setViewMode(mode) {
   document.querySelectorAll('.view-toggle-btn[data-mode]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
-  document.querySelectorAll('.card-grid').forEach(el => {
+  // 홈 recent-cases 제외 — 홈에서 list-view가 걸리면 레이아웃이 어색함
+  document.querySelectorAll('.card-grid:not(#recent-cases)').forEach(el => {
     el.classList.toggle('list-view', mode === 'list');
   });
 }
