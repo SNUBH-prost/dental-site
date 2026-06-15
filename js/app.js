@@ -850,8 +850,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('modal-overlay').addEventListener('click', e => {
     if (e.target.id === 'modal-overlay') closeModal();
   });
-  document.getElementById('editor-overlay').addEventListener('click', e => {
-    if (e.target.id === 'editor-overlay') closeEditor();
+  const _edOverlay = document.getElementById('editor-overlay');
+  let _edMouseDownOnOverlay = false;
+  _edOverlay.addEventListener('mousedown', e => {
+    _edMouseDownOnOverlay = e.target.id === 'editor-overlay';
+  });
+  _edOverlay.addEventListener('click', e => {
+    if (e.target.id === 'editor-overlay' && _edMouseDownOnOverlay) closeEditor();
+    _edMouseDownOnOverlay = false;
   });
   document.addEventListener('keydown', e => {
     const presOpen = document.getElementById('pres-overlay')?.classList.contains('open');
@@ -1412,6 +1418,18 @@ function _renderEditorForm(data = {}) {
   _edRenderTagChips();
   _edSetupTextareaDrop();
   _setupTcDrag();
+  // 편집기 열릴 때 미리보기 분할 뷰 자동 ON
+  const pane  = document.getElementById('ed-preview-pane');
+  const split = document.getElementById('ed-split');
+  const btn   = document.getElementById('ed-preview-toggle');
+  const ta    = document.getElementById('ed-description');
+  if (pane && pane.style.display === 'none') {
+    pane.style.display = '';
+    split?.classList.add('ed-split-active');
+    if (ta) ta.style.borderRadius = '0';
+    if (btn) btn.classList.add('active');
+    _edUpdatePreview();
+  }
 }
 
 function _edFormHTML(d = {}) {
