@@ -868,6 +868,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     if (e.key === 'Escape') { _closeSearch(); closeModal(); closeEditor(); closeDayModal(); _annCancel(); }
+    // Ctrl/Cmd+Enter로 편집기 저장
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter'
+        && document.getElementById('editor-overlay').classList.contains('open')) {
+      e.preventDefault();
+      const saveBtn = document.getElementById('ed-save-btn');
+      if (saveBtn && !saveBtn.disabled) _edSave();
+      return;
+    }
     if (document.getElementById('modal-overlay').classList.contains('open')) {
       if (e.key === 'ArrowLeft')  changePhoto(-1);
       if (e.key === 'ArrowRight') changePhoto(1);
@@ -1573,7 +1581,8 @@ function _edFormHTML(d = {}) {
       </div>
     </div>
 
-    <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end;align-items:center">
+      <span style="font-size:0.72rem;color:var(--text-muted)">Ctrl+Enter로 저장</span>
       <button class="btn btn-outline" onclick="closeEditor()">취소</button>
       <button class="btn btn-primary" id="ed-save-btn" onclick="_edSave()">
         ${_edId ? '저장' : '등록'}
