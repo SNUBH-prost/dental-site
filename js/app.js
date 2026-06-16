@@ -878,7 +878,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       _openSearch();
     }
   });
-
+  document.addEventListener('paste', _edGlobalPasteHandler);
 
   firebase.auth().onAuthStateChanged(user => {
     const nowAdmin = !!user;
@@ -1398,6 +1398,23 @@ function closeEditor() {
   _edId = null; _edType = null; _edPhotos = []; _edTags = [];
 }
 
+// 에디터가 열린 동안 전역 Ctrl+V로 사진 붙여넣기 (업로드 갤러리에 추가)
+function _edGlobalPasteHandler(e) {
+  if (!document.getElementById('editor-overlay').classList.contains('open')) return;
+  // 텍스트영역에 포커스가 있으면 기존 textarea paste 핸들러가 처리
+  if (document.activeElement?.id === 'ed-description') return;
+  const cd = e.clipboardData;
+  if (!cd) return;
+  const files = Array.from(cd.items || [])
+    .filter(i => i.type.startsWith('image/'))
+    .map(i => i.getAsFile())
+    .filter(Boolean);
+  if (!files.length) return;
+  e.preventDefault();
+  _edAddFiles(files);
+  _edToast(`사진 ${files.length}장을 붙여넣었습니다.`);
+}
+
 // ── 폼 렌더 ──────────────────────────────────────────────────
 function _renderEditorForm(data = {}) {
   _edPhotos = (data.photos || []).map(p => ({ url: p.url, caption: p.caption || '', annotations: p.annotations || [] }));
@@ -1538,7 +1555,7 @@ function _edFormHTML(d = {}) {
         <input type="file" id="ed-file-input" multiple accept="image/*" onchange="_edFileSelect(event)">
         <div style="font-size:2rem;margin-bottom:0.5rem">📷</div>
         <div>사진을 여기에 드래그하거나 클릭하여 선택</div>
-        <div style="font-size:0.8rem;margin-top:0.3rem;color:var(--text-muted)">여러 장 동시 선택 가능</div>
+        <div style="font-size:0.8rem;margin-top:0.3rem;color:var(--text-muted)">여러 장 동시 선택 가능 · Ctrl+V로 붙여넣기</div>
       </div>
       <div class="upload-progress" id="ed-progress">
         <div class="upload-progress-bar" id="ed-progress-bar"></div>
