@@ -907,7 +907,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 let _edId = null, _edType = null;
 let _edPhotos = [], _edTags = [], _edTeeth = [];
-// _edTeeth: [{n: 16, type: 'implant'}, ...]
+let _edDirty = false; // 저장하지 않은 변경사항 여부
 let _tcMultiSel = new Set(); // shift-선택 중인 치아 번호들
 let _tcDragging = false, _tcDragMoved = false;
 
@@ -1400,7 +1400,11 @@ function openEditorNew(type, deptId = '') {
 }
 
 // ── 에디터 닫기 ──────────────────────────────────────────────
-function closeEditor() {
+function closeEditor(force = false) {
+  if (!force && _edDirty) {
+    if (!confirm('저장하지 않은 변경사항이 있습니다.\n닫으시겠습니까?')) return;
+  }
+  _edDirty = false;
   document.getElementById('editor-overlay').classList.remove('open');
   document.body.style.overflow = '';
   _edId = null; _edType = null; _edPhotos = []; _edTags = [];
@@ -1455,6 +1459,9 @@ function _renderEditorForm(data = {}) {
     if (btn) btn.classList.add('active');
     _edUpdatePreview();
   }
+  // 열릴 때 dirty 초기화 + 이후 변경 감지
+  _edDirty = false;
+  document.getElementById('editor-form-content').addEventListener('input', () => { _edDirty = true; }, { passive: true });
 }
 
 function _edFormHTML(d = {}) {
@@ -1629,10 +1636,10 @@ function _edTagInput(e) {
   if (e.key !== 'Enter' && e.key !== ',') return;
   e.preventDefault();
   const val = e.target.value.trim().replace(/,$/, '');
-  if (val && !_edTags.includes(val)) { _edTags.push(val); _edRenderTagChips(); }
+  if (val && !_edTags.includes(val)) { _edTags.push(val); _edRenderTagChips(); _edDirty = true; }
   e.target.value = '';
 }
-function _edRemoveTag(idx) { _edTags.splice(idx, 1); _edRenderTagChips(); }
+function _edRemoveTag(idx) { _edTags.splice(idx, 1); _edRenderTagChips(); _edDirty = true; }
 function _edRenderTagChips() {
   document.getElementById('ed-tag-chips').innerHTML =
     _edTags.map((t,i) => `
@@ -1651,6 +1658,7 @@ function _edHandleDrop(e) {
 function _edAddFiles(files) {
   files.forEach(f => _edPhotos.push({ url: URL.createObjectURL(f), caption: '', file: f, annotations: [] }));
   _edRenderPhotoPreview();
+  _edDirty = true;
 }
 function _edRenderPhotoPreview() {
   const el = document.getElementById('ed-photo-preview');
@@ -1667,7 +1675,7 @@ function _edRenderPhotoPreview() {
     </div>`;
   }).join('');
 }
-function _edRemovePhoto(idx) { _edPhotos.splice(idx, 1); _edRenderPhotoPreview(); }
+function _edRemovePhoto(idx) { _edPhotos.splice(idx, 1); _edRenderPhotoPreview(); _edDirty = true; }
 
 // ── 참고 논문 ─────────────────────────────────────────────────
 function _edAddRef() {
@@ -2114,8 +2122,9 @@ async function _edSave() {
       docData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
       await db.collection(col).add(docData);
     }
+    _edDirty = false;
     _edToast('저장되었습니다.');
-    closeEditor();
+    closeEditor(true);
     await loadData();
   } catch(err) {
     _edToast('저장 실패: ' + err.message, 'error');
