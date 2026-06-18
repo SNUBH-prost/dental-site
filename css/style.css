@@ -2808,3 +2808,59 @@ a.cite-link .cite-sup {
 .dark .inv-brand-komet { background: #422006; color: #fde68a; }
 .dark .inv-order-item  { background: #450a0a; color: #fca5a5; }
 .dark .inv-table tr:hover td { background: rgba(255,255,255,0.04); }
+
+/* 재고 카테고리 상위 메뉴 */
+.inv-cat-menu {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.inv-cat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 1.1rem 0.6rem;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: center;
+}
+.inv-cat-card:hover { border-color: var(--primary-light); background: var(--bg-hover, rgba(37,99,235,0.05)); }
+.inv-cat-card.active { border-color: var(--primary); background: rgba(37,99,235,0.07); }
+.inv-cat-icon { font-size: 1.8rem; line-height: 1; }
+.inv-cat-name { font-weight: 700; font-size: 0.95rem; color: var(--text); }
+.inv-cat-sub  { font-size: 0.72rem; color: var(--text-muted); }
+.inv-sub-page { animation: fadeIn 0.18s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.inv-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+.inv-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.inv-form-grid input, .inv-form-grid select {
+  padding: 0.45rem 0.6rem;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+@media (max-width: 480px) {
+  .inv-cat-menu { grid-template-columns: repeat(3, 1fr); gap: 0.45rem; }
+  .inv-cat-card { padding: 0.8rem 0.3rem; border-radius: 10px; }
+  .inv-cat-icon { font-size: 1.4rem; }
+  .inv-cat-name { font-size: 0.82rem; }
+  .inv-form-grid { grid-template-columns: 1fr; }
+}
