@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=73">
+  <link rel="stylesheet" href="css/style.css?v=74">
   <link rel="stylesheet" href="css/editor.css?v=28">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -191,30 +191,68 @@
 
   <!-- ── 재고 관리 ── -->
   <div id="page-inventory" class="page">
-    <div class="inv-toolbar">
-      <div class="inv-toolbar-left">
-        <h2 class="inv-title">다이아몬드 버 재고</h2>
-      </div>
-      <div class="inv-toolbar-right" id="inv-admin-btns"></div>
+    <!-- 상위 카테고리 -->
+    <div class="inv-cat-menu" id="inv-cat-menu">
+      <button class="inv-cat-card active" data-cat="diamond" onclick="_setInvCat('diamond')">
+        <span class="inv-cat-icon">💎</span>
+        <span class="inv-cat-name">다이아몬드 버</span>
+        <span class="inv-cat-sub">Diamond Bur</span>
+      </button>
+      <button class="inv-cat-card" data-cat="denture" onclick="_setInvCat('denture')">
+        <span class="inv-cat-icon">🦷</span>
+        <span class="inv-cat-name">덴처 버</span>
+        <span class="inv-cat-sub">Denture Bur</span>
+      </button>
+      <button class="inv-cat-card" data-cat="polishing" onclick="_setInvCat('polishing')">
+        <span class="inv-cat-icon">✨</span>
+        <span class="inv-cat-name">폴리싱</span>
+        <span class="inv-cat-sub">Polishing</span>
+      </button>
     </div>
-    <div class="inv-filters">
-      <div class="inv-grade-tabs" id="inv-grade-tabs">
-        <button class="inv-grade-tab active" data-grade="all" onclick="_setBurGrade('all')">전체</button>
-        <button class="inv-grade-tab inv-ef" data-grade="EF" onclick="_setBurGrade('EF')">EF 초극세</button>
-        <button class="inv-grade-tab inv-c" data-grade="C" onclick="_setBurGrade('C')">C 조립</button>
-        <button class="inv-grade-tab inv-f" data-grade="F" onclick="_setBurGrade('F')">F 세립</button>
-        <button class="inv-grade-tab inv-reg" data-grade="REG" onclick="_setBurGrade('REG')">REG 기본</button>
+
+    <!-- 다이아몬드 버 서브페이지 -->
+    <div id="inv-sub-diamond" class="inv-sub-page">
+      <div class="inv-toolbar">
+        <div class="inv-toolbar-left"><h2 class="inv-title">다이아몬드 버 재고</h2></div>
+        <div class="inv-toolbar-right" id="inv-admin-btns"></div>
       </div>
-      <div class="inv-stock-tabs" id="inv-stock-tabs">
-        <button class="inv-stock-tab active" data-stock="all" onclick="_setBurStock('all')">전체</button>
-        <button class="inv-stock-tab" data-stock="enough,ok" onclick="_setBurStock('enough,ok')">충분/있음</button>
-        <button class="inv-stock-tab" data-stock="low" onclick="_setBurStock('low')">소량</button>
-        <button class="inv-stock-tab" data-stock="none" onclick="_setBurStock('none')">재고없음</button>
-        <button class="inv-stock-tab" data-stock="warn" onclick="_setBurStock('warn')">확인필요</button>
+      <div class="inv-filters">
+        <div class="inv-grade-tabs" id="inv-grade-tabs">
+          <button class="inv-grade-tab active" data-grade="all" onclick="_setBurGrade('all')">전체</button>
+          <button class="inv-grade-tab inv-ef" data-grade="EF" onclick="_setBurGrade('EF')">EF 초극세</button>
+          <button class="inv-grade-tab inv-c" data-grade="C" onclick="_setBurGrade('C')">C 조립</button>
+          <button class="inv-grade-tab inv-f" data-grade="F" onclick="_setBurGrade('F')">F 세립</button>
+          <button class="inv-grade-tab inv-reg" data-grade="REG" onclick="_setBurGrade('REG')">REG 기본</button>
+        </div>
+        <div class="inv-stock-tabs" id="inv-stock-tabs">
+          <button class="inv-stock-tab active" data-stock="all" onclick="_setBurStock('all')">전체</button>
+          <button class="inv-stock-tab" data-stock="enough,ok" onclick="_setBurStock('enough,ok')">충분/있음</button>
+          <button class="inv-stock-tab" data-stock="low" onclick="_setBurStock('low')">소량</button>
+          <button class="inv-stock-tab" data-stock="none" onclick="_setBurStock('none')">재고없음</button>
+          <button class="inv-stock-tab" data-stock="warn" onclick="_setBurStock('warn')">확인필요</button>
+        </div>
       </div>
+      <div id="inv-content"></div>
+      <div id="inv-order-summary"></div>
     </div>
-    <div id="inv-content"></div>
-    <div id="inv-order-summary"></div>
+
+    <!-- 덴처 버 서브페이지 -->
+    <div id="inv-sub-denture" class="inv-sub-page" style="display:none">
+      <div class="inv-toolbar">
+        <div class="inv-toolbar-left"><h2 class="inv-title">덴처 버 재고</h2></div>
+        <div class="inv-toolbar-right" id="inv-denture-admin-btns"></div>
+      </div>
+      <div id="inv-denture-content"></div>
+    </div>
+
+    <!-- 폴리싱 서브페이지 -->
+    <div id="inv-sub-polishing" class="inv-sub-page" style="display:none">
+      <div class="inv-toolbar">
+        <div class="inv-toolbar-left"><h2 class="inv-title">폴리싱 재고</h2></div>
+        <div class="inv-toolbar-right" id="inv-polishing-admin-btns"></div>
+      </div>
+      <div id="inv-polishing-content"></div>
+    </div>
   </div>
 </main>
 
@@ -316,7 +354,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
 <script defer src="js/firebase-config.js?v=21"></script>
 <script defer src="js/cloudinary-config.js?v=21"></script>
-<script defer src="js/app.js?v=95"></script>
+<script defer src="js/app.js?v=96"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {

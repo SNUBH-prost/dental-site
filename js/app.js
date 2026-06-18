@@ -276,7 +276,7 @@ function showPage(pageId) {
   window.scrollTo(0, 0);
   _currentPage = pageId;
   if (pageId === 'calendar') renderCalendar();
-  if (pageId === 'inventory') { if (!_burItems.length) _loadInventory(); else renderInventory(); }
+  if (pageId === 'inventory') { _setInvCat(_invCat); if (_invCat === 'diamond' && !_burItems.length) _loadInventory(); }
   if (!_isPopState) {
     history.pushState({ page: pageId }, '');
   }
@@ -3477,13 +3477,29 @@ const BUR_SEED = [
 let _burItems = [];
 let _burGradeFilter = 'all';
 let _burStockFilter = 'all';
+let _invCat = 'diamond';
+
+// 덴처/폴리싱 공용 simple inventory
+let _simpleInvItems = { denture: [], polishing: [] };
+let _simpleInvLoaded = { denture: false, polishing: false };
+const SIMPLE_INV_COLS = { denture: ['코드','품명','사양','재고','비고'], polishing: ['코드','품명','재료/용도','재고','비고'] };
+
+function _setInvCat(cat) {
+  _invCat = cat;
+  document.querySelectorAll('.inv-cat-card').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+  document.querySelectorAll('.inv-sub-page').forEach(p => p.style.display = 'none');
+  const sub = document.getElementById(`inv-sub-${cat}`);
+  if (sub) sub.style.display = '';
+  if (cat === 'diamond') renderInventory();
+  else _renderSimpleInv(cat);
+}
 
 function _burDocId(code) {
   return code.replace(/\s+/g, '-').replace(/\//g, '_').replace(/[.]/g, '_');
 }
 
 async function _loadInventory() {
-  const snap = await db.collection('burInventory').orderBy('grade').get().catch(() => null);
+  const snap = await db.collection('burInventory').get().catch(() => null);
   if (!snap) { renderInventory(); return; }
   if (snap.empty) {
     await _seedInventory();
@@ -3737,6 +3753,112 @@ async function _deleteBur(id) {
   _burItems = _burItems.filter(i => i.id !== id);
   _closeBurEdit();
   renderInventory();
+}
+
+// ── Simple Inventory (덴처버 / 폴리싱) ───────────────────────
+const _SIMPLE_COLLS = { denture: 'dentureBurInventory', polishing: 'polishingInventory' };
+const _SIMPLE_LABELS = { denture: '덴처 버', polishing: '폴리싱' };
+
+async function _loadSimpleInv(cat) {
+  const coll = _SIMPLE_COLLS[cat];
+  const snap = await db.collection(coll).get().catch(() => null);
+  _simpleInvLoaded[cat] = true;
+  _simpleInvItems[cat] = snap ? snap.docs.map(d => ({ id: d.id, ...d.data() })) : [];
+  _renderSimpleInv(cat);
+}
+
+function _renderSimpleInv(cat) {
+  const content = document.getElementById(`inv-${cat}-content`);
+  const adminEl = document.getElementById(`inv-${cat}-admin-btns`);
+  if (!content) return;
+  if (adminEl) adminEl.innerHTML = isAdmin
+    ? `<button class="inv-add-btn" onclick="_openSimpleEdit('${cat}',null)">+ 추가</button>` : '';
+
+  if (!_simpleInvItems[cat].length) {
+    if (!_simpleInvLoaded[cat]) {
+      content.innerHTML = '<div class="empty" style="padding:2rem;text-align:center">불러오는 중…</div>';
+      _loadSimpleInv(cat);
+      return;
+    }
+    content.innerHTML = `<div class="empty" style="padding:3rem;text-align:center;color:var(--text-muted)">
+      등록된 항목이 없습니다.<br><small>관리자가 항목을 추가할 수 있습니다.</small></div>`;
+    return;
+  }
+
+  const items = _simpleInvItems[cat];
+  const stockCls = { enough:'inv-s-enough', ok:'inv-s-ok', low:'inv-s-low', none:'inv-s-none', warn:'inv-s-warn' };
+  content.innerHTML = `<div class="inv-table-wrap"><table class="inv-table">
+    <thead><tr>
+      <th>코드</th><th>품명</th><th>${cat==='denture'?'사양':'재료/용도'}</th><th>재고</th><th>비고</th>
+      ${isAdmin?'<th></th>':''}
+    </tr></thead>
+    <tbody>${items.map(it => `<tr>
+      <td class="inv-code">${_esc(it.code||'')}</td>
+      <td>${_esc(it.name||'')}</td>
+      <td class="inv-iso">${_esc(it.spec||'')}</td>
+      <td><span class="inv-stock ${stockCls[it.stock]||''}">${BUR_META.stock_labels[it.stock]||it.stock||''}</span></td>
+      <td style="font-size:0.82rem;color:var(--text-muted)">${_esc(it.notes||'')}</td>
+      ${isAdmin?`<td class="inv-act"><button class="inv-edit-btn" onclick="_openSimpleEdit('${cat}','${_esc(it.id)}')">✏️</button></td>`:''}
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function _openSimpleEdit(cat, id) {
+  const item = id ? (_simpleInvItems[cat]||[]).find(i => i.id === id) : null;
+  const fv = (k, def='') => item ? (item[k] ?? def) : def;
+  const stockOpts = Object.entries(BUR_META.stock_labels).map(([k,v]) =>
+    `<option value="${k}"${fv('stock','ok')===k?' selected':''}>${v}</option>`).join('');
+  const specLabel = cat === 'denture' ? '사양' : '재료/용도';
+  const html = `<div id="simple-edit-overlay" class="modal-overlay open" onclick="if(event.target.id==='simple-edit-overlay')_closeSimpleEdit()">
+    <div class="modal" style="max-width:440px">
+      <button class="modal-close" onclick="_closeSimpleEdit()">✕</button>
+      <div class="modal-body">
+        <h3 style="margin:0 0 1.2rem">${item ? _SIMPLE_LABELS[cat]+' 편집' : _SIMPLE_LABELS[cat]+' 추가'}</h3>
+        <div class="inv-form-grid">
+          <label>코드<input id="si-f-code" type="text" value="${_esc(fv('code'))}" placeholder="예: DC-01"></label>
+          <label>품명 *<input id="si-f-name" type="text" value="${_esc(fv('name'))}" placeholder="품명"></label>
+          <label>${specLabel}<input id="si-f-spec" type="text" value="${_esc(fv('spec'))}" placeholder="사양/용도"></label>
+          <label>재고 상태<select id="si-f-stock">${stockOpts}</select></label>
+          <label style="grid-column:1/-1">비고<input id="si-f-notes" type="text" value="${_esc(fv('notes'))}" placeholder="메모"></label>
+        </div>
+        <div style="display:flex;gap:0.7rem;margin-top:1.4rem;justify-content:flex-end;align-items:center">
+          ${item ? `<button class="card-admin-btn del" onclick="_deleteSimpleItem('${cat}','${_esc(id)}')">🗑 삭제</button>` : ''}
+          <button class="cal-cancel-btn" onclick="_closeSimpleEdit()">취소</button>
+          <button class="cal-save-btn" onclick="_saveSimpleItem('${cat}','${_esc(id||'')}')">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _closeSimpleEdit() {
+  document.getElementById('simple-edit-overlay')?.remove();
+}
+
+async function _saveSimpleItem(cat, id) {
+  const g = sel => document.getElementById(sel)?.value?.trim();
+  const name = g('si-f-name');
+  if (!name) { alert('품명을 입력하세요.'); return; }
+  const data = { code: g('si-f-code')||'', name, spec: g('si-f-spec')||'', stock: g('si-f-stock')||'ok', notes: g('si-f-notes')||'' };
+  const coll = _SIMPLE_COLLS[cat];
+  const docId = id || _burDocId(name + '-' + Date.now());
+  await db.collection(coll).doc(docId).set(data);
+  const arr = _simpleInvItems[cat] || [];
+  const idx = arr.findIndex(i => i.id === docId);
+  if (idx >= 0) arr[idx] = { id: docId, ...data };
+  else arr.push({ id: docId, ...data });
+  _simpleInvItems[cat] = arr;
+  _closeSimpleEdit();
+  _renderSimpleInv(cat);
+}
+
+async function _deleteSimpleItem(cat, id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  await db.collection(_SIMPLE_COLLS[cat]).doc(id).delete();
+  _simpleInvItems[cat] = (_simpleInvItems[cat]||[]).filter(i => i.id !== id);
+  _closeSimpleEdit();
+  _renderSimpleInv(cat);
 }
 
 // ── Pull-to-refresh (모바일) ──────────────────────────────────
