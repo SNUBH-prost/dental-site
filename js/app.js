@@ -276,6 +276,7 @@ function showPage(pageId) {
   window.scrollTo(0, 0);
   _currentPage = pageId;
   if (pageId === 'calendar') renderCalendar();
+  if (pageId === 'inventory') { if (!_burItems.length) _loadInventory(); else renderInventory(); }
   if (!_isPopState) {
     history.pushState({ page: pageId }, '');
   }
@@ -3404,6 +3405,338 @@ function _setupCiteTip() {
       tip.style.display = 'none';
     }
   });
+}
+
+// ── Inventory (재고) ──────────────────────────────────────────
+const BUR_META = {
+  shapes: { TR:'Taper Round (테이퍼라운드)', TC:'Taper Cylinder (테이퍼실린더)', TF:'Taper Flat (테이퍼플랫)', FO:'Football/Flame (풋볼)', SO:'Small Round (스몰라운드)', EX:'Extra Shape (엑스트라)' },
+  grade_order: ['EF','C','F','REG'],
+  shape_order: ['TR','TC','TF','FO','SO','EX'],
+  grades: {
+    EF:  { name:'Extra Fine', ko:'초극세', grit:'20–30 µm', hex:'#eab308' },
+    C:   { name:'Coarse',     ko:'조립',   grit:'125–150 µm', hex:'#22c55e' },
+    F:   { name:'Fine',       ko:'세립',   grit:'40 µm',      hex:'#ef4444' },
+    REG: { name:'Regular',    ko:'기본/표준', grit:'106–125 µm', hex:'#3b82f6' }
+  },
+  stock_labels: { enough:'✅ 충분', ok:'있음', low:'🟡 소량', none:'❌ 재고없음', warn:'⚠️ 확인필요' }
+};
+
+const BUR_SEED = [
+  {code:'TR-11EF',shape:'TR',shape_ko:'테이퍼라운드(소)',grade:'EF',iso:'199/016',full_len:21.7,work_len:9.0,max_dia:1.6,rpm:300,stock:'low',brand:'MANI'},
+  {code:'TR-13EF',shape:'TR',shape_ko:'테이퍼라운드(중)',grade:'EF',iso:'198/015',full_len:21.7,work_len:9.0,max_dia:1.5,rpm:300,stock:'enough',brand:'MANI'},
+  {code:'TR-25EF',shape:'TR',shape_ko:'테이퍼라운드(대)',grade:'EF',iso:'199/016',full_len:21.7,work_len:10.0,max_dia:1.6,rpm:300,stock:'enough',brand:'MANI'},
+  {code:'TR-26EF',shape:'TR',shape_ko:'테이퍼라운드(대)',grade:'EF',iso:'199/016',full_len:21.7,work_len:10.0,max_dia:1.6,rpm:300,stock:'low',brand:'MANI'},
+  {code:'TF-12EF',shape:'TF',shape_ko:'테이퍼플랫',grade:'EF',iso:'197/013',full_len:21.0,work_len:7.0,max_dia:1.3,rpm:300,stock:'low',brand:'MANI'},
+  {code:'TC-21EF',shape:'TC',shape_ko:'테이퍼실린더',grade:'EF',iso:'171/014',full_len:20.9,work_len:7.0,max_dia:1.4,rpm:300,stock:'low',brand:'MANI'},
+  {code:'FO-22EF',shape:'FO',shape_ko:'풋볼',grade:'EF',iso:'297/012',full_len:21.0,work_len:5.2,max_dia:1.2,rpm:300,stock:'low',brand:'MANI'},
+  {code:'EX-21EF',shape:'EX',shape_ko:'라운드(엑스트라)',grade:'EF',iso:'830R',full_len:18.9,work_len:4.7,max_dia:2.9,rpm:160,stock:'none',brand:'MANI'},
+  {code:'코메 FG-379EF 023',shape:'TR',shape_ko:'FG 테이퍼라운드',grade:'EF',iso:'196/023',full_len:21.5,work_len:8.1,max_dia:2.3,rpm:300,stock:'low',brand:'Komet'},
+  {code:'코메 FG-379EF',shape:'TR',shape_ko:'FG 테이퍼라운드',grade:'EF',iso:'196/019',full_len:18.9,work_len:4.9,max_dia:1.9,rpm:300,stock:'low',brand:'Komet'},
+  {code:'코메 FG-858EF',shape:'TF',shape_ko:'FG 테이퍼플랫',grade:'EF',iso:'196/016',full_len:19.0,work_len:4.1,max_dia:1.6,rpm:300,stock:'none',brand:'Komet'},
+  {code:'코메 FG-859EF',shape:'TF',shape_ko:'FG 테이퍼플랫',grade:'EF',iso:'196/013',full_len:18.9,work_len:3.9,max_dia:1.3,rpm:450,stock:'none',brand:'Komet'},
+  {code:'TR-11C',shape:'TR',shape_ko:'테이퍼라운드(소)',grade:'C',iso:'199/016',full_len:21.7,work_len:9.0,max_dia:1.6,rpm:300,stock:'ok',brand:'MANI'},
+  {code:'TR-13C',shape:'TR',shape_ko:'테이퍼라운드(중)',grade:'C',iso:'198/018',full_len:21.8,work_len:9.2,max_dia:1.8,rpm:300,stock:'ok',brand:'MANI'},
+  {code:'TR-19C',shape:'TR',shape_ko:'테이퍼라운드',grade:'C',iso:'198/018',full_len:21.5,work_len:8.0,max_dia:1.8,rpm:300,stock:'ok',brand:'MANI'},
+  {code:'TR-25C',shape:'TR',shape_ko:'테이퍼라운드(대)',grade:'C',iso:'199/021',full_len:21.7,work_len:10.1,max_dia:2.1,rpm:300,stock:'enough',brand:'MANI'},
+  {code:'TC-11C',shape:'TC',shape_ko:'테이퍼실린더',grade:'C',iso:'—',full_len:null,work_len:null,max_dia:null,rpm:300,stock:'low',brand:'MANI'},
+  {code:'TF-12C',shape:'TF',shape_ko:'테이퍼플랫',grade:'C',iso:'173/016',full_len:21.8,work_len:10.2,max_dia:1.6,rpm:300,stock:'none',brand:'MANI'},
+  {code:'TF-20C',shape:'TF',shape_ko:'테이퍼플랫',grade:'C',iso:'173/019',full_len:21.8,work_len:10.1,max_dia:1.9,rpm:300,stock:'none',brand:'MANI'},
+  {code:'FO-27C',shape:'FO',shape_ko:'풋볼',grade:'C',iso:'299/016',full_len:21.0,work_len:5.5,max_dia:1.6,rpm:300,stock:'none',brand:'MANI'},
+  {code:'SO-21C',shape:'SO',shape_ko:'스몰라운드',grade:'C',iso:'130/014',full_len:21.1,work_len:5.4,max_dia:1.4,rpm:450,stock:'low',brand:'MANI'},
+  {code:'EX-21C',shape:'EX',shape_ko:'라운드(엑스트라)',grade:'C',iso:'830R',full_len:19.1,work_len:5.0,max_dia:3.3,rpm:160,stock:'none',brand:'MANI'},
+  {code:'코메 FG-6856 012',shape:'TR',shape_ko:'FG φ1.2mm',grade:'C',iso:'196/012',full_len:19.0,work_len:5.1,max_dia:1.2,rpm:300,stock:'low',brand:'Komet'},
+  {code:'코메 FG-6856 016',shape:'TR',shape_ko:'FG φ1.6mm',grade:'C',iso:'196/016',full_len:19.0,work_len:5.1,max_dia:1.6,rpm:300,stock:'none',brand:'Komet'},
+  {code:'코메 FG-6379 023',shape:'TR',shape_ko:'FG φ2.3mm',grade:'C',iso:'196/023',full_len:21.5,work_len:8.1,max_dia:2.3,rpm:300,stock:'warn',brand:'Komet'},
+  {code:'TR-11F',shape:'TR',shape_ko:'테이퍼라운드(소)',grade:'F',iso:'199/016',full_len:21.7,work_len:9.0,max_dia:1.6,rpm:300,stock:'none',brand:'MANI'},
+  {code:'TR-13F',shape:'TR',shape_ko:'테이퍼라운드(중)',grade:'F',iso:'198/018',full_len:21.7,work_len:9.1,max_dia:1.8,rpm:300,stock:'none',brand:'MANI'},
+  {code:'TR-21F',shape:'TR',shape_ko:'테이퍼라운드',grade:'F',iso:'197/016',full_len:21.5,work_len:8.5,max_dia:1.6,rpm:300,stock:'none',brand:'MANI'},
+  {code:'TR-25F',shape:'TR',shape_ko:'테이퍼라운드(대)',grade:'F',iso:'199/021',full_len:21.7,work_len:10.1,max_dia:2.1,rpm:300,stock:'low',brand:'MANI'},
+  {code:'TC-11F',shape:'TC',shape_ko:'테이퍼실린더',grade:'F',iso:'—',full_len:null,work_len:null,max_dia:null,rpm:300,stock:'none',brand:'MANI'},
+  {code:'EX-21F',shape:'EX',shape_ko:'라운드(엑스트라)',grade:'F',iso:'830R',full_len:18.9,work_len:4.7,max_dia:2.9,rpm:160,stock:'none',brand:'MANI'},
+  {code:'코메 FG-8856 016',shape:'TR',shape_ko:'FG φ1.6mm',grade:'F',iso:'196/016',full_len:19.0,work_len:4.1,max_dia:1.6,rpm:300,stock:'ok',brand:'Komet'},
+  {code:'코메 FG-8379 023',shape:'TR',shape_ko:'FG φ2.3mm',grade:'F',iso:'196/023',full_len:21.5,work_len:8.1,max_dia:2.3,rpm:300,stock:'ok',brand:'Komet'},
+  {code:'코메 FG-8845KR 016',shape:'TR',shape_ko:'FG φ1.6mm',grade:'F',iso:'196/016',full_len:19.0,work_len:5.1,max_dia:1.6,rpm:300,stock:'warn',brand:'Komet'},
+  {code:'코메 FG-856',shape:'TR',shape_ko:'FG 테이퍼라운드',grade:'F',iso:'196/016',full_len:19.0,work_len:5.1,max_dia:1.6,rpm:300,stock:'ok',brand:'Komet'},
+  {code:'TR-S21',shape:'TR',shape_ko:'테이퍼라운드(쇼트생크)',grade:'REG',iso:'553/016',full_len:19.9,work_len:9.0,max_dia:1.6,rpm:300,stock:'enough',brand:'MANI'},
+  {code:'TR-12',shape:'TR',shape_ko:'테이퍼라운드',grade:'REG',iso:'199/016',full_len:21.7,work_len:9.0,max_dia:1.6,rpm:300,stock:'low',brand:'MANI'},
+  {code:'TR-14',shape:'TR',shape_ko:'테이퍼라운드',grade:'REG',iso:'199/018',full_len:21.7,work_len:9.5,max_dia:1.8,rpm:300,stock:'low',brand:'MANI'},
+  {code:'TR-21',shape:'TR',shape_ko:'테이퍼라운드',grade:'REG',iso:'199/016',full_len:21.7,work_len:9.0,max_dia:1.6,rpm:300,stock:'ok',brand:'MANI'},
+  {code:'TR-25',shape:'TR',shape_ko:'테이퍼라운드(대)',grade:'REG',iso:'199/021',full_len:21.7,work_len:10.0,max_dia:2.1,rpm:300,stock:'ok',brand:'MANI'},
+  {code:'TR-26',shape:'TR',shape_ko:'테이퍼라운드(대)',grade:'REG',iso:'199/021',full_len:21.7,work_len:10.1,max_dia:2.1,rpm:300,stock:'ok',brand:'MANI'},
+  {code:'TR-SS21',shape:'TR',shape_ko:'테이퍼라운드(슈퍼쇼트)',grade:'REG',iso:'197/012',full_len:15.9,work_len:5.9,max_dia:1.2,rpm:450,stock:'ok',brand:'MANI'},
+  {code:'TC-11',shape:'TC',shape_ko:'테이퍼실린더',grade:'REG',iso:'—',full_len:null,work_len:null,max_dia:null,rpm:300,stock:'ok',brand:'MANI'},
+  {code:'TC-21',shape:'TC',shape_ko:'테이퍼실린더',grade:'REG',iso:'—',full_len:null,work_len:null,max_dia:null,rpm:300,stock:'ok',brand:'MANI'},
+  {code:'TF-12',shape:'TF',shape_ko:'테이퍼플랫',grade:'REG',iso:'173/016',full_len:21.8,work_len:10.2,max_dia:1.6,rpm:300,stock:'low',brand:'MANI'},
+  {code:'TF-13',shape:'TF',shape_ko:'테이퍼플랫',grade:'REG',iso:'173/018',full_len:21.8,work_len:10.2,max_dia:1.8,rpm:300,stock:'none',brand:'MANI'},
+  {code:'FO-25',shape:'FO',shape_ko:'풋볼',grade:'REG',iso:'297/014',full_len:21.0,work_len:5.2,max_dia:1.4,rpm:300,stock:'none',brand:'MANI'},
+  {code:'SO-21',shape:'SO',shape_ko:'스몰라운드',grade:'REG',iso:'130/014',full_len:21.1,work_len:5.4,max_dia:1.4,rpm:450,stock:'ok',brand:'MANI'},
+  {code:'EX-21',shape:'EX',shape_ko:'라운드(엑스트라)',grade:'REG',iso:'830R',full_len:19.1,work_len:5.0,max_dia:3.2,rpm:160,stock:'ok',brand:'MANI'},
+  {code:'EX-40',shape:'EX',shape_ko:'라운드(대)',grade:'REG',iso:'830L',full_len:20.1,work_len:7.2,max_dia:3.5,rpm:160,stock:'warn',brand:'MANI'}
+];
+
+let _burItems = [];
+let _burGradeFilter = 'all';
+let _burStockFilter = 'all';
+
+function _burDocId(code) {
+  return code.replace(/\s+/g, '-').replace(/\//g, '_').replace(/[.]/g, '_');
+}
+
+async function _loadInventory() {
+  const snap = await db.collection('burInventory').orderBy('grade').get().catch(() => null);
+  if (!snap) { renderInventory(); return; }
+  if (snap.empty) {
+    await _seedInventory();
+    const snap2 = await db.collection('burInventory').get();
+    _burItems = snap2.docs.map(d => ({ id: d.id, ...d.data() }));
+  } else {
+    _burItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  renderInventory();
+}
+
+async function _seedInventory() {
+  const batch = db.batch();
+  BUR_SEED.forEach(item => {
+    const ref = db.collection('burInventory').doc(_burDocId(item.code));
+    batch.set(ref, item);
+  });
+  await batch.commit();
+}
+
+function _setBurGrade(grade) {
+  _burGradeFilter = grade;
+  document.querySelectorAll('.inv-grade-tab').forEach(b => b.classList.toggle('active', b.dataset.grade === grade));
+  renderInventory();
+}
+
+function _setBurStock(stock) {
+  _burStockFilter = stock;
+  document.querySelectorAll('.inv-stock-tab').forEach(b => b.classList.toggle('active', b.dataset.stock === stock));
+  renderInventory();
+}
+
+function _burStockHTML(stock) {
+  const cls = { enough:'inv-s-enough', ok:'inv-s-ok', low:'inv-s-low', none:'inv-s-none', warn:'inv-s-warn' };
+  return `<span class="inv-stock ${cls[stock]||''}">${BUR_META.stock_labels[stock]||stock}</span>`;
+}
+
+function _burRowHTML(item, showAdminBtns) {
+  const rpmHigh = item.rpm >= 450;
+  const rpmStr = item.rpm ? `<span class="${rpmHigh ? 'inv-rpm-high' : ''}">${item.rpm}</span>` : '—';
+  const editBtn = showAdminBtns
+    ? `<button class="inv-edit-btn" onclick="_openBurEdit('${item.id}')">✏️</button>`
+    : '';
+  return `<tr>
+    <td class="inv-code">${_esc(item.code)}<span class="inv-brand-badge inv-brand-${(item.brand||'').toLowerCase()}">${_esc(item.brand||'')}</span></td>
+    <td>${_esc(item.shape_ko||'')}</td>
+    <td class="inv-iso">${_esc(item.iso||'—')}</td>
+    <td class="inv-num">${item.full_len!=null?item.full_len:'—'}</td>
+    <td class="inv-num">${item.work_len!=null?item.work_len:'—'}</td>
+    <td class="inv-num">${item.max_dia!=null?item.max_dia:'—'}</td>
+    <td class="inv-num">${rpmStr}</td>
+    <td>${_burStockHTML(item.stock)}</td>
+    ${showAdminBtns ? `<td class="inv-act">${editBtn}</td>` : ''}
+  </tr>`;
+}
+
+function renderInventory() {
+  const content = document.getElementById('inv-content');
+  if (!content) return;
+
+  const adminBtns = document.getElementById('inv-admin-btns');
+  if (adminBtns) {
+    adminBtns.innerHTML = isAdmin
+      ? `<button class="inv-add-btn" onclick="_openBurEdit(null)">+ 버 추가</button>`
+      : '';
+  }
+
+  let items = _burItems;
+  if (_burGradeFilter !== 'all') items = items.filter(i => i.grade === _burGradeFilter);
+  if (_burStockFilter !== 'all') {
+    const allow = _burStockFilter.split(',');
+    items = items.filter(i => allow.includes(i.stock));
+  }
+
+  const grades = _burGradeFilter === 'all' ? BUR_META.grade_order : [_burGradeFilter];
+  let html = '';
+
+  grades.forEach(grade => {
+    const gm = BUR_META.grades[grade];
+    const gi = items.filter(i => i.grade === grade);
+    if (!gi.length) return;
+
+    html += `<div class="inv-grade-section">
+      <div class="inv-grade-header" style="border-left:4px solid ${gm.hex}">
+        <span class="inv-grade-label" style="color:${gm.hex}">${grade === 'REG' ? 'Regular' : grade}</span>
+        <span class="inv-grade-desc">${gm.ko} · ${gm.grit}</span>
+        <span class="inv-grade-count">${gi.length}종</span>
+      </div>`;
+
+    BUR_META.shape_order.forEach(shape => {
+      const si = gi.filter(i => i.shape === shape);
+      if (!si.length) return;
+      const shapeImg = `/dental-site/icons/bur/${shape}.png`;
+      html += `<div class="inv-shape-group">
+        <div class="inv-shape-header">
+          <img src="${shapeImg}" alt="${shape}" class="inv-shape-img" onerror="this.style.display='none'">
+          <span class="inv-shape-name">${BUR_META.shapes[shape]||shape}</span>
+          <span class="inv-shape-count">${si.length}종</span>
+        </div>
+        <div class="inv-table-wrap">
+          <table class="inv-table">
+            <thead><tr>
+              <th>코드</th><th>형태명</th><th>ISO</th>
+              <th title="전장(mm)">전장</th><th title="작업장(mm)">작업장</th><th title="최대경(mm)">최대경</th><th title="최대RPM ×1000">RPM(K)</th>
+              <th>재고</th>${isAdmin ? '<th></th>' : ''}
+            </tr></thead>
+            <tbody>${si.map(item => _burRowHTML(item, isAdmin)).join('')}</tbody>
+          </table>
+        </div>
+      </div>`;
+    });
+
+    // unknown shapes not in shape_order
+    const knownShapes = new Set(BUR_META.shape_order);
+    const others = gi.filter(i => !knownShapes.has(i.shape));
+    if (others.length) {
+      html += `<div class="inv-shape-group">
+        <div class="inv-shape-header"><span class="inv-shape-name">기타</span><span class="inv-shape-count">${others.length}종</span></div>
+        <div class="inv-table-wrap"><table class="inv-table">
+          <thead><tr><th>코드</th><th>형태명</th><th>ISO</th><th>전장</th><th>작업장</th><th>최대경</th><th>RPM(K)</th><th>재고</th>${isAdmin ? '<th></th>' : ''}</tr></thead>
+          <tbody>${others.map(item => _burRowHTML(item, isAdmin)).join('')}</tbody>
+        </table></div>
+      </div>`;
+    }
+
+    html += '</div>';
+  });
+
+  content.innerHTML = html || '<div class="empty" style="padding:2rem;text-align:center">표시할 항목이 없습니다.</div>';
+
+  _renderBurOrderSummary(items);
+}
+
+function _renderBurOrderSummary(items) {
+  const el = document.getElementById('inv-order-summary');
+  if (!el) return;
+  const noneItems = (items || _burItems).filter(i => i.stock === 'none');
+  if (!noneItems.length) { el.innerHTML = ''; return; }
+
+  const byGrade = {};
+  noneItems.forEach(i => {
+    if (!byGrade[i.grade]) byGrade[i.grade] = [];
+    byGrade[i.grade].push(i);
+  });
+
+  let html = `<div class="inv-order-section">
+    <div class="inv-order-title">❌ 주문 필요 목록 (${noneItems.length}종)</div>`;
+  BUR_META.grade_order.forEach(grade => {
+    if (!byGrade[grade]) return;
+    const gm = BUR_META.grades[grade];
+    html += `<div class="inv-order-grade">
+      <span class="inv-order-grade-label" style="color:${gm.hex}">${grade === 'REG' ? 'Regular' : grade}</span>
+      ${byGrade[grade].map(i => `<span class="inv-order-item">${_esc(i.code)}</span>`).join('')}
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function _openBurEdit(id) {
+  const item = id ? _burItems.find(i => i.id === id) : null;
+  const title = item ? '버 정보 편집' : '새 버 추가';
+
+  const fv = (k, def='') => item ? (item[k] != null ? item[k] : def) : def;
+  const gradeOpts = BUR_META.grade_order.map(g => {
+    const gm = BUR_META.grades[g];
+    const sel = fv('grade','EF') === g ? ' selected' : '';
+    return `<option value="${g}"${sel}>${g} (${gm.ko})</option>`;
+  }).join('');
+  const shapeOpts = BUR_META.shape_order.map(s => {
+    const sel = fv('shape','TR') === s ? ' selected' : '';
+    return `<option value="${s}"${sel}>${s}</option>`;
+  }).join('');
+  const stockOpts = Object.entries(BUR_META.stock_labels).map(([k,v]) => {
+    const sel = fv('stock','ok') === k ? ' selected' : '';
+    return `<option value="${k}"${sel}>${v}</option>`;
+  }).join('');
+
+  const html = `<div id="bur-edit-overlay" class="modal-overlay open" onclick="if(event.target.id==='bur-edit-overlay')_closeBurEdit()">
+    <div class="modal" style="max-width:520px">
+      <button class="modal-close" onclick="_closeBurEdit()">✕</button>
+      <div class="modal-body">
+        <h3 style="margin:0 0 1.2rem">${title}</h3>
+        <div class="ed-form-grid">
+          <label>버 코드 *<input id="bur-f-code" type="text" value="${_esc(fv('code'))}" placeholder="예: TR-11EF"></label>
+          <label>브랜드<select id="bur-f-brand">
+            <option value="MANI"${fv('brand','MANI')==='MANI'?' selected':''}>MANI</option>
+            <option value="Komet"${fv('brand')==='Komet'?' selected':''}>Komet</option>
+            <option value="기타"${fv('brand')==='기타'?' selected':''}>기타</option>
+          </select></label>
+          <label>형태(shape)<select id="bur-f-shape">${shapeOpts}</select></label>
+          <label>형태명(한글)<input id="bur-f-shape-ko" type="text" value="${_esc(fv('shape_ko'))}" placeholder="테이퍼라운드(소)"></label>
+          <label>등급<select id="bur-f-grade">${gradeOpts}</select></label>
+          <label>ISO 코드<input id="bur-f-iso" type="text" value="${_esc(fv('iso','—'))}" placeholder="199/016"></label>
+          <label>전장(mm)<input id="bur-f-full-len" type="number" step="0.1" value="${fv('full_len','')}"></label>
+          <label>작업장(mm)<input id="bur-f-work-len" type="number" step="0.1" value="${fv('work_len','')}"></label>
+          <label>최대경(mm)<input id="bur-f-max-dia" type="number" step="0.1" value="${fv('max_dia','')}"></label>
+          <label>최대RPM(×1000)<input id="bur-f-rpm" type="number" value="${fv('rpm',300)}"></label>
+          <label style="grid-column:1/-1">재고 상태<select id="bur-f-stock">${stockOpts}</select></label>
+        </div>
+        <div style="display:flex;gap:0.7rem;margin-top:1.4rem;justify-content:flex-end">
+          ${item && isAdmin ? `<button class="card-admin-btn del" onclick="_deleteBur('${id}')">🗑 삭제</button>` : ''}
+          <button class="cal-cancel-btn" onclick="_closeBurEdit()">취소</button>
+          <button class="cal-save-btn" onclick="_saveBur('${id||''}')">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _closeBurEdit() {
+  document.getElementById('bur-edit-overlay')?.remove();
+}
+
+async function _saveBur(id) {
+  const g = sel => document.getElementById(sel)?.value?.trim();
+  const gn = sel => { const v = document.getElementById(sel)?.value; return v === '' || v == null ? null : Number(v); };
+  const code = g('bur-f-code');
+  if (!code) { alert('버 코드를 입력하세요.'); return; }
+
+  const data = {
+    code,
+    brand: g('bur-f-brand') || 'MANI',
+    shape: g('bur-f-shape') || 'TR',
+    shape_ko: g('bur-f-shape-ko') || '',
+    grade: g('bur-f-grade') || 'EF',
+    iso: g('bur-f-iso') || '—',
+    full_len: gn('bur-f-full-len'),
+    work_len: gn('bur-f-work-len'),
+    max_dia: gn('bur-f-max-dia'),
+    rpm: gn('bur-f-rpm') || 300,
+    stock: g('bur-f-stock') || 'ok'
+  };
+
+  const docId = id || _burDocId(code);
+  await db.collection('burInventory').doc(docId).set(data);
+
+  const idx = _burItems.findIndex(i => i.id === docId);
+  if (idx >= 0) _burItems[idx] = { id: docId, ...data };
+  else _burItems.push({ id: docId, ...data });
+
+  _closeBurEdit();
+  renderInventory();
+}
+
+async function _deleteBur(id) {
+  if (!confirm('이 버를 삭제하시겠습니까?')) return;
+  await db.collection('burInventory').doc(id).delete();
+  _burItems = _burItems.filter(i => i.id !== id);
+  _closeBurEdit();
+  renderInventory();
 }
 
 // ── Pull-to-refresh (모바일) ──────────────────────────────────
