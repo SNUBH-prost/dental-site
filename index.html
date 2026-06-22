@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=74">
+  <link rel="stylesheet" href="css/style.css?v=75">
   <link rel="stylesheet" href="css/editor.css?v=28">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -57,6 +57,7 @@
 
       <a href="javascript:void(0)" data-page="calendar" class="nav-link" onclick="showPage('calendar')">일정</a>
       <a href="javascript:void(0)" data-page="inventory" class="nav-link" onclick="showPage('inventory')">재고</a>
+      <a href="javascript:void(0)" data-page="stats" class="nav-link" onclick="showPage('stats')">통계</a>
       <a href="admin.html?v=1" class="nav-link nav-admin">관리</a>
     </nav>
 
@@ -90,6 +91,7 @@
     <div class="drawer-section-label">기타</div>
     <a href="javascript:void(0)" onclick="showPage('calendar');toggleMobileMenu()"><span class="di">📅</span>일정</a>
     <a href="javascript:void(0)" onclick="showPage('inventory');toggleMobileMenu()"><span class="di">🔩</span>재고</a>
+    <a href="javascript:void(0)" onclick="showPage('stats');toggleMobileMenu()"><span class="di">📊</span>통계</a>
     <a href="admin.html?v=1"><span class="di">⚙</span>관리</a>
   </div>
 </div>
@@ -254,6 +256,16 @@
       <div id="inv-polishing-content"></div>
     </div>
   </div>
+
+  <!-- ── 통계 ── -->
+  <div id="page-stats" class="page">
+    <div class="stats-header">
+      <h2 class="stats-title">케이스 통계</h2>
+      <span id="stats-updated" class="stats-updated"></span>
+    </div>
+    <div id="stats-summary-row" class="stats-summary-row"></div>
+    <div id="stats-charts" class="stats-charts"></div>
+  </div>
 </main>
 
 <!-- ── 날짜 상세 모달 ── -->
@@ -354,7 +366,7 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
 <script defer src="js/firebase-config.js?v=21"></script>
 <script defer src="js/cloudinary-config.js?v=21"></script>
-<script defer src="js/app.js?v=96"></script>
+<script defer src="js/app.js?v=97"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {
