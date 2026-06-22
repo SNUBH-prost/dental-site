@@ -277,6 +277,7 @@ function showPage(pageId) {
   _currentPage = pageId;
   if (pageId === 'calendar') renderCalendar();
   if (pageId === 'inventory') { _setInvCat(_invCat); if (_invCat === 'diamond' && !_burItems.length) _loadInventory(); }
+  if (pageId === 'stats') renderStats();
   if (!_isPopState) {
     history.pushState({ page: pageId }, '');
   }
@@ -3753,6 +3754,135 @@ async function _deleteBur(id) {
   _burItems = _burItems.filter(i => i.id !== id);
   _closeBurEdit();
   renderInventory();
+}
+
+// ── Statistics (통계) ─────────────────────────────────────────
+function renderStats() {
+  const summary = document.getElementById('stats-summary-row');
+  const charts  = document.getElementById('stats-charts');
+  const updated = document.getElementById('stats-updated');
+  if (!summary || !charts) return;
+
+  const now   = new Date();
+  const thisM = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const total = allCases.length;
+  const thisMonth = allCases.filter(c => (c.date||'').startsWith(thisM)).length;
+  const ongoing   = allCases.filter(c => c.status === 'ongoing').length;
+  const done      = allCases.filter(c => c.status === 'done').length;
+
+  if (updated) updated.textContent = `총 ${total}건 · ${now.toLocaleDateString('ko-KR')} 기준`;
+
+  summary.innerHTML = [
+    { label:'전체 케이스', value: total,      icon:'📋', cls:'' },
+    { label:'이번 달',    value: thisMonth,   icon:'📅', cls:'' },
+    { label:'진행중',     value: ongoing,     icon:'🔄', cls:'stat-card-ongoing' },
+    { label:'완료',       value: done,        icon:'✅', cls:'stat-card-done' }
+  ].map(s => `<div class="stat-card ${s.cls}">
+    <div class="stat-card-icon">${s.icon}</div>
+    <div class="stat-card-value">${s.value}</div>
+    <div class="stat-card-label">${s.label}</div>
+  </div>`).join('');
+
+  charts.innerHTML = `
+    <div class="stats-chart-card stats-chart-full">
+      <div class="stats-chart-title">월별 케이스 등록 수 <span class="stats-chart-sub">(최근 12개월)</span></div>
+      ${_statsMonthlyChart()}
+    </div>
+    <div class="stats-chart-card">
+      <div class="stats-chart-title">부문별 케이스 수</div>
+      ${_statsDeptChart()}
+    </div>
+    <div class="stats-chart-card">
+      <div class="stats-chart-title">자주 쓰인 태그 <span class="stats-chart-sub">(상위 15개)</span></div>
+      ${_statsTagChart()}
+    </div>`;
+}
+
+function _statsMonthlyChart() {
+  const months = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    months.push({ key, label: `${d.getFullYear()}.${d.getMonth()+1}`, short: `${d.getMonth()+1}월`, count: 0 });
+  }
+  allCases.forEach(c => {
+    if (!c.date) return;
+    const key = c.date.slice(0, 7);
+    const m = months.find(m => m.key === key);
+    if (m) m.count++;
+  });
+
+  const maxCount = Math.max(...months.map(m => m.count), 1);
+  const W = 560, H = 160, PT = 14, PB = 28, PL = 28, PR = 8;
+  const bw_total = (W - PL - PR) / months.length;
+  const bw = bw_total * 0.65;
+  const bpad = bw_total * 0.175;
+  const ch = H - PT - PB;
+
+  const gridY = [0.25, 0.5, 0.75, 1].filter(f => Math.round(f * maxCount) > 0);
+  const grids = gridY.map(f => {
+    const y = PT + ch - f * ch;
+    return `<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="var(--border)" stroke-dasharray="3,3" stroke-width="1"/>
+      <text x="${PL-4}" y="${y+4}" text-anchor="end" font-size="9" fill="var(--text-muted)">${Math.round(f*maxCount)}</text>`;
+  }).join('');
+
+  const bars = months.map((m, i) => {
+    const bh = maxCount ? (m.count / maxCount) * ch : 0;
+    const x  = PL + i * bw_total + bpad;
+    const y  = PT + ch - bh;
+    const mid = x + bw / 2;
+    return `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" rx="3" fill="var(--primary)" opacity="0.82">
+        <title>${m.label}: ${m.count}건</title></rect>
+      ${m.count > 0 ? `<text x="${mid}" y="${y-3}" text-anchor="middle" font-size="9" fill="var(--primary)" font-weight="600">${m.count}</text>` : ''}
+      <text x="${mid}" y="${H-PB+13}" text-anchor="middle" font-size="9" fill="var(--text-muted)">${m.short}</text>`;
+  }).join('');
+
+  return `<div class="stats-svg-wrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto;display:block">
+    ${grids}
+    <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+ch}" stroke="var(--border)" stroke-width="1"/>
+    ${bars}
+  </svg></div>`;
+}
+
+function _statsDeptChart() {
+  const counts = {};
+  allCases.forEach(c => { if (c.department) counts[c.department] = (counts[c.department]||0)+1; });
+  const items = _departments
+    .map(d => ({ name: d.name, count: counts[d.id]||0 }))
+    .filter(d => d.count > 0)
+    .sort((a,b) => b.count - a.count);
+  if (!items.length) return '<div class="stats-empty">케이스가 없습니다.</div>';
+  const max = items[0].count;
+  return `<div class="stats-hbar-list">${items.map((d,i) => {
+    const pct = Math.round((d.count/max)*100);
+    const hue = (i * 47) % 360;
+    return `<div class="stats-hbar-row">
+      <div class="stats-hbar-label">${_esc(d.name)}</div>
+      <div class="stats-hbar-track">
+        <div class="stats-hbar-fill" style="width:${pct}%;background:hsl(${hue},60%,52%)"></div>
+      </div>
+      <div class="stats-hbar-count">${d.count}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function _statsTagChart() {
+  const counts = {};
+  allCases.forEach(c => (c.tags||[]).forEach(t => { counts[t] = (counts[t]||0)+1; }));
+  const items = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  if (!items.length) return '<div class="stats-empty">태그가 없습니다.</div>';
+  const max = items[0][1];
+  return `<div class="stats-hbar-list">${items.map(([tag, count]) => {
+    const pct = Math.round((count/max)*100);
+    return `<div class="stats-hbar-row">
+      <div class="stats-hbar-label stats-tag-label">${_esc(tag)}</div>
+      <div class="stats-hbar-track">
+        <div class="stats-hbar-fill" style="width:${pct}%;background:var(--primary)"></div>
+      </div>
+      <div class="stats-hbar-count">${count}</div>
+    </div>`;
+  }).join('')}</div>`;
 }
 
 // ── Simple Inventory (덴처버 / 폴리싱) ───────────────────────
