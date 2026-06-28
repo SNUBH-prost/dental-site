@@ -1204,6 +1204,16 @@ function _injectAdminControls() {
     btn.onclick = () => openEditorNew('content', d.id);
     header.appendChild(btn);
   });
+
+  // Calendar — "사진/텍스트로 일정 가져오기" button
+  const calToolbar = document.querySelector('#page-calendar .cal-toolbar');
+  if (calToolbar) {
+    const btn = document.createElement('button');
+    btn.className = 'cal-import-btn admin-inject';
+    btn.innerHTML = '📷 일정 가져오기';
+    btn.onclick = _openSchedImport;
+    calToolbar.appendChild(btn);
+  }
 }
 
 // ── 부문 관리 (동적 추가/삭제) ────────────────────────────────
@@ -3754,6 +3764,264 @@ async function _deleteBur(id) {
   _burItems = _burItems.filter(i => i.id !== id);
   _closeBurEdit();
   renderInventory();
+}
+
+// ── Schedule Import (사진/텍스트 → 일정 자동 입력) ───────────
+let _schedImportRows = [];   // 검토 중인 파싱 결과
+let _tesseractLoading = null;
+
+// claude.ai 등에 붙여넣을 프롬프트 (JSON 출력 강제)
+function _schedImportPrompt() {
+  const y = _calYear, m = _pad2(_calMonth + 1);
+  const depts = _departments.map(d => `${d.id}=${d.name}`).join(', ');
+  return [
+    '첨부한 진료 일정 사진/표를 읽고, 각 일정을 아래 JSON 배열로만 출력해줘. 설명·코드펜스 없이 JSON 배열 그 자체만.',
+    '',
+    '형식: [{"date":"YYYY-MM-DD","time":"HH:MM","patient":"환자식별","treatment":"진료종류","dept":"부문ID","notes":"메모"}]',
+    '',
+    '규칙:',
+    `- date는 반드시 YYYY-MM-DD. 연/월이 사진에 없으면 ${_calYear}년 ${m}월로 가정.`,
+    '- time은 24시간제 HH:MM. 시간이 없으면 빈 문자열 "".',
+    '- dept는 다음 중 ID로 매핑(애매하면 ""): ' + (depts || '(부문 없음)'),
+    '- 개인정보 보호: 환자명은 사진에 적힌 그대로 옮기되 새로 추측하지 말 것.',
+    '- 값이 없으면 빈 문자열. 일정이 여러 개면 배열에 모두 담을 것.'
+  ].join('\n');
+}
+
+function _openSchedImport() {
+  if (!isAdmin) return;
+  _schedImportRows = [];
+  const html = `<div id="sched-import-overlay" class="modal-overlay open" onclick="if(event.target.id==='sched-import-overlay')_closeSchedImport()">
+    <div class="modal sched-import-modal">
+      <button class="modal-close" onclick="_closeSchedImport()">✕</button>
+      <div class="modal-body">
+        <h3 style="margin:0 0 0.3rem">📷 일정 가져오기</h3>
+        <p class="si-hint">사진을 올리면 자동 인식(브라우저 OCR)하거나, claude.ai에서 변환한 JSON을 붙여넣어 한 번에 등록합니다.</p>
+
+        <div class="si-method">
+          <div class="si-method-title">방법 1 · 사진 자동 인식 <span class="si-badge">실험적</span></div>
+          <label class="si-upload" id="si-upload-label">
+            <input type="file" accept="image/*" id="si-file" style="display:none" onchange="_schedImportOCR(this.files[0])">
+            <span id="si-upload-text">📁 일정 사진 선택 / 촬영</span>
+          </label>
+          <div id="si-ocr-status" class="si-status"></div>
+        </div>
+
+        <div class="si-divider"><span>또는</span></div>
+
+        <div class="si-method">
+          <div class="si-method-title">방법 2 · claude.ai 붙여넣기 <span class="si-badge si-badge-accurate">정확도 높음</span></div>
+          <button class="si-copy-btn" onclick="_copySchedPrompt(this)">📋 변환 프롬프트 복사</button>
+          <span class="si-copy-hint">→ claude.ai에 사진과 함께 붙여넣고, 나온 JSON을 아래에 붙여넣으세요</span>
+          <textarea id="si-paste" class="si-paste" placeholder='여기에 JSON 붙여넣기 — 예:&#10;[{"date":"2026-06-30","time":"14:30","patient":"K.H.M","treatment":"임플란트 2차","dept":"","notes":""}]'></textarea>
+          <button class="si-parse-btn" onclick="_schedImportParse()">분석하기 →</button>
+        </div>
+
+        <div id="si-review"></div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _closeSchedImport() {
+  document.getElementById('sched-import-overlay')?.remove();
+  _schedImportRows = [];
+}
+
+function _copySchedPrompt(btn) {
+  const txt = _schedImportPrompt();
+  const done = () => { btn.textContent = '✓ 복사됨'; setTimeout(() => btn.textContent = '📋 변환 프롬프트 복사', 1800); };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(txt).then(done).catch(() => { _fallbackCopy(txt); done(); });
+  } else { _fallbackCopy(txt); done(); }
+}
+
+function _fallbackCopy(txt) {
+  const ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  ta.remove();
+}
+
+// ── 방법 2: 붙여넣은 JSON/텍스트 파싱 ──
+function _schedImportParse() {
+  const raw = document.getElementById('si-paste')?.value || '';
+  if (!raw.trim()) { _edToast('붙여넣은 내용이 없습니다.', 'error'); return; }
+  let rows = _parseSchedJSON(raw);
+  if (!rows.length) rows = _parseSchedLoose(raw);
+  if (!rows.length) { _edToast('일정을 찾지 못했습니다. 형식을 확인하세요.', 'error'); return; }
+  _schedImportRows = rows.map(_normSchedRow);
+  _renderSchedReview();
+}
+
+function _parseSchedJSON(raw) {
+  // 코드펜스/앞뒤 텍스트 제거하고 첫 배열 추출
+  let s = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/,'').trim();
+  const a = s.indexOf('['), b = s.lastIndexOf(']');
+  if (a >= 0 && b > a) s = s.slice(a, b + 1);
+  try {
+    const arr = JSON.parse(s);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+
+// JSON이 아닐 때: 줄 단위 휴리스틱 (OCR 텍스트/표 붙여넣기 대응)
+function _parseSchedLoose(raw) {
+  const rows = [];
+  const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let curDate = '';
+  lines.forEach(line => {
+    const d = _grabDate(line);
+    if (d) curDate = d;
+    const t = _grabTime(line);
+    // 날짜 또는 시간 또는 의미있는 텍스트가 있으면 후보 행
+    let rest = line
+      .replace(/\d{4}[-./]\d{1,2}[-./]\d{1,2}/g, '')
+      .replace(/\d{1,2}월\s*\d{1,2}일/g, '')
+      .replace(/\d{1,2}:\d{2}/g, '')
+      .replace(/\b\d{3,4}\b/g, '')
+      .replace(/[|\t]+/g, ' ')
+      .trim();
+    if (!t && !d && !rest) return;
+    if (!rest && !t) return;
+    rows.push({ date: curDate || d || '', time: t || '', patient: '', treatment: rest, dept: '', notes: '' });
+  });
+  return rows;
+}
+
+function _grabDate(s) {
+  let m = s.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+  if (m) return `${m[1]}-${_pad2(+m[2])}-${_pad2(+m[3])}`;
+  m = s.match(/(\d{1,2})월\s*(\d{1,2})일/);
+  if (m) return `${_calYear}-${_pad2(+m[1])}-${_pad2(+m[2])}`;
+  m = s.match(/\b(\d{1,2})[/.](\d{1,2})\b/);
+  if (m) return `${_calYear}-${_pad2(+m[1])}-${_pad2(+m[2])}`;
+  return '';
+}
+
+function _grabTime(s) {
+  let m = s.match(/\b(\d{1,2}):(\d{2})\b/);
+  if (m) return _normTime(`${m[1]}:${m[2]}`);
+  m = s.match(/\b(\d{1,2})시\s*(\d{1,2})?분?/);
+  if (m) return _normTime(`${m[1]}:${m[2] ? _pad2(+m[2]) : '00'}`);
+  return '';
+}
+
+function _normSchedRow(r) {
+  const validDept = _departments.some(d => d.id === r.dept) ? r.dept : '';
+  return {
+    date: _grabDate(String(r.date || '')) || String(r.date || '').trim(),
+    time: _normTime(String(r.time || '').replace(/[^\d:]/g,'')) || '',
+    patient: String(r.patient || '').trim(),
+    treatment: String(r.treatment || '').trim(),
+    dept: validDept,
+    notes: String(r.notes || '').trim()
+  };
+}
+
+// ── 방법 1: 브라우저 OCR (Tesseract.js) ──
+function _loadTesseract() {
+  if (window.Tesseract) return Promise.resolve();
+  if (_tesseractLoading) return _tesseractLoading;
+  _tesseractLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('OCR 라이브러리 로드 실패'));
+    document.head.appendChild(s);
+  });
+  return _tesseractLoading;
+}
+
+async function _schedImportOCR(file) {
+  if (!file) return;
+  const status = document.getElementById('si-ocr-status');
+  const label  = document.getElementById('si-upload-text');
+  if (label) label.textContent = '📁 ' + file.name;
+  const setS = (msg) => { if (status) status.textContent = msg; };
+  setS('OCR 엔진 불러오는 중…');
+  try {
+    await _loadTesseract();
+    setS('이미지 분석 중… (한글 인식은 시간이 걸릴 수 있어요)');
+    const { data } = await window.Tesseract.recognize(file, 'kor+eng', {
+      logger: m => { if (m.status === 'recognizing text') setS(`인식 중… ${Math.round((m.progress||0)*100)}%`); }
+    });
+    const text = (data && data.text) || '';
+    if (!text.trim()) { setS('글자를 인식하지 못했습니다. 더 선명한 사진을 시도하거나 방법 2를 쓰세요.'); return; }
+    const rows = _parseSchedLoose(text).map(_normSchedRow).filter(r => r.date || r.time || r.treatment);
+    if (!rows.length) { setS('일정 형태를 못 찾았습니다. 인식된 텍스트를 방법 2 칸에 넣고 정리해 보세요.');
+      const pasteEl = document.getElementById('si-paste'); if (pasteEl) pasteEl.value = text; return; }
+    setS(`✓ ${rows.length}건 인식됨 — 아래에서 검토·수정하세요.`);
+    _schedImportRows = rows;
+    _renderSchedReview();
+  } catch (e) {
+    setS('OCR 실패: ' + (e.message || e) + ' — 방법 2(붙여넣기)를 이용하세요.');
+  }
+}
+
+// ── 검토 표 ──
+function _renderSchedReview() {
+  const el = document.getElementById('si-review');
+  if (!el) return;
+  if (!_schedImportRows.length) { el.innerHTML = ''; return; }
+  const deptOpts = (sel) => ['<option value="">—</option>']
+    .concat(_departments.map(d => `<option value="${d.id}"${d.id===sel?' selected':''}>${_esc(d.name)}</option>`)).join('');
+  const rows = _schedImportRows.map((r, i) => `<tr>
+    <td><input class="si-cell" value="${_esc(r.date)}" placeholder="YYYY-MM-DD" oninput="_schedImportRows[${i}].date=this.value"></td>
+    <td><input class="si-cell si-cell-time" value="${_esc(r.time)}" placeholder="HH:MM" oninput="_schedImportRows[${i}].time=this.value"></td>
+    <td><input class="si-cell" value="${_esc(r.patient)}" placeholder="환자" oninput="_schedImportRows[${i}].patient=this.value"></td>
+    <td><input class="si-cell" value="${_esc(r.treatment)}" placeholder="진료" oninput="_schedImportRows[${i}].treatment=this.value"></td>
+    <td><select class="si-cell" onchange="_schedImportRows[${i}].dept=this.value">${deptOpts(r.dept)}</select></td>
+    <td><button class="si-row-del" onclick="_schedImportDelRow(${i})" title="삭제">✕</button></td>
+  </tr>`).join('');
+  el.innerHTML = `
+    <div class="si-review-title">검토 (${_schedImportRows.length}건) — 잘못된 칸은 직접 수정하세요</div>
+    <div class="si-table-wrap"><table class="si-table">
+      <thead><tr><th>날짜</th><th>시간</th><th>환자</th><th>진료</th><th>부문</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="si-review-btns">
+      <button class="cal-cancel-btn" onclick="_closeSchedImport()">취소</button>
+      <button class="cal-save-btn" onclick="_schedImportCommit()">✓ 전부 등록</button>
+    </div>`;
+}
+
+function _schedImportDelRow(i) {
+  _schedImportRows.splice(i, 1);
+  _renderSchedReview();
+}
+
+async function _schedImportCommit() {
+  if (!isAdmin) return;
+  const valid = _schedImportRows.filter(r => /^\d{4}-\d{2}-\d{2}$/.test(r.date) && (r.treatment || r.patient || r.notes));
+  if (!valid.length) { _edToast('등록할 유효한 일정이 없습니다. 날짜(YYYY-MM-DD)를 확인하세요.', 'error'); return; }
+  const skipped = _schedImportRows.length - valid.length;
+  try {
+    const batch = db.batch();
+    valid.forEach(r => {
+      const ref = db.collection('schedules').doc();
+      batch.set(ref, {
+        date: r.date,
+        time: _normTime(r.time) || '',
+        treatment: r.treatment || '',
+        patient: r.patient || '',
+        dept: _departments.some(d => d.id === r.dept) ? r.dept : '',
+        notes: r.notes || '',
+        done: false,
+        caseIds: [],
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    await batch.commit();
+    await loadSchedules(_calYear, _calMonth, true);
+    _refreshCalViews();
+    _closeSchedImport();
+    _edToast(`${valid.length}건 등록 완료${skipped ? ` (${skipped}건은 날짜 누락으로 건너뜀)` : ''}.`);
+  } catch (e) {
+    _edToast('등록 실패: ' + (e.message || e), 'error');
+  }
 }
 
 // ── Statistics (통계) ─────────────────────────────────────────

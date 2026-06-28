@@ -2970,3 +2970,74 @@ a.cite-link .cite-sup {
   .stats-chart-full { grid-column: auto; }
   .stats-hbar-row { grid-template-columns: 5.5rem 1fr 1.8rem; }
 }
+
+/* ── 일정 가져오기 (Schedule Import) ──────────────────────────── */
+.cal-import-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+.cal-import-btn:hover { opacity: 0.9; }
+.sched-import-modal { max-width: 640px; }
+.si-hint { font-size: 0.82rem; color: var(--text-muted); margin: 0 0 1.1rem; line-height: 1.5; }
+.si-method { margin-bottom: 0.5rem; }
+.si-method-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 0.4rem; }
+.si-badge {
+  font-size: 0.66rem; font-weight: 600; padding: 0.1rem 0.4rem; border-radius: 5px;
+  background: #fef3c7; color: #92400e;
+}
+.si-badge-accurate { background: #dcfce7; color: #15803d; }
+.si-upload {
+  display: flex; align-items: center; justify-content: center;
+  border: 2px dashed var(--border); border-radius: 10px;
+  padding: 1.2rem; cursor: pointer; font-size: 0.88rem; color: var(--text-muted);
+  transition: all 0.15s;
+}
+.si-upload:hover { border-color: var(--primary); color: var(--primary); background: rgba(37,99,235,0.04); }
+.si-status { font-size: 0.8rem; color: var(--primary); margin-top: 0.5rem; min-height: 1.1rem; line-height: 1.4; }
+.si-divider { display: flex; align-items: center; text-align: center; margin: 1.2rem 0; color: var(--text-muted); font-size: 0.78rem; }
+.si-divider::before, .si-divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
+.si-divider span { padding: 0 0.8rem; }
+.si-copy-btn {
+  background: var(--bg-card); border: 1.5px solid var(--primary); color: var(--primary);
+  border-radius: 8px; padding: 0.4rem 0.8rem; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+}
+.si-copy-btn:hover { background: rgba(37,99,235,0.06); }
+.si-copy-hint { font-size: 0.76rem; color: var(--text-muted); margin-left: 0.5rem; }
+.si-paste {
+  width: 100%; min-height: 90px; margin-top: 0.7rem; padding: 0.6rem 0.7rem;
+  border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text);
+  font-size: 0.82rem; font-family: monospace; resize: vertical; box-sizing: border-box;
+}
+.si-parse-btn {
+  margin-top: 0.6rem; background: var(--primary); color: #fff; border: none; border-radius: 8px;
+  padding: 0.45rem 1rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+}
+.si-parse-btn:hover { opacity: 0.9; }
+.si-review-title { font-weight: 700; font-size: 0.86rem; margin: 1.4rem 0 0.6rem; }
+.si-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.si-table { width: 100%; border-collapse: collapse; min-width: 520px; }
+.si-table th {
+  text-align: left; font-size: 0.74rem; color: var(--text-muted);
+  padding: 0.3rem 0.4rem; border-bottom: 1.5px solid var(--border); white-space: nowrap;
+}
+.si-table td { padding: 0.25rem 0.3rem; border-bottom: 1px solid var(--border); }
+.si-cell {
+  width: 100%; min-width: 4.5rem; padding: 0.35rem 0.45rem; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--bg);
+  color: var(--text); font-size: 0.82rem;
+}
+.si-cell-time { min-width: 3.4rem; }
+.si-row-del {
+  background: none; border: none; color: #dc2626; cursor: pointer; font-size: 0.95rem; padding: 0.2rem 0.4rem;
+}
+.si-review-btns { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1rem; }
+@media (max-width: 600px) {
+  .si-copy-hint { display: block; margin: 0.4rem 0 0; }
+}
