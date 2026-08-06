@@ -277,6 +277,7 @@ function showPage(pageId) {
   _currentPage = pageId;
   if (pageId === 'calendar') renderCalendar();
   if (pageId === 'inventory') { _setInvCat(_invCat); if (_invCat === 'diamond' && !_burItems.length) _loadInventory(); }
+  if (pageId === 'soap') { if (!_soapItems.length) _loadSOAP(); else renderSOAP(); }
   if (pageId === 'stats') renderStats();
   if (!_isPopState) {
     history.pushState({ page: pageId }, '');
@@ -4022,6 +4023,252 @@ async function _schedImportCommit() {
   } catch (e) {
     _edToast('등록 실패: ' + (e.message || e), 'error');
   }
+}
+
+// ── 진료별 SOAP ───────────────────────────────────────────────
+const SOAP_CATS = ['고정성', '임플란트', '총의치', '국소의치', '심미', '기타'];
+
+const SOAP_SEED = [
+  {
+    title: '싱글 크라운 — 지대치 형성 및 인상',
+    category: '고정성', order: 1,
+    subjective: '- 주소(C.C.): "#OO 씌운 게 빠졌어요 / 시려요 / 깨졌어요"\n- 저작 시 불편·통증 유무, 온도 자극 반응\n- 심미 요구도, 과거 근관치료·수복 이력',
+    objective: '- #OO 임상: 광범위 우식 / 기존 수복물 파절 / crack line\n- 치수 생활력 검사(EPT·cold), 타진·동요도\n- 방사선: 잔존 치질량, 근단 병소, post 유무, 골 소실\n- 대합치·인접치 관계, 교합 접촉, 치주 probing depth',
+    assessment: '- #OO full-coverage crown 적응증 (수복물 광범위 / 파절 위험 / 근관치료 후 치아)\n- 지대치 예후: 양호 (잔존 치질·ferrule 충분)\n- 필요 시 post & core 선행 여부 판단',
+    plan: '1. 국소마취 하 <u>지대치 형성</u>: occlusal reduction <mark style="background:#fef08a">1.5–2.0mm</mark>, axial taper <mark style="background:#fef08a">6°</mark> 내외, chamfer/shoulder margin\n2. <u>치은압배</u>(retraction cord) 후 최종 인상 — 부가중합형 실리콘(PVS) 또는 구강 스캔\n3. 대합치 인상·바이트 채득, shade 선택\n4. 임시치아 제작·장착, 교합 조정\n\n<div class="tip"><b>💡 보철과 디테일</b>margin은 치은연상(supragingival)에 두면 인상·접착·유지관리가 모두 쉬워집니다. 심미가 필요한 전치부만 치은연하로.</div>\n\n<div class="warning"><b>⚠️ 주의</b>축벽 taper가 과도하면(>10°) 유지력이 급감합니다. under-cut 없애려다 과삭제하기 쉬우니 형성 후 반드시 확인.</div>',
+  },
+  {
+    title: '싱글 크라운 — 최종 시적 및 접착',
+    category: '고정성', order: 2,
+    subjective: '- 임시치아 사용 중 탈락·시림·통증 유무\n- 심미(색·형태) 사전 기대치',
+    objective: '- 임시치아 제거 후 지대치·변연 치은 상태\n- 최종 보철물: marginal fit, proximal contact, 교합, 색조 확인\n- 인접치와의 이행부, 접촉점 강도',
+    assessment: '- 최종 보철물 적합, 접착 진행 가능\n- 교합·접촉 조정 소량 필요 여부 판단',
+    plan: '1. 시적: proximal contact(floss 저항), margin 적합, 교합(occlusal paper) 조정\n2. 재료별 접착 프로토콜\n   - <u>지르코니아·글라스세라믹</u>: 표면처리 + resin cement\n   - <u>PFM·금속</u>: RMGI 또는 resin-modified cement\n3. 잉여 시멘트 완전 제거(특히 치은열구), 최종 교합 확인\n4. 구강위생·유지관리 교육\n\n<div class="danger"><b>🚫 역효과 주의</b>치은연하 잉여 시멘트 잔존은 만성 치은염·골소실의 흔한 원인입니다. 접착 전 치실을 미리 걸어두면 제거가 쉽습니다.</div>',
+  },
+  {
+    title: '임플란트 보철 — 최종 인상',
+    category: '임플란트', order: 1,
+    subjective: '- 골유착 대기기간 경과 확인, 불편·동통 유무\n- 보철물 형태·심미 요구',
+    objective: '- Fixture 안정성(percussion, 필요 시 ISQ)\n- Peri-implant 연조직: 염증·각화점막 폭\n- 방사선: marginal bone level, fixture-abutment 연결부\n- Healing abutment 상태, 대합·인접 관계',
+    assessment: '- 골유착 완료, 보철 단계 진행 가능\n- 연조직 성숙도 양호 / emergence profile 고려',
+    plan: '1. Healing abutment 제거\n2. <u>impression coping</u> 체결 → <mark style="background:#fef08a">방사선</mark>으로 완전 안착 확인\n3. Open/closed tray 인상(PVS) 또는 scan body 디지털 스캔\n4. 대합·바이트, shade\n5. Healing abutment 재장착\n\n<div class="warning"><b>⚠️ 주의</b>impression coping이 완전히 안착되지 않으면 보철물 전체가 부정합됩니다. 육안·촉진만 믿지 말고 방사선 확인이 원칙.</div>',
+  },
+  {
+    title: '총의치(CD) — 최종 인상',
+    category: '총의치', order: 1,
+    subjective: '- 기존 의치 사용력·불편(유지·안정·동통), 무치악 기간\n- 저작·발음·심미 요구',
+    objective: '- 잔존 치조제 형태·흡수도, 점막 상태(flabby tissue, undercut)\n- Frenum 부착, 개구량, 타액 분비\n- 상순 지지·안모',
+    assessment: '- 완전 무치악, 최종 인상 단계\n- 유지·지지·안정에 영향 주는 해부학적 요소 파악',
+    plan: '1. 개인 트레이 <u>border molding</u>(modeling compound 또는 PVS heavy)\n2. 최종 인상: ZOE 또는 light-body PVS\n3. Boxing 후 master cast 제작\n\n<div class="tip"><b>💡 보철과 디테일</b>flabby ridge는 무압인상(selective pressure)으로 떠야 의치 안정이 좋아집니다. 트레이에 relief hole을 주세요.</div>',
+  },
+  {
+    title: '총의치(CD) — 악간관계 채득',
+    category: '총의치', order: 2,
+    subjective: '- 이전 단계 이후 불편 유무, 의치에 대한 기대',
+    objective: '- Occlusion rim으로 수직·수평 관계 평가\n- 안모(입술 지지, 비순구), 발음, 심미선',
+    assessment: '- 악간관계 기록 단계, VD·CR 결정 필요',
+    plan: '1. <u>교합제(occlusion rim)</u>로 수직고경 결정: 안모·발음·<mark style="background:#fef08a">freeway space 2–4mm</mark>\n2. 중심위(centric relation) 채득\n3. 정중선·구각선·교합평면·미소선 표시\n4. 인공치 선택(shade·mold), 배열 의뢰\n\n<div class="warning"><b>⚠️ 주의</b>수직고경을 과도하게 높이면 clicking·저작통·구각염이 생깁니다. 안정위(rest position)에서 freeway space를 반드시 확보.</div>',
+  },
+  {
+    title: '국소의치(RPD) — 금속 구조물 시적',
+    category: '국소의치', order: 1,
+    subjective: '- 이전 단계 이후 불편, 착탈·저작 기대',
+    objective: '- Framework 적합: rest seat 안착, clasp 유지력, major connector 적합\n- 압박점·rocking 여부, 잔존치 상태',
+    assessment: '- 금속 구조물 적합 확인 단계\n- 조정·재인상 필요 여부 판단',
+    plan: '1. Framework 시적: <u>pressure indicator paste</u>로 조기 접촉·압박점 조정\n2. Rest·clasp·major connector 적합 확인, 필요 시 altered cast impression\n3. 바이트 채득, 인공치 배열 의뢰\n\n<div class="tip"><b>💡 보철과 디테일</b>framework가 rocking하면 그대로 배열하지 말고 원인(조기접촉·변형)을 먼저 해결하세요. 이 단계의 오차가 완성 의치까지 그대로 갑니다.</div>',
+  },
+];
+
+let _soapItems = [];
+let _soapCatFilter = 'all';
+let _soapSearch = '';
+let _soapOpenId = null;
+
+function _soapDocId(title) {
+  return 'soap-' + title.replace(/\s+/g, '-').replace(/[^\w가-힣-]/g, '').slice(0, 60);
+}
+
+async function _loadSOAP() {
+  const snap = await db.collection('soapTemplates').get().catch(() => null);
+  if (!snap) { renderSOAP(); return; }
+  if (snap.empty) {
+    await _seedSOAP();
+    const s2 = await db.collection('soapTemplates').get();
+    _soapItems = s2.docs.map(d => ({ id: d.id, ...d.data() }));
+  } else {
+    _soapItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  renderSOAP();
+}
+
+async function _seedSOAP() {
+  const batch = db.batch();
+  SOAP_SEED.forEach(t => batch.set(db.collection('soapTemplates').doc(_soapDocId(t.title)), t));
+  await batch.commit();
+}
+
+function _soapCatOrder(cat) {
+  const i = SOAP_CATS.indexOf(cat);
+  return i < 0 ? 99 : i;
+}
+
+function _setSoapCat(cat) {
+  _soapCatFilter = cat;
+  renderSOAP();
+}
+
+function _soapFilter(v) {
+  _soapSearch = (v || '').trim().toLowerCase();
+  renderSOAP();
+}
+
+function _soapToggle(id) {
+  _soapOpenId = _soapOpenId === id ? null : id;
+  renderSOAP();
+}
+
+function renderSOAP() {
+  const list = document.getElementById('soap-list');
+  const tabs = document.getElementById('soap-cat-tabs');
+  const adminEl = document.getElementById('soap-admin-btns');
+  if (!list) return;
+
+  if (adminEl) adminEl.innerHTML = isAdmin
+    ? '<button class="soap-add-btn" onclick="_openSoapEdit(null)">+ SOAP 추가</button>' : '';
+
+  // 카테고리 탭
+  const usedCats = SOAP_CATS.filter(c => _soapItems.some(i => i.category === c));
+  if (tabs) {
+    tabs.innerHTML = ['all'].concat(usedCats).map(c =>
+      `<button class="soap-cat-tab${_soapCatFilter === c ? ' active' : ''}" onclick="_setSoapCat('${c}')">${c === 'all' ? '전체' : c}</button>`
+    ).join('');
+  }
+
+  let items = _soapItems.slice();
+  if (_soapCatFilter !== 'all') items = items.filter(i => i.category === _soapCatFilter);
+  if (_soapSearch) items = items.filter(i =>
+    (i.title || '').toLowerCase().includes(_soapSearch) ||
+    [i.subjective, i.objective, i.assessment, i.plan].join(' ').toLowerCase().includes(_soapSearch));
+
+  items.sort((a, b) =>
+    _soapCatOrder(a.category) - _soapCatOrder(b.category) ||
+    (a.order || 0) - (b.order || 0) ||
+    (a.title || '').localeCompare(b.title || ''));
+
+  if (!items.length) {
+    list.innerHTML = '<div class="empty" style="padding:2.5rem;text-align:center;color:var(--text-muted)">항목이 없습니다.</div>';
+    return;
+  }
+
+  let html = '', lastCat = null;
+  items.forEach(it => {
+    if (it.category !== lastCat && _soapCatFilter === 'all') {
+      html += `<div class="soap-cat-label">${_esc(it.category || '기타')}</div>`;
+      lastCat = it.category;
+    }
+    const open = _soapOpenId === it.id;
+    const editBtn = isAdmin
+      ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openSoapEdit('${it.id}')">✏️</button>` : '';
+    const body = open ? `<div class="soap-body">
+        ${_soapBlock('S', 'Subjective 주관적', it.subjective)}
+        ${_soapBlock('O', 'Objective 객관적', it.objective)}
+        ${_soapBlock('A', 'Assessment 평가', it.assessment)}
+        ${_soapBlock('P', 'Plan 계획', it.plan)}
+      </div>` : '';
+    html += `<div class="soap-card${open ? ' open' : ''}">
+      <div class="soap-card-head" onclick="_soapToggle('${it.id}')">
+        <span class="soap-cat-badge">${_esc(it.category || '')}</span>
+        <span class="soap-card-title">${_esc(it.title || '')}</span>
+        ${editBtn}
+        <span class="soap-chevron">${open ? '▲' : '▼'}</span>
+      </div>
+      ${body}
+    </div>`;
+  });
+  list.innerHTML = html;
+}
+
+function _soapBlock(letter, label, md) {
+  if (!md || !String(md).trim()) return '';
+  return `<div class="soap-sec soap-sec-${letter.toLowerCase()}">
+    <div class="soap-sec-label"><span class="soap-sec-letter">${letter}</span>${label}</div>
+    <div class="soap-sec-body markdown-body">${marked.parse(String(md))}</div>
+  </div>`;
+}
+
+function _openSoapEdit(id) {
+  if (!isAdmin) return;
+  const it = id ? _soapItems.find(x => x.id === id) : null;
+  const fv = (k, d = '') => it ? (it[k] != null ? it[k] : d) : d;
+  const catOpts = SOAP_CATS.map(c => `<option value="${c}"${fv('category', '고정성') === c ? ' selected' : ''}>${c}</option>`).join('');
+  const ta = (id2, label, val) =>
+    `<label class="soap-f-label">${label}<textarea id="${id2}" class="soap-f-ta">${_esc(val)}</textarea></label>`;
+  const html = `<div id="soap-edit-overlay" class="modal-overlay open" onclick="if(event.target.id==='soap-edit-overlay')_closeSoapEdit()">
+    <div class="modal soap-edit-modal">
+      <button class="modal-close" onclick="_closeSoapEdit()">✕</button>
+      <div class="modal-body">
+        <h3 style="margin:0 0 1rem">${it ? 'SOAP 편집' : '새 SOAP'}</h3>
+        <div class="soap-f-row">
+          <label class="soap-f-label" style="flex:2">진료명<input id="soap-f-title" class="soap-f-input" value="${_esc(fv('title'))}" placeholder="예: 싱글 크라운 — 최종 접착"></label>
+          <label class="soap-f-label" style="flex:1">분류<select id="soap-f-cat" class="soap-f-input">${catOpts}</select></label>
+          <label class="soap-f-label" style="width:5rem">순서<input id="soap-f-order" type="number" class="soap-f-input" value="${fv('order', 0)}"></label>
+        </div>
+        <p class="soap-f-hint">각 칸은 마크다운 지원 (- 목록, **굵게**, tip/warning 박스 등). 이전 대화의 SOAP 내용을 그대로 붙여넣어도 됩니다.</p>
+        ${ta('soap-f-s', 'S — Subjective (주관적)', fv('subjective'))}
+        ${ta('soap-f-o', 'O — Objective (객관적)', fv('objective'))}
+        ${ta('soap-f-a', 'A — Assessment (평가)', fv('assessment'))}
+        ${ta('soap-f-p', 'P — Plan (계획)', fv('plan'))}
+        <div class="soap-f-btns">
+          ${it ? `<button class="card-admin-btn del" onclick="_deleteSoap('${id}')">🗑 삭제</button>` : ''}
+          <button class="cal-cancel-btn" onclick="_closeSoapEdit()">취소</button>
+          <button class="cal-save-btn" onclick="_saveSoap('${id || ''}')">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _closeSoapEdit() {
+  document.getElementById('soap-edit-overlay')?.remove();
+}
+
+async function _saveSoap(id) {
+  if (!isAdmin) return;
+  const g = s => document.getElementById(s)?.value ?? '';
+  const title = g('soap-f-title').trim();
+  if (!title) { _edToast('진료명을 입력하세요.', 'error'); return; }
+  const data = {
+    title,
+    category: g('soap-f-cat') || '기타',
+    order: Number(g('soap-f-order')) || 0,
+    subjective: g('soap-f-s').trim(),
+    objective: g('soap-f-o').trim(),
+    assessment: g('soap-f-a').trim(),
+    plan: g('soap-f-p').trim(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  const docId = id || _soapDocId(title);
+  try {
+    await db.collection('soapTemplates').doc(docId).set(data, { merge: true });
+    const idx = _soapItems.findIndex(x => x.id === docId);
+    if (idx >= 0) _soapItems[idx] = { ...(_soapItems[idx]), id: docId, ...data };
+    else _soapItems.push({ id: docId, ...data });
+    _closeSoapEdit();
+    renderSOAP();
+    _edToast('저장되었습니다.');
+  } catch (e) {
+    _edToast('저장 실패: ' + (e.message || e), 'error');
+  }
+}
+
+async function _deleteSoap(id) {
+  if (!confirm('이 SOAP 항목을 삭제하시겠습니까?')) return;
+  await db.collection('soapTemplates').doc(id).delete();
+  _soapItems = _soapItems.filter(x => x.id !== id);
+  if (_soapOpenId === id) _soapOpenId = null;
+  _closeSoapEdit();
+  renderSOAP();
 }
 
 // ── Statistics (통계) ─────────────────────────────────────────

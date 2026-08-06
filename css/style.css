@@ -795,7 +795,11 @@ main {
 .modal-description .note,
 .modal-description .tip,
 .modal-description .warning,
-.modal-description .danger {
+.modal-description .danger,
+.soap-sec-body .note,
+.soap-sec-body .tip,
+.soap-sec-body .warning,
+.soap-sec-body .danger {
   padding: 0.75rem 1.1rem;
   border-radius: 8px;
   margin: 1rem 0;
@@ -803,21 +807,30 @@ main {
   line-height: 1.7;
   border-left: 4px solid;
 }
-.modal-description .note    { background: #f0f9ff; border-color: #38bdf8; color: #0c4a6e; }
-.modal-description .tip     { background: #f0fdf4; border-color: #4ade80; color: #14532d; }
-.modal-description .warning { background: #fffbeb; border-color: #fbbf24; color: #78350f; }
-.modal-description .danger  { background: #fef2f2; border-color: #f87171; color: #7f1d1d; }
+.modal-description .note,
+.soap-sec-body .note    { background: #f0f9ff; border-color: #38bdf8; color: #0c4a6e; }
+.modal-description .tip,
+.soap-sec-body .tip     { background: #f0fdf4; border-color: #4ade80; color: #14532d; }
+.modal-description .warning,
+.soap-sec-body .warning { background: #fffbeb; border-color: #fbbf24; color: #78350f; }
+.modal-description .danger,
+.soap-sec-body .danger  { background: #fef2f2; border-color: #f87171; color: #7f1d1d; }
 .modal-description .note b,
 .modal-description .tip b,
 .modal-description .warning b,
-.modal-description .danger b { display: block; margin-bottom: 0.2rem; }
+.modal-description .danger b,
+.soap-sec-body .note b,
+.soap-sec-body .tip b,
+.soap-sec-body .warning b,
+.soap-sec-body .danger b { display: block; margin-bottom: 0.2rem; }
 
 /* ── 위/아래 첨자 ── */
-.modal-description sup { font-size: 0.7em; vertical-align: super; }
-.modal-description sub { font-size: 0.7em; vertical-align: sub; }
+.modal-description sup, .soap-sec-body sup { font-size: 0.7em; vertical-align: super; }
+.modal-description sub, .soap-sec-body sub { font-size: 0.7em; vertical-align: sub; }
 
 /* ── 단계 배지 ── */
-.modal-description kbd {
+.modal-description kbd,
+.soap-sec-body kbd {
   display: inline-block;
   background: var(--primary);
   color: #fff;
@@ -831,10 +844,14 @@ main {
 }
 
 /* ── 다크모드 ── */
-[data-theme="dark"] .modal-description .note    { background: rgba(56,189,248,0.08); color: #7dd3fc; }
-[data-theme="dark"] .modal-description .tip     { background: rgba(74,222,128,0.08); color: #86efac; }
-[data-theme="dark"] .modal-description .warning { background: rgba(251,191,36,0.08); color: #fcd34d; }
-[data-theme="dark"] .modal-description .danger  { background: rgba(248,113,113,0.08); color: #fca5a5; }
+[data-theme="dark"] .modal-description .note,
+[data-theme="dark"] .soap-sec-body .note    { background: rgba(56,189,248,0.08); color: #7dd3fc; }
+[data-theme="dark"] .modal-description .tip,
+[data-theme="dark"] .soap-sec-body .tip     { background: rgba(74,222,128,0.08); color: #86efac; }
+[data-theme="dark"] .modal-description .warning,
+[data-theme="dark"] .soap-sec-body .warning { background: rgba(251,191,36,0.08); color: #fcd34d; }
+[data-theme="dark"] .modal-description .danger,
+[data-theme="dark"] .soap-sec-body .danger  { background: rgba(248,113,113,0.08); color: #fca5a5; }
 [data-theme="dark"] .modal-description summary  { background: var(--surface); }
 [data-theme="dark"] .modal-description details  { border-color: var(--border); }
 
@@ -3040,4 +3057,54 @@ a.cite-link .cite-sup {
 .si-review-btns { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1rem; }
 @media (max-width: 600px) {
   .si-copy-hint { display: block; margin: 0.4rem 0 0; }
+}
+
+/* ── 진료별 SOAP ──────────────────────────────────────────────── */
+.soap-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.soap-title { margin: 0; font-size: 1.3rem; font-weight: 700; }
+.soap-sub { margin: 0.2rem 0 0; font-size: 0.82rem; color: var(--text-muted); }
+.soap-add-btn { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 0.45rem 1rem; font-size: 0.88rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.soap-add-btn:hover { opacity: 0.9; }
+.soap-cat-tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.7rem; }
+.soap-cat-tab { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 20px; padding: 0.3rem 0.85rem; font-size: 0.82rem; font-weight: 500; color: var(--text-muted); cursor: pointer; }
+.soap-cat-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.soap-search { width: 100%; box-sizing: border-box; padding: 0.55rem 0.8rem; border: 1.5px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--text); font-size: 0.9rem; margin-bottom: 1.1rem; }
+.soap-cat-label { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 1.1rem 0 0.5rem; }
+.soap-card { border: 1.5px solid var(--border); border-radius: 11px; margin-bottom: 0.6rem; overflow: hidden; background: var(--bg-card); }
+.soap-card.open { border-color: var(--primary); }
+.soap-card-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 1rem; cursor: pointer; }
+.soap-card-head:hover { background: var(--bg-hover, rgba(0,0,0,0.02)); }
+.soap-cat-badge { font-size: 0.68rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 6px; background: rgba(37,99,235,0.1); color: var(--primary); white-space: nowrap; }
+.soap-card-title { font-weight: 600; font-size: 0.94rem; flex: 1; }
+.soap-edit-btn { background: none; border: none; cursor: pointer; font-size: 0.95rem; opacity: 0.55; padding: 0.1rem 0.3rem; }
+.soap-edit-btn:hover { opacity: 1; }
+.soap-chevron { font-size: 0.7rem; color: var(--text-muted); }
+.soap-body { padding: 0.2rem 1rem 1rem; }
+.soap-sec { border-left: 3px solid var(--border); padding: 0.1rem 0 0.1rem 0.9rem; margin: 0.9rem 0; }
+.soap-sec-s { border-color: #3b82f6; }
+.soap-sec-o { border-color: #22c55e; }
+.soap-sec-a { border-color: #f59e0b; }
+.soap-sec-p { border-color: #a855f7; }
+.soap-sec-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; font-weight: 700; color: var(--text); margin-bottom: 0.3rem; }
+.soap-sec-letter { display: inline-flex; align-items: center; justify-content: center; width: 1.35rem; height: 1.35rem; border-radius: 6px; color: #fff; font-size: 0.78rem; font-weight: 800; }
+.soap-sec-s .soap-sec-letter { background: #3b82f6; }
+.soap-sec-o .soap-sec-letter { background: #22c55e; }
+.soap-sec-a .soap-sec-letter { background: #f59e0b; }
+.soap-sec-p .soap-sec-letter { background: #a855f7; }
+.soap-sec-body { font-size: 0.88rem; line-height: 1.7; color: var(--text); }
+.soap-sec-body ul, .soap-sec-body ol { padding-left: 1.2rem; margin: 0.3rem 0; }
+.soap-sec-body li { margin: 0.15rem 0; }
+.soap-sec-body p:first-child { margin-top: 0; }
+.soap-sec-body u { text-decoration-color: var(--primary); text-underline-offset: 2px; }
+/* 편집 모달 */
+.soap-edit-modal { max-width: 640px; }
+.soap-f-row { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.soap-f-label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.7rem; }
+.soap-f-input { padding: 0.45rem 0.6rem; border: 1.5px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); font-size: 0.9rem; }
+.soap-f-ta { min-height: 90px; padding: 0.5rem 0.65rem; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 0.85rem; line-height: 1.6; font-family: inherit; resize: vertical; }
+.soap-f-hint { font-size: 0.76rem; color: var(--text-muted); margin: 0 0 0.8rem; }
+.soap-f-btns { display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1rem; align-items: center; }
+@media (max-width: 600px) {
+  .soap-f-row { flex-direction: column; }
+  .soap-f-row .soap-f-label { width: auto !important; flex: unset !important; }
 }
