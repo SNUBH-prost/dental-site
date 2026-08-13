@@ -4026,56 +4026,194 @@ async function _schedImportCommit() {
 }
 
 // ── 진료별 SOAP ───────────────────────────────────────────────
-const SOAP_CATS = ['고정성', '임플란트', '총의치', '국소의치', '심미', '기타'];
+const SOAP_CATS = ['고정성', '국소의치', '총의치', '임플란트', '임시의치', '심미', '기타'];
+const SOAP_SEED_VERSION = 2; // 시드 콘텐츠 버전 — 올리면 기존 시드 항목이 새 내용으로 교체됨
 
 const SOAP_SEED = [
+  // ── 1. 고정성 보철 (Crown & Bridge) ──
   {
-    title: '싱글 크라운 — 지대치 형성 및 인상',
+    title: '고정성 1-1 · 진단 및 치료계획',
     category: '고정성', order: 1,
-    subjective: '- 주소(C.C.): "#OO 씌운 게 빠졌어요 / 시려요 / 깨졌어요"\n- 저작 시 불편·통증 유무, 온도 자극 반응\n- 심미 요구도, 과거 근관치료·수복 이력',
-    objective: '- #OO 임상: 광범위 우식 / 기존 수복물 파절 / crack line\n- 치수 생활력 검사(EPT·cold), 타진·동요도\n- 방사선: 잔존 치질량, 근단 병소, post 유무, 골 소실\n- 대합치·인접치 관계, 교합 접촉, 치주 probing depth',
-    assessment: '- #OO full-coverage crown 적응증 (수복물 광범위 / 파절 위험 / 근관치료 후 치아)\n- 지대치 예후: 양호 (잔존 치질·ferrule 충분)\n- 필요 시 post & core 선행 여부 판단',
-    plan: '1. 국소마취 하 <u>지대치 형성</u>: occlusal reduction <mark style="background:#fef08a">1.5–2.0mm</mark>, axial taper <mark style="background:#fef08a">6°</mark> 내외, chamfer/shoulder margin\n2. <u>치은압배</u>(retraction cord) 후 최종 인상 — 부가중합형 실리콘(PVS) 또는 구강 스캔\n3. 대합치 인상·바이트 채득, shade 선택\n4. 임시치아 제작·장착, 교합 조정\n\n<div class="tip"><b>💡 보철과 디테일</b>margin은 치은연상(supragingival)에 두면 인상·접착·유지관리가 모두 쉬워집니다. 심미가 필요한 전치부만 치은연하로.</div>\n\n<div class="warning"><b>⚠️ 주의</b>축벽 taper가 과도하면(>10°) 유지력이 급감합니다. under-cut 없애려다 과삭제하기 쉬우니 형성 후 반드시 확인.</div>',
+    subjective: '주소(C.C.), 심미·기능·통증 호소, 치과·의과 병력, 기대치',
+    objective: '- 진단 자료: 진단 모형, Panorama/PA, 임상사진, **diagnostic wax-up**\n- 교합 평가: **VDO 변동 여부**, **CR–CO 일치 여부**(편위 방향·양)\n- 지대치 평가: 치주 상태(probing depth·동요도), **치근단 상태(PA)**, 치수 생활력, 잔존 치질량, 기존 수복물',
+    assessment: '진단, 지대치 예후, 보철 설계(단관 / FPD·재질), VDO 조정 필요성 판단',
+    plan: '- 치료 옵션·순서 제시\n- **informed consent** (대안·위험·비용)\n- 다음 예약 (prep)',
   },
   {
-    title: '싱글 크라운 — 최종 시적 및 접착',
+    title: '고정성 1-2 · 지대치 형성 및 임시보철',
     category: '고정성', order: 2,
-    subjective: '- 임시치아 사용 중 탈락·시림·통증 유무\n- 심미(색·형태) 사전 기대치',
-    objective: '- 임시치아 제거 후 지대치·변연 치은 상태\n- 최종 보철물: marginal fit, proximal contact, 교합, 색조 확인\n- 인접치와의 이행부, 접촉점 강도',
-    assessment: '- 최종 보철물 적합, 접착 진행 가능\n- 교합·접촉 조정 소량 필요 여부 판단',
-    plan: '1. 시적: proximal contact(floss 저항), margin 적합, 교합(occlusal paper) 조정\n2. 재료별 접착 프로토콜\n   - <u>지르코니아·글라스세라믹</u>: 표면처리 + resin cement\n   - <u>PFM·금속</u>: RMGI 또는 resin-modified cement\n3. 잉여 시멘트 완전 제거(특히 치은열구), 최종 교합 확인\n4. 구강위생·유지관리 교육\n\n<div class="danger"><b>🚫 역효과 주의</b>치은연하 잉여 시멘트 잔존은 만성 치은염·골소실의 흔한 원인입니다. 접착 전 치실을 미리 걸어두면 제거가 쉽습니다.</div>',
+    subjective: '특이사항·증상, 동의 재확인',
+    objective: '- 마취 (종류 / 용량 / 부위)\n- **Prep**: 재질별 마진 형태(chamfer / shoulder)·삭제량 확보, 축면 taper(약 <mark style="background:#fef08a">6~10°</mark>), undercut 제거, line angle 정리\n- **Provisional**: direct / indirect 제작, **contact·margin·occlusion·contour** 형성, 임시 접착(ZNE / ZOE)\n- Shade 예비 채득 (치아 탈수 전)',
+    assessment: '형성량·마진 적절, 임시보철 적합·교합·심미 acceptable',
+    plan: '- 다음 예약 (정밀인상)\n- 술후 지침 (지각과민 가능·임시보철 관리·홈케어)\n\n<div class="tip"><b>💡 보철과 디테일</b>shade는 치아가 탈수되면 밝게 보여 오차가 납니다. 러버댐·장시간 격리 <u>전에</u> 미리 채득하세요.</div>',
   },
   {
-    title: '임플란트 보철 — 최종 인상',
-    category: '임플란트', order: 1,
-    subjective: '- 골유착 대기기간 경과 확인, 불편·동통 유무\n- 보철물 형태·심미 요구',
-    objective: '- Fixture 안정성(percussion, 필요 시 ISQ)\n- Peri-implant 연조직: 염증·각화점막 폭\n- 방사선: marginal bone level, fixture-abutment 연결부\n- Healing abutment 상태, 대합·인접 관계',
-    assessment: '- 골유착 완료, 보철 단계 진행 가능\n- 연조직 성숙도 양호 / emergence profile 고려',
-    plan: '1. Healing abutment 제거\n2. <u>impression coping</u> 체결 → <mark style="background:#fef08a">방사선</mark>으로 완전 안착 확인\n3. Open/closed tray 인상(PVS) 또는 scan body 디지털 스캔\n4. 대합·바이트, shade\n5. Healing abutment 재장착\n\n<div class="warning"><b>⚠️ 주의</b>impression coping이 완전히 안착되지 않으면 보철물 전체가 부정합됩니다. 육안·촉진만 믿지 말고 방사선 확인이 원칙.</div>',
+    title: '고정성 1-3 · 정밀인상 및 악간관계 채득',
+    category: '고정성', order: 3,
+    subjective: '임시보철 사용감 (불편·지각과민·탈락)',
+    objective: '- 임시보철 제거, 지대치 상태 확인\n- **Gingival displacement**: 2-cord technique (1st: 지혈 / 2nd: 조직 압배)\n- **Impression**: PVS / polyether 또는 구강 스캐너, 대합치 인상, **bite registration**\n- **Lab work order**: shade(VITA 3D / Classical) 채득, 사진 첨부, 기공지시서 작성\n- 임시보철 재장착',
+    assessment: '압배·인상 정밀도 양호, 마진 인기 확인',
+    plan: '- 기공 의뢰 (재질·shade·마진·납기)\n- 다음 예약 (시적 / 장착)',
   },
   {
-    title: '총의치(CD) — 최종 인상',
-    category: '총의치', order: 1,
-    subjective: '- 기존 의치 사용력·불편(유지·안정·동통), 무치악 기간\n- 저작·발음·심미 요구',
-    objective: '- 잔존 치조제 형태·흡수도, 점막 상태(flabby tissue, undercut)\n- Frenum 부착, 개구량, 타액 분비\n- 상순 지지·안모',
-    assessment: '- 완전 무치악, 최종 인상 단계\n- 유지·지지·안정에 영향 주는 해부학적 요소 파악',
-    plan: '1. 개인 트레이 <u>border molding</u>(modeling compound 또는 PVS heavy)\n2. 최종 인상: ZOE 또는 light-body PVS\n3. Boxing 후 master cast 제작\n\n<div class="tip"><b>💡 보철과 디테일</b>flabby ridge는 무압인상(selective pressure)으로 떠야 의치 안정이 좋아집니다. 트레이에 relief hole을 주세요.</div>',
+    title: '고정성 1-4 · 시적 (Try-in)',
+    category: '고정성', order: 4,
+    subjective: '임시보철 경과',
+    objective: '- **Substructure(metal / coping) 적합도**, interocclusal space, contact tightness\n- (bisque / porcelain 단계) 심미·교합 확인, **환자 확인**',
+    assessment: '하부구조 적합·공간·접촉 acceptable / 수정 필요 사항',
+    plan: '- 기공 재의뢰 (glaze·수정)\n- 다음 예약 (장착)',
   },
   {
-    title: '총의치(CD) — 악간관계 채득',
-    category: '총의치', order: 2,
-    subjective: '- 이전 단계 이후 불편 유무, 의치에 대한 기대',
-    objective: '- Occlusion rim으로 수직·수평 관계 평가\n- 안모(입술 지지, 비순구), 발음, 심미선',
-    assessment: '- 악간관계 기록 단계, VD·CR 결정 필요',
-    plan: '1. <u>교합제(occlusion rim)</u>로 수직고경 결정: 안모·발음·<mark style="background:#fef08a">freeway space 2–4mm</mark>\n2. 중심위(centric relation) 채득\n3. 정중선·구각선·교합평면·미소선 표시\n4. 인공치 선택(shade·mold), 배열 의뢰\n\n<div class="warning"><b>⚠️ 주의</b>수직고경을 과도하게 높이면 clicking·저작통·구각염이 생깁니다. 안정위(rest position)에서 freeway space를 반드시 확보.</div>',
+    title: '고정성 1-5 · 최종 장착 및 종결',
+    category: '고정성', order: 5,
+    subjective: '임시보철 경과, 최종 심미 확인',
+    objective: '- 임시보철·잉여 시멘트 제거\n- **Fit-checker**: internal fit + margin fit 점검\n- **Contact test**(floss / shimstock), **Occlusion test**(CO / excursion)\n- **Final cementation**(resin / GI / RMGI), 방습, **잉여 시멘트 완전 제거**\n- **Final PA**',
+    assessment: '적합·접촉·교합·심미 양호, 완전 안착',
+    plan: '- 술후 지침, 리콜, 경과관찰\n\n<div class="danger"><b>🚫 역효과 주의</b>치은연하 잉여 시멘트 잔존은 만성 치은염·골소실의 흔한 원인. 접착 전 치실을 걸어두고, 접착 후 방사선으로 잔사 확인.</div>',
   },
+
+  // ── 2. 국소의치 (RPD) ──
   {
-    title: '국소의치(RPD) — 금속 구조물 시적',
+    title: 'RPD 2-1 · 예비인상 및 서베잉',
     category: '국소의치', order: 1,
-    subjective: '- 이전 단계 이후 불편, 착탈·저작 기대',
-    objective: '- Framework 적합: rest seat 안착, clasp 유지력, major connector 적합\n- 압박점·rocking 여부, 잔존치 상태',
-    assessment: '- 금속 구조물 적합 확인 단계\n- 조정·재인상 필요 여부 판단',
-    plan: '1. Framework 시적: <u>pressure indicator paste</u>로 조기 접촉·압박점 조정\n2. Rest·clasp·major connector 적합 확인, 필요 시 altered cast impression\n3. 바이트 채득, 인공치 배열 의뢰\n\n<div class="tip"><b>💡 보철과 디테일</b>framework가 rocking하면 그대로 배열하지 말고 원인(조기접촉·변형)을 먼저 해결하세요. 이 단계의 오차가 완성 의치까지 그대로 갑니다.</div>',
+    subjective: '주소, 결손 부위, 병력, 기대치',
+    objective: '- Alginate 인상 → 진단 모형\n- **Diagnostic surveyor**: 착탈로(path of insertion), undercut 위치 / 깊이(0.01"), guide plane 설정\n- Kennedy 분류, 잔존치·치주 평가',
+    assessment: '분류, 설계 방향 (지지·유지·유도 요소), 지대치 예후',
+    plan: '- 구강 형성 계획\n- 다음 예약',
+  },
+  {
+    title: 'RPD 2-2 · 구강 형성 (Mouth Preparation)',
+    category: '국소의치', order: 2,
+    subjective: '특이사항',
+    objective: '- 마취 (해당 시)\n- **Guiding plane**(지대치 인접면 삭제), **Rest seat**(occlusal / cingulum rest) prep\n- Surveyed crown 필요 시 prep 진행 및 인상 채득',
+    assessment: 'rest seat·guide plane 형성 적절',
+    plan: '- 정밀인상 계획\n- 다음 예약',
+  },
+  {
+    title: 'RPD 2-3 · 정밀인상 (Final Impression)',
+    category: '국소의치', order: 3,
+    subjective: '특이사항',
+    objective: '- **Custom tray** 제작·시적, **border molding**(modeling compound), rubber impression\n- 필요 시 **altered cast technique** (원심 유리단)',
+    assessment: '변연·지지부 인기 적절',
+    plan: '- framework 제작 의뢰\n- 다음 예약',
+  },
+  {
+    title: 'RPD 2-4 · 금속 주조체 시적 (Framework Try-in)',
+    category: '국소의치', order: 4,
+    subjective: '특이사항',
+    objective: '- **Disclosing wax / fit-checker**: rest, major / minor connector, direct retainer 적합\n- 잔존치·대합치 교합 간섭 제거',
+    assessment: 'framework 수동적 적합(passive fit), rest 완전 안착, **rocking 없음**',
+    plan: '- bite record / 인공치 배열 단계\n- 다음 예약\n\n<div class="warning"><b>⚠️ 주의</b>framework가 rocking하면 그대로 배열로 넘어가지 말 것. 원인(조기접촉·주조 변형)을 먼저 해결 — 이 단계 오차가 완성 의치까지 그대로 전달됩니다.</div>',
+  },
+  {
+    title: 'RPD 2-5 · 악간관계 채득 및 납의치 시적',
+    category: '국소의치', order: 5,
+    subjective: '환자 심미 피드백',
+    objective: '- **Record base + wax rim**: VDO, CR 측정, **facebow transfer**\n- 인공치 선택 (shade, mold)\n- **Wax try-in**: 심미, 발음(F / V / S sound), midline, 교합 검수, **환자 승인**',
+    assessment: 'VDO·CR·심미·교합 acceptable, 환자 동의',
+    plan: '- 온성 (processing)\n- 다음 예약 (장착)',
+  },
+  {
+    title: 'RPD 2-6 · 의치 장착 및 조정',
+    category: '국소의치', order: 6,
+    subjective: '(재내원) 통증·유지 관련 호소',
+    objective: '- 장착, **PIP(Pressure Indicator Paste)**로 조직면 fit 조정\n- **Disclosing wax**로 변연(border extension) 조정\n- **Clinical remount** 후 centric / eccentric 교합 조정\n- 착탈·세척 교육',
+    assessment: '적합·유지·교합 양호',
+    plan: '- 3~4회 조정 내원 관찰 후 종결\n- 리콜',
+  },
+
+  // ── 3. 총의치 (Complete Denture) ──
+  {
+    title: 'CD 3-1 · 예비인상 (Preliminary Impression)',
+    category: '총의치', order: 1,
+    subjective: '주소, 의치 사용력, 병력, 기대치',
+    objective: 'Stock tray + alginate / impression compound → 진단 모형·**custom tray** 제작; 치조제 형태·점막 평가',
+    assessment: '치조제 분류, 지지·유지 예후',
+    plan: '- custom tray 제작\n- 다음 예약',
+  },
+  {
+    title: 'CD 3-2 · 정밀인상 (Final Impression)',
+    category: '총의치', order: 2,
+    subjective: '특이사항',
+    objective: 'Custom tray에 **green-stick compound** border molding → **mucostatic / functional impression** 채득, post-dam',
+    assessment: '변연 폐쇄·신장 적절',
+    plan: '- 주모형·교합제 제작\n- 다음 예약',
+  },
+  {
+    title: 'CD 3-3 · 악간관계 채득 (Jaw Relation)',
+    category: '총의치', order: 3,
+    subjective: '특이사항',
+    objective: '**Occlusal rim**으로 VDO, CR(**Gothic arch tracer** 또는 swallowing method) 측정, **facebow transfer**, 인공치 선택(mold / shade)',
+    assessment: 'VDO 적절 (freeway space 약 <mark style="background:#fef08a">2~4 mm</mark>), CR 채득',
+    plan: '- 배열 / try-in\n- 다음 예약',
+  },
+  {
+    title: 'CD 3-4 · 납의치 시적 (Wax Try-in)',
+    category: '총의치', order: 4,
+    subjective: '심미 피드백',
+    objective: 'VDO·CR 재확인, **lip support**, esthetics, phonetics, occlusion(balanced) 점검, **환자 승인**',
+    assessment: '심미·교합·VD acceptable, 환자 동의',
+    plan: '- 온성\n- 다음 예약 (장착)',
+  },
+  {
+    title: 'CD 3-5 · 의치 장착 및 종결',
+    category: '총의치', order: 5,
+    subjective: '(재내원) 통증·유지',
+    objective: '**PIP** 조직면 조정, **clinical remount** 교합 조정, 변연 조정',
+    assessment: '유지·적합·교합 양호',
+    plan: '- **24시간 / 3일 / 1주** 리콜로 sore spot relief 완결 후 종결\n- 관리·착탈 교육',
+  },
+
+  // ── 4. 임플란트 보철 (Implant Prosthetics) ──
+  {
+    title: '임플란트 4-1 · 2차 수술 및 연조직 형성',
+    category: '임플란트', order: 1,
+    subjective: '식립부 경과, 자각 증상',
+    objective: '**Healing abutment** 체결, gingival cuff 형성 대기(2~3주); 연조직 상태·osseointegration(방사선) 확인',
+    assessment: '치유 양호, cuff 형성 대기',
+    plan: '- 인상 예약 (2~3주 후)',
+  },
+  {
+    title: '임플란트 4-2 · 인상 채득 (Impression)',
+    category: '임플란트', order: 2,
+    subjective: '특이사항',
+    objective: '**Pick-up(open tray) / Transfer(closed tray) / Scanbody 스캔**, custom abutment 디자인 수립, 대합 인상, shade, **방사선으로 인상 코핑 완전 안착 확인**',
+    assessment: '안착·연조직 양호',
+    plan: '- abutment / crown 제작 의뢰\n- 다음 예약\n\n<div class="warning"><b>⚠️ 주의</b>impression coping이 완전히 안착되지 않으면 보철물 전체가 부정합. 육안·촉진만 믿지 말고 <u>방사선</u> 확인이 원칙.</div>',
+  },
+  {
+    title: '임플란트 4-3 · Abutment & Crown Try-in',
+    category: '임플란트', order: 3,
+    subjective: '특이사항',
+    objective: '**Custom abutment 적합 및 torque 체결(<mark style="background:#fef08a">20~35 Ncm</mark>)**, crown **fit / contact / occlusion** 점검, 방사선 확인',
+    assessment: 'abutment 적합, crown 적합·교합 acceptable',
+    plan: '- (수정 시 재의뢰)\n- 장착 예약',
+  },
+  {
+    title: '임플란트 4-4 · 최종 장착 및 종결',
+    category: '임플란트', order: 4,
+    subjective: '특이사항',
+    objective: '- 나사유지: **screw hole sealing**(teflon tape + composite resin), 제조사 지정 토크\n- 시멘트유지: **잉여 시멘트 완전 제거**\n- **Occlusion**(implant-protected: 경교합 약접촉, 측방운동 무접촉), contact, **Final PA로 완전 안착 확인**',
+    assessment: '적합·교합·안착 양호',
+    plan: '- 유지관리 (6개월 리콜)로 이관\n- 위생 교육',
+  },
+
+  // ── 5. 임시·즉시의치 (Interim / Immediate Denture) ──
+  {
+    title: '임시의치 5-1 · 임시의치 장착',
+    category: '임시의치', order: 1,
+    subjective: '내원 목적, 심미·발음·기능 기대, "임시"임을 이해하는지',
+    objective: '- 장착 — 유형(interim RPD / flipper / 치료용 의치), 재질(acrylic resin ± wire clasp)\n- 확인·조정: 조직면 적합, 유지(클래스프 / undercut), 변연 신장·조직 압박, **교합(조기접촉 제거)**, 심미, 발음\n- (임플란트 대기 중) **임플란트 부위 relief** — 수술 후 2~4개월 하중 회피',
+    assessment: '**잠정(임시) 보철임을 명시** + 목적(심미·공간유지·기능·조직 및 환자 적응·의문 지대치 예후 관찰 중 해당); 유지·안정·적합은 **임시 수준에서 acceptable**(확정 기준 아님)',
+    plan: '- **확정 치료 계획·시기** (치유 후 확정 RPD / 임플란트 / 이장)\n- 환자 지침 (임시성·제한된 저작효율·위생·야간 제거)\n- informed consent (한계·이행 계획)\n- 조정 재내원',
+  },
+  {
+    title: '임시의치 5-2 · 즉시의치 장착 (Immediate Denture)',
+    category: '임시의치', order: 2,
+    subjective: '발치·창상 관련 자각, 심미 기대',
+    objective: '- 발치 부위 위 장착, **지혈 확인**, (필요시) tissue conditioner / 연성 이장재 적용\n- 유지·변연·교합 확인',
+    assessment: '발치와 위 장착으로 **골흡수에 따른 이장이 예정된** 이행기 보철임을 명시',
+    plan: '- **첫 24시간 제거 금지** (창상 보호·지혈·부종 조절)\n- 후속 예약: **24시간 / 1주 / 1개월** — 필요시 tissue conditioner·연성 이장\n- **이장 시기**: 흡수는 첫 6개월에 집중 → 초기 이장은 곧 헐거워짐. **발치 후 4~6개월경 확정 의치 제작 또는 경성 이장**\n- 연식이·소독 지침, informed consent\n\n<div class="warning"><b>⚠️ 주의</b>즉시의치는 첫 24시간 제거 금지 — 이 시기가 창상 보호·지혈·부종 조절의 핵심. 다음 날 내원 시 처음 제거·조정.</div>',
   },
 ];
 
@@ -4089,10 +4227,14 @@ function _soapDocId(title) {
 }
 
 async function _loadSOAP() {
-  const snap = await db.collection('soapTemplates').get().catch(() => null);
+  const [snap, metaSnap] = await Promise.all([
+    db.collection('soapTemplates').get().catch(() => null),
+    db.collection('appMeta').doc('soapSeed').get().catch(() => null)
+  ]);
   if (!snap) { renderSOAP(); return; }
-  if (snap.empty) {
-    await _seedSOAP();
+  const ver = (metaSnap && metaSnap.exists) ? (metaSnap.data().version || 0) : 0;
+  if (snap.empty || ver < SOAP_SEED_VERSION) {
+    await _seedSOAP(snap);
     const s2 = await db.collection('soapTemplates').get();
     _soapItems = s2.docs.map(d => ({ id: d.id, ...d.data() }));
   } else {
@@ -4101,9 +4243,18 @@ async function _loadSOAP() {
   renderSOAP();
 }
 
-async function _seedSOAP() {
+// 시드 항목을 최신 SOAP_SEED로 교체. 관리자가 직접 만든 항목(userCreated)은 보존.
+async function _seedSOAP(existingSnap) {
   const batch = db.batch();
-  SOAP_SEED.forEach(t => batch.set(db.collection('soapTemplates').doc(_soapDocId(t.title)), t));
+  const newIds = new Set(SOAP_SEED.map(t => _soapDocId(t.title)));
+  if (existingSnap) {
+    existingSnap.forEach(d => {
+      const data = d.data() || {};
+      if (!data.userCreated && !newIds.has(d.id)) batch.delete(d.ref); // 옛 시드 정리
+    });
+  }
+  SOAP_SEED.forEach(t => batch.set(db.collection('soapTemplates').doc(_soapDocId(t.title)), { ...t, seed: true }));
+  batch.set(db.collection('appMeta').doc('soapSeed'), { version: SOAP_SEED_VERSION });
   await batch.commit();
 }
 
@@ -4248,6 +4399,7 @@ async function _saveSoap(id) {
     plan: g('soap-f-p').trim(),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
+  if (!id) data.userCreated = true; // 관리자가 새로 만든 항목은 재시드 시 보존
   const docId = id || _soapDocId(title);
   try {
     await db.collection('soapTemplates').doc(docId).set(data, { merge: true });
