@@ -4027,193 +4027,193 @@ async function _schedImportCommit() {
 
 // ── 진료별 SOAP ───────────────────────────────────────────────
 const SOAP_CATS = ['고정성', '국소의치', '총의치', '임플란트', '임시의치', '심미', '기타'];
-const SOAP_SEED_VERSION = 2; // 시드 콘텐츠 버전 — 올리면 기존 시드 항목이 새 내용으로 교체됨
+const SOAP_SEED_VERSION = 3; // 시드 콘텐츠 버전 — 올리면 기존 시드 항목이 새 내용으로 교체됨
 
 const SOAP_SEED = [
   // ── 1. 고정성 보철 (Crown & Bridge) ──
   {
     title: '고정성 1-1 · 진단 및 치료계획',
     category: '고정성', order: 1,
-    subjective: '주소(C.C.), 심미·기능·통증 호소, 치과·의과 병력, 기대치',
-    objective: '- 진단 자료: 진단 모형, Panorama/PA, 임상사진, **diagnostic wax-up**\n- 교합 평가: **VDO 변동 여부**, **CR–CO 일치 여부**(편위 방향·양)\n- 지대치 평가: 치주 상태(probing depth·동요도), **치근단 상태(PA)**, 치수 생활력, 잔존 치질량, 기존 수복물',
-    assessment: '진단, 지대치 예후, 보철 설계(단관 / FPD·재질), VDO 조정 필요성 판단',
-    plan: '- 치료 옵션·순서 제시\n- **informed consent** (대안·위험·비용)\n- 다음 예약 (prep)',
+    subjective: '- **주소(C.C.)**: 환자 표현 그대로 인용 + 발생 시점·지속기간·악화/완화 요인\n- **치과력**: 과거 보철·근관·치주·교정 치료, 기존 수복물 실패 이력과 원인\n- **의과력**: 당뇨(창상 치유·감염), 골다공증·**비스포스포네이트/항흡수제(MRONJ)**, 항응고제, 두경부 방사선, 알레르기(금속·라텍스)\n- **습관·기대치**: bruxism/clenching, 흡연, 심미 요구 수준, 경제적·시간적 제약',
+    objective: '- **진단 자료 세트**: 반조절성 교합기 마운팅 진단모형, 파노라마 + 지대치 PA, 규격 임상사진, **diagnostic wax-up**, 필요 시 CBCT\n- **전악 평가**: 치주(전악 6점 probing, BOP, 부착소실, 동요도 Miller I~III), 우식·기존 수복물, 교모/마모\n- **교합 분석**: <u>VDO</u> 적정·상실, <u>CR–CO 편위</u>(방향·양, <mark style="background:#fef08a">>1~2 mm</mark> 유의), 전방·측방 유도(canine guidance / group function), 조기접촉·간섭\n- **지대치별**: 잔존 치질량, **ferrule 확보 여부(높이 <mark style="background:#fef08a">≥1.5~2 mm</mark>·두께 ≥1 mm)**, 치수 생활력(EPT·cold), 치근단 상태(PA), 관·치근 비(C:R ratio ≥ 1:1)',
+    assessment: '- 진단명 및 손상·결손의 원인\n- **개별 치아 예후**: good / fair / poor / hopeless (McGuire & Nunn 개념)\n- **설계 결정**: 단관 vs FPD vs 임플란트 · 재료(지르코니아 / 리튬디실리케이트 / PFM / type III~IV gold) · pontic 디자인(ovate / modified ridge lap)\n- **ACP PDI**(부분무치악 Class I~IV)로 난이도·전문의 의뢰 필요성 층화\n- VDO 재설정·전처치(근관·치주·교정·발치) 선행 필요성',
+    plan: '- 순차 치료계획(전처치 → 임시 → 최종) 제시, **대안 포함**(무처치·임플란트·가철성)\n- **Informed consent**: 이득·위험·대안·비용·예후·유지관리 부담 문서화\n- 다음 예약(지대치 형성)\n\n<div class="note"><b>ℹ️ 안내</b>diagnostic wax-up은 최종 형태·교합·심미의 청사진이며, 동시에 임시보철 제작용 matrix와 삭제량 가이드(reduction/silicone index)의 원본이 됩니다.</div>\n\n<details><summary>🔬 근거 — ferrule effect</summary>\n\n1.5~2 mm 높이의 온전한 치질을 감싸는 ferrule은 post-core 수복치의 파절 저항을 유의하게 높입니다(Sorensen & Engelman 1990; Juloski 2012 review). ferrule이 부족하면 crown-lengthening 또는 정출(orthodontic extrusion)을 선행 고려.\n\n</details>',
   },
   {
     title: '고정성 1-2 · 지대치 형성 및 임시보철',
     category: '고정성', order: 2,
-    subjective: '특이사항·증상, 동의 재확인',
-    objective: '- 마취 (종류 / 용량 / 부위)\n- **Prep**: 재질별 마진 형태(chamfer / shoulder)·삭제량 확보, 축면 taper(약 <mark style="background:#fef08a">6~10°</mark>), undercut 제거, line angle 정리\n- **Provisional**: direct / indirect 제작, **contact·margin·occlusion·contour** 형성, 임시 접착(ZNE / ZOE)\n- Shade 예비 채득 (치아 탈수 전)',
-    assessment: '형성량·마진 적절, 임시보철 적합·교합·심미 acceptable',
-    plan: '- 다음 예약 (정밀인상)\n- 술후 지침 (지각과민 가능·임시보철 관리·홈케어)\n\n<div class="tip"><b>💡 보철과 디테일</b>shade는 치아가 탈수되면 밝게 보여 오차가 납니다. 러버댐·장시간 격리 <u>전에</u> 미리 채득하세요.</div>',
+    subjective: '- 지난 내원 이후 증상(자발통·냉온 반응), 특이사항\n- 치료 범위·비용 **동의 재확인**',
+    objective: '- **마취**: 약제/용량/부위(예: 2% lidocaine 1:100,000 epi)\n- **삭제량(재료별 최소 두께)** —\n<dl><dt>지르코니아(모놀리식)</dt><dd>교합면 1.0~1.5 mm, 축면 0.5~1.0 mm</dd><dt>리튬디실리케이트</dt><dd>교합면 1.5~2.0 mm, 축면 1.0~1.5 mm</dd><dt>PFM</dt><dd>교합면 1.5~2.0 mm, 순면 1.2~1.5 mm(도재+금속)</dd><dt>전부금속관</dt><dd>기능교두 1.5 mm, 비기능교두 1.0 mm</dd></dl>\n- **형성 원칙**: 축면 **total occlusal convergence** 목표 <mark style="background:#fef08a">6°</mark>(임상 현실 10~20°), undercut 무, 마진 형태(chamfer=지르코니아·금 / rounded shoulder=도재), 명확·연속된 finish line, line angle·point angle 정리\n- **Margin 위치**: 가능하면 치은연상(supragingival) — biologic width(<mark style="background:#fef08a">~2 mm</mark>) 침범 금지\n- **Provisional**: direct(bis-acryl) / indirect 제작, **contact·margin·occlusion·contour·emergence** 형성, 임시접착(비유게놀 = ZNPE, 최종이 레진접착일 때)\n- **Shade**: 치아 탈수 전 채득',
+    assessment: '- 삭제량·convergence·마진 연속성 적절, 잔존 치질·ferrule 확보\n- 임시보철 적합·변연·교합·심미 acceptable',
+    plan: '- 다음 예약(정밀인상)\n- 술후 지침: 지각과민 가능성, 임시보철 관리(끈적한 음식 회피), 탈락 시 대응, 구강위생\n\n<div class="warning"><b>⚠️ 주의</b>축면 convergence가 과도하면(>20°) 유지·저항형태가 급감합니다. 반대로 과도한 삭제는 치수 노출·지각과민을 유발 — <u>reduction guide</u>로 삭제량을 계량하며 형성하세요.</div>\n\n<div class="danger"><b>🚫 역효과 주의</b>마진을 치은열구 깊숙이(biologic width 침범) 두면 만성 염증·부착소실·치은퇴축이 옵니다. 심미상 불가피할 때만 열구 깊이의 1/2 이내, 0.5 mm 연하로 제한.</div>',
   },
   {
     title: '고정성 1-3 · 정밀인상 및 악간관계 채득',
     category: '고정성', order: 3,
-    subjective: '임시보철 사용감 (불편·지각과민·탈락)',
-    objective: '- 임시보철 제거, 지대치 상태 확인\n- **Gingival displacement**: 2-cord technique (1st: 지혈 / 2nd: 조직 압배)\n- **Impression**: PVS / polyether 또는 구강 스캐너, 대합치 인상, **bite registration**\n- **Lab work order**: shade(VITA 3D / Classical) 채득, 사진 첨부, 기공지시서 작성\n- 임시보철 재장착',
-    assessment: '압배·인상 정밀도 양호, 마진 인기 확인',
-    plan: '- 기공 의뢰 (재질·shade·마진·납기)\n- 다음 예약 (시적 / 장착)',
+    subjective: '- 임시보철 사용감: 불편·지각과민·탈락·저작 이상\n- 심미·형태에 대한 중간 피드백',
+    objective: '- 임시보철 제거, 지대치·변연 치은 상태 확인(염증 시 인상 연기 고려)\n- **치은압배**: 2-cord technique — 1st cord(가는 것, 지혈·수분조절: Al/Fe 함유) → 2nd cord(굵은 것, 조직 측방 압배) → 2nd cord 제거 직후 인상\n- **정밀인상**: <u>PVS(부가중합형 실리콘)</u> 또는 polyether, one-step/two-step, 또는 **디지털 구강스캐너**; margin 전둘레가 인기됐는지 확대 확인\n- **대합치 인상 + bite registration**(CR 또는 MIP), 필요 시 **facebow transfer**\n- **기공지시서**: 재료·shade(VITA Classical/3D-Master, 사진 첨부)·마진 디자인·pontic·contact·occlusal scheme·납기 명시\n- 임시보철 재장착(교합 재확인)',
+    assessment: '- 압배 충분, 인상 정밀도 양호(기포·당김·미인기 없음), 전 둘레 마진 인기 확인\n- 악간관계·shade 기록 신뢰 가능',
+    plan: '- 기공 의뢰(재질·shade·마진·occlusion·납기)\n- 다음 예약(시적 또는 장착)\n\n<div class="tip"><b>💡 보철과 디테일</b>단일 후속 접착이 레진시멘트면, 압배 지혈이 곧 접착 성공을 좌우합니다. 출혈·삼출이 있으면 인상뿐 아니라 최종 접착까지 실패하므로 이 단계에서 완전한 지혈을 확보하세요.</div>',
   },
   {
-    title: '고정성 1-4 · 시적 (Try-in)',
+    title: '고정성 1-4 · 시적 (Framework / Bisque Try-in)',
     category: '고정성', order: 4,
-    subjective: '임시보철 경과',
-    objective: '- **Substructure(metal / coping) 적합도**, interocclusal space, contact tightness\n- (bisque / porcelain 단계) 심미·교합 확인, **환자 확인**',
-    assessment: '하부구조 적합·공간·접촉 acceptable / 수정 필요 사항',
-    plan: '- 기공 재의뢰 (glaze·수정)\n- 다음 예약 (장착)',
+    subjective: '- 임시보철 경과, 심미 기대 재확인',
+    objective: '- **하부구조(metal / zirconia coping) 적합**: marginal fit(explorer·확대), internal fit(fit-checker / silicone disclosing), **rocking 여부**\n- **인접 접촉**: floss 저항·shimstock, 접촉 강도·위치\n- **교합**: articulating paper로 CO 균등 접촉, 편심위 간섭\n- (bisque / try-in 단계) 심미(형태·색·표면질감·절단연 투명도), 발음, **환자 확인·서면 동의**\n- 필요 시 방사선으로 마진 적합 확인',
+    assessment: '- 하부구조 수동적 적합, 변연 간격 임상 허용치 내, 접촉·공간 acceptable\n- 심미·교합 환자 승인 / 수정 필요 항목 특정',
+    plan: '- 기공 재의뢰(glaze·characterization·교합/접촉 수정)\n- 다음 예약(최종 장착)\n\n<details><summary>🔬 근거 — 변연 적합 기준</summary>\n\n임상적으로 허용되는 marginal gap은 통상 <mark style="background:#fef08a">&lt;120 μm</mark>가 인용됩니다(McLean & von Fraunhofer 1971, 대규모 임상 관찰 기반). 간격이 클수록 시멘트 용해·미세누출·이차우식·치주염 위험이 증가합니다.\n\n</details>',
   },
   {
     title: '고정성 1-5 · 최종 장착 및 종결',
     category: '고정성', order: 5,
-    subjective: '임시보철 경과, 최종 심미 확인',
-    objective: '- 임시보철·잉여 시멘트 제거\n- **Fit-checker**: internal fit + margin fit 점검\n- **Contact test**(floss / shimstock), **Occlusion test**(CO / excursion)\n- **Final cementation**(resin / GI / RMGI), 방습, **잉여 시멘트 완전 제거**\n- **Final PA**',
-    assessment: '적합·접촉·교합·심미 양호, 완전 안착',
-    plan: '- 술후 지침, 리콜, 경과관찰\n\n<div class="danger"><b>🚫 역효과 주의</b>치은연하 잉여 시멘트 잔존은 만성 치은염·골소실의 흔한 원인. 접착 전 치실을 걸어두고, 접착 후 방사선으로 잔사 확인.</div>',
+    subjective: '- 임시보철 경과, 최종 심미 최종 확인',
+    objective: '- 임시보철·잔여 임시시멘트 완전 제거, 지대치 청결·건조\n- **적합 점검**: fit-checker로 internal + margin fit, **contact test**(floss / shimstock), **occlusion test**(CO 균등 · excursion 간섭 제거, 자연치와 조화)\n- **접착/합착 — 재료별 프로토콜** —\n<dl><dt>지르코니아</dt><dd>알루미나 샌드블라스트 + <u>MDP 프라이머</u> → resin/자가접착 레진시멘트</dd><dt>리튬디실리케이트</dt><dd>HF 4~5% etching + silane → resin cement(가능하면 광/이중중합)</dd><dt>금속·PFM(유지형태 충분)</dt><dd>RMGI 또는 GI</dd></dl>\n- 방습(러버댐/코튼롤), 시멘트 도포, 안착·유지 하 경화, **잉여 시멘트 완전 제거**(특히 치은열구·인접부)\n- **Final PA**로 완전 안착·잔사 확인',
+    assessment: '- 적합·접촉·교합·심미 양호, 완전 안착, 잉여 시멘트 없음',
+    plan: '- 술후 지침(초기 시림 가능·저작 적응), 구강위생·치실·야간 가드(bruxer)\n- **리콜**: 6~12개월 정기 점검(변연·교합·치주·이차우식)\n\n<div class="danger"><b>🚫 역효과 주의</b>치은연하 잉여 레진시멘트 잔존은 임플란트/자연치 주위 만성 염증·골소실의 흔한 원인입니다. 접착 전 인접부에 치실을 미리 통과시켜 두고, 경화 후 방사선으로 잔사를 반드시 확인하세요.</div>',
   },
 
   // ── 2. 국소의치 (RPD) ──
   {
     title: 'RPD 2-1 · 예비인상 및 서베잉',
     category: '국소의치', order: 1,
-    subjective: '주소, 결손 부위, 병력, 기대치',
-    objective: '- Alginate 인상 → 진단 모형\n- **Diagnostic surveyor**: 착탈로(path of insertion), undercut 위치 / 깊이(0.01"), guide plane 설정\n- Kennedy 분류, 잔존치·치주 평가',
-    assessment: '분류, 설계 방향 (지지·유지·유도 요소), 지대치 예후',
-    plan: '- 구강 형성 계획\n- 다음 예약',
+    subjective: '- 주소, 결손 부위·기간, 기존 의치 경험(유지·불편)\n- 병력, 심미·저작 기대, 손재주(착탈 능력)',
+    objective: '- Stock tray + alginate 예비인상 → 진단모형\n- **진단 서베잉(diagnostic surveyor)**: 착탈로(path of insertion) 결정, undercut 위치·깊이 계측(<mark style="background:#fef08a">0.25 mm(0.01")</mark> 표준 게이지), **guide plane**·간섭·심미 클래스프 위치\n- **분류**: <u>Kennedy 분류 + Applegate 규칙</u>, 대합 관계, 잔존치 수·분포·치주·동요도, 잔존 치조제·연조직',
+    assessment: '- Kennedy Class(I 양측 유리단 / II 편측 유리단 / III 중간결손 / IV 전방결손) 및 modification\n- 지지 형태 결정: 치아지지 / 치아-조직 혼합지지(유리단)\n- **설계 방향**: 4요소 — 지지(rest) · 유지(retainer) · 안정 · 연결(major/minor connector) 개념 수립\n- **ACP PDI(부분무치악)**로 난이도 층화, 지대치 예후',
+    plan: '- 구강 형성 계획(rest seat·guide plane·surveyed crown 필요 부위)\n- 필요 전처치(치주·보존) 확인, 다음 예약\n\n<div class="note"><b>ℹ️ 안내</b>유리단(Kennedy I·II)은 치아와 점막의 피압축성 차이(점막이 훨씬 큼) 때문에 유지·설계 원칙이 중간결손과 근본적으로 다릅니다 — 응력 분산(stress-breaking)·altered cast·기능인상 개념이 여기서 출발합니다.</div>',
   },
   {
     title: 'RPD 2-2 · 구강 형성 (Mouth Preparation)',
     category: '국소의치', order: 2,
-    subjective: '특이사항',
-    objective: '- 마취 (해당 시)\n- **Guiding plane**(지대치 인접면 삭제), **Rest seat**(occlusal / cingulum rest) prep\n- Surveyed crown 필요 시 prep 진행 및 인상 채득',
-    assessment: 'rest seat·guide plane 형성 적절',
-    plan: '- 정밀인상 계획\n- 다음 예약',
+    subjective: '- 특이사항, 지난 내원 후 증상',
+    objective: '- 마취(해당 시)\n- **Guiding plane**: 지대치 인접면을 착탈로에 평행하게 삭제(2~4 mm 높이) — 착탈로 일치·유지·안정 향상\n- **Rest seat 형성**: occlusal rest(변연융선 하방, spoon 형태, 바닥이 치아 장축으로 응력 전달), cingulum/incisal rest — 최소 두께(금속 강도) 확보\n- **Survey line·retentive undercut** 조정, 필요 시 **surveyed crown** 형성·인상(가이드플레인·rest seat·undercut을 크라운에 부여)\n- 대합·잔존치 조기접촉 조정',
+    assessment: '- rest seat 형태·깊이 적절(응력의 축방향 전달), guide plane 평행·연속\n- surveyed crown 설계 요건 반영',
+    plan: '- 정밀인상 계획, 다음 예약\n\n<div class="warning"><b>⚠️ 주의</b>occlusal rest seat이 얕으면 금속이 얇아져 파절하거나 교합 간섭이 생기고, 바닥 경사가 잘못되면 지대치에 측방력이 걸립니다. 바닥은 치아 장축을 향해 응력이 전달되도록 형성하세요.</div>',
   },
   {
     title: 'RPD 2-3 · 정밀인상 (Final Impression)',
     category: '국소의치', order: 3,
-    subjective: '특이사항',
-    objective: '- **Custom tray** 제작·시적, **border molding**(modeling compound), rubber impression\n- 필요 시 **altered cast technique** (원심 유리단)',
-    assessment: '변연·지지부 인기 적절',
-    plan: '- framework 제작 의뢰\n- 다음 예약',
+    subjective: '- 특이사항',
+    objective: '- **개인트레이(custom tray)** 제작·시적, 변연 조정\n- 필요 시 **border molding**(modeling compound), rubber(PVS/polyether) 정밀인상\n- **유리단(Kennedy I·II)**: <u>altered cast(수정모형) 기법</u> — 먼저 framework 제작 후, framework를 지지로 유리단 부위만 기능인상 재채득하여 점막 피압축성을 반영',
+    assessment: '- 변연·지지부·잔존치 인기 정밀, 유리단 조직 지지 확보',
+    plan: '- framework 제작 의뢰(설계도 첨부), 다음 예약\n\n<details><summary>🔬 근거 — altered cast의 목적</summary>\n\n유리단 의치는 원심으로 갈수록 점막(피압축성 큼)에만 지지됩니다. 해부학적 인상만으로 만들면 저작 시 의치가 조직 쪽으로 침하하며 지대치에 지렛대(torque)가 걸립니다. altered cast(McCracken)는 유리단을 기능적 부하 상태로 인기해 지지를 넓히고 지대치 응력을 줄입니다.\n\n</details>',
   },
   {
     title: 'RPD 2-4 · 금속 주조체 시적 (Framework Try-in)',
     category: '국소의치', order: 4,
-    subjective: '특이사항',
-    objective: '- **Disclosing wax / fit-checker**: rest, major / minor connector, direct retainer 적합\n- 잔존치·대합치 교합 간섭 제거',
-    assessment: 'framework 수동적 적합(passive fit), rest 완전 안착, **rocking 없음**',
-    plan: '- bite record / 인공치 배열 단계\n- 다음 예약\n\n<div class="warning"><b>⚠️ 주의</b>framework가 rocking하면 그대로 배열로 넘어가지 말 것. 원인(조기접촉·주조 변형)을 먼저 해결 — 이 단계 오차가 완성 의치까지 그대로 전달됩니다.</div>',
+    subjective: '- 특이사항, 착용 시 압박·통증 여부',
+    objective: '- **적합 점검**: disclosing wax / fit-checker로 rest, major·minor connector, direct/indirect retainer 접촉 확인\n- **Passive fit**: 손가락 압력 없이 완전 안착, **rocking 무**, rest 완전 착좌\n- 클래스프 유지력(retentive tip이 계측된 undercut에 위치), 잔존치·대합 교합 간섭 제거\n- major connector와 점막 사이 relief 적절',
+    assessment: '- framework 수동적 적합, rest 완전 안착, **rocking 없음**, 유지·안정 요소 정상 작동',
+    plan: '- bite record / 인공치 배열(또는 altered cast) 단계, 다음 예약\n\n<div class="warning"><b>⚠️ 주의</b>framework가 rocking하거나 rest가 뜨면 배열로 넘어가지 마세요. 원인(조기접촉·주조 변형·모형 오차)을 먼저 해결 — 이 단계의 부적합은 완성 의치의 유지 상실·지대치 손상으로 그대로 이어집니다.</div>',
   },
   {
     title: 'RPD 2-5 · 악간관계 채득 및 납의치 시적',
     category: '국소의치', order: 5,
-    subjective: '환자 심미 피드백',
-    objective: '- **Record base + wax rim**: VDO, CR 측정, **facebow transfer**\n- 인공치 선택 (shade, mold)\n- **Wax try-in**: 심미, 발음(F / V / S sound), midline, 교합 검수, **환자 승인**',
-    assessment: 'VDO·CR·심미·교합 acceptable, 환자 동의',
-    plan: '- 온성 (processing)\n- 다음 예약 (장착)',
+    subjective: '- 환자 심미 피드백(치아 형태·색·배열)',
+    objective: '- **Record base + wax rim**(framework 위)으로 VDO·CR 채득, **facebow transfer**\n- 인공치 선택: mold(악궁·잔존치 조화), shade(대합·잔존치 매칭)\n- **Wax try-in**: 심미(정중선·순측 지지·smile line), 발음(F/V=절단연 위치, S=VDO/전방공간), 교합(잔존치와 조화·balanced 여부), **환자 승인 서면화**',
+    assessment: '- VDO·CR·심미·교합·발음 acceptable, 환자 동의 확보',
+    plan: '- 온성(processing) 의뢰, 다음 예약(장착)',
   },
   {
     title: 'RPD 2-6 · 의치 장착 및 조정',
     category: '국소의치', order: 6,
-    subjective: '(재내원) 통증·유지 관련 호소',
-    objective: '- 장착, **PIP(Pressure Indicator Paste)**로 조직면 fit 조정\n- **Disclosing wax**로 변연(border extension) 조정\n- **Clinical remount** 후 centric / eccentric 교합 조정\n- 착탈·세척 교육',
-    assessment: '적합·유지·교합 양호',
-    plan: '- 3~4회 조정 내원 관찰 후 종결\n- 리콜',
+    subjective: '- (장착·재내원) 통증 부위, 유지·저작·발음 관련 호소',
+    objective: '- 장착, **PIP(pressure indicator paste)**로 조직면 과압박점 조정\n- **Disclosing wax**로 변연 신장(border extension) 조정\n- **Clinical remount**(교합기 재부착) 후 CO 균등·편심위 조정 — 구내 조정보다 정밀\n- 클래스프 유지력 미세조정, 착탈·세척·야간 제거 교육',
+    assessment: '- 적합·유지·안정·교합 양호, 조직 압박점 해소',
+    plan: '- **24~48시간 후 1차 조정** 시작, sore spot 소실까지 3~4회 내원\n- 정기 리콜(연 1회), 조직 변화 시 이장(reline) 안내\n\n<div class="tip"><b>💡 보철과 디테일</b>첫 조정 전 24시간은 의치를 계속 착용하도록 하면(취침 제외 권고와 별개로) 압박점(sore spot)이 점막에 뚜렷이 표시되어 조정 위치를 정확히 찾을 수 있습니다.</div>',
   },
 
   // ── 3. 총의치 (Complete Denture) ──
   {
     title: 'CD 3-1 · 예비인상 (Preliminary Impression)',
     category: '총의치', order: 1,
-    subjective: '주소, 의치 사용력, 병력, 기대치',
-    objective: 'Stock tray + alginate / impression compound → 진단 모형·**custom tray** 제작; 치조제 형태·점막 평가',
-    assessment: '치조제 분류, 지지·유지 예후',
-    plan: '- custom tray 제작\n- 다음 예약',
+    subjective: '- 주소, 무치악 기간·기존 의치 사용력(유지·저작·심미 불만), 병력, 기대치·적응력',
+    objective: '- Stock tray + alginate/impression compound → 진단모형 → **개인트레이 제작**\n- **평가**: 치조제 형태·흡수도, 점막 피개(flabby/undercut), 구개 형태, 설·순소대 부착, 개구량, 타액(양·점조도), 상순 지지·안모',
+    assessment: '- **치조제·무치악 분류**: ACP PDI(완전무치악 Class I~IV), House 점막 분류, 하악 흡수(McGarry)\n- 지지·유지·안정 예후, 어려운 해부(심한 흡수·flabby·건조) 예고',
+    plan: '- 개인트레이 제작, 다음 예약\n\n<div class="note"><b>ℹ️ 안내</b>총의치 유지는 흡착(retention: 변연폐쇄·타액·표면장력)과 안정(stability: 교합·연마면 형태), 지지(support: 치조제 면적)의 합입니다. 예비 단계에서 해부학적 한계를 먼저 파악해야 최종 결과의 상한이 정해집니다.</div>',
   },
   {
     title: 'CD 3-2 · 정밀인상 (Final Impression)',
     category: '총의치', order: 2,
-    subjective: '특이사항',
-    objective: 'Custom tray에 **green-stick compound** border molding → **mucostatic / functional impression** 채득, post-dam',
-    assessment: '변연 폐쇄·신장 적절',
-    plan: '- 주모형·교합제 제작\n- 다음 예약',
+    subjective: '- 특이사항, 개인트레이 착용감',
+    objective: '- 개인트레이 시적·조정(1~2 mm short of vestibule)\n- **Border molding**: <u>green-stick compound</u> 또는 PVS heavy로 근육 부착·기능운동 반영(가동조직 경계 형성)\n- **최종인상**: light-body PVS / ZOE / polyether — 상악 **post-dam(posterior palatal seal)** 설정, 하악 retromolar pad·buccal shelf 지지 인기\n- flabby ridge는 **선택적 무압인상(selective pressure)** 고려',
+    assessment: '- 변연 폐쇄·신장 적절, 지지영역 정확 인기(과압박 없음)',
+    plan: '- 주모형·record base·occlusal rim 제작, 다음 예약',
   },
   {
     title: 'CD 3-3 · 악간관계 채득 (Jaw Relation)',
     category: '총의치', order: 3,
-    subjective: '특이사항',
-    objective: '**Occlusal rim**으로 VDO, CR(**Gothic arch tracer** 또는 swallowing method) 측정, **facebow transfer**, 인공치 선택(mold / shade)',
-    assessment: 'VDO 적절 (freeway space 약 <mark style="background:#fef08a">2~4 mm</mark>), CR 채득',
-    plan: '- 배열 / try-in\n- 다음 예약',
+    subjective: '- 특이사항',
+    objective: '- **Occlusal rim**으로 순측 지지·교합평면(비익-이주선 Camper’s plane / 동공간선에 평행) 설정\n- **VDO**: 안모·발음·연하·**freeway space** 측정(안정위 - 교합위 = <mark style="background:#fef08a">2~4 mm</mark>)\n- **CR 채득**: Gothic arch(arrow-point) tracer 또는 swallowing/bimanual manipulation\n- **Facebow transfer**로 교합기 부착, 인공치 선택(mold: 악궁·안모·성별·나이 / shade)',
+    assessment: '- VDO 적절(과고경 → 저작통·clicking / 과저경 → 심미·저작효율 저하), CR 재현 가능, 교합평면 적절',
+    plan: '- 인공치 배열·wax try-in, 다음 예약\n\n<div class="warning"><b>⚠️ 주의</b>VDO를 과도하게 높이면 안정위 공간(freeway space)이 없어져 저작통·구각염·의치 clicking·치조제 흡수 가속을 초래합니다. 안정위에서 2~4 mm 여유를 반드시 확보하세요.</div>',
   },
   {
     title: 'CD 3-4 · 납의치 시적 (Wax Try-in)',
     category: '총의치', order: 4,
-    subjective: '심미 피드백',
-    objective: 'VDO·CR 재확인, **lip support**, esthetics, phonetics, occlusion(balanced) 점검, **환자 승인**',
-    assessment: '심미·교합·VD acceptable, 환자 동의',
-    plan: '- 온성\n- 다음 예약 (장착)',
+    subjective: '- 심미 피드백(치아·잇몸 색, 배열, 노출량)',
+    objective: '- **VDO·CR 재확인**(1회 더 검증), **lip support**·정중선·smile line·buccal corridor\n- **발음**: F/V(절단연-하순), S(전방·수직 공간, 휘파람/휘슬 없이), 순음\n- **교합**: balanced occlusion(양측성 균형교합) 방향 확인\n- **환자·(가능시) 보호자 승인 서면화**',
+    assessment: '- 심미·발음·교합·VDO acceptable, 환자 동의',
+    plan: '- 온성(processing), 다음 예약(장착)',
   },
   {
     title: 'CD 3-5 · 의치 장착 및 종결',
     category: '총의치', order: 5,
-    subjective: '(재내원) 통증·유지',
-    objective: '**PIP** 조직면 조정, **clinical remount** 교합 조정, 변연 조정',
-    assessment: '유지·적합·교합 양호',
-    plan: '- **24시간 / 3일 / 1주** 리콜로 sore spot relief 완결 후 종결\n- 관리·착탈 교육',
+    subjective: '- (장착·재내원) 통증·유지·저작·발음',
+    objective: '- 내면 적합(**PIP**), 변연 조정, **clinical remount**로 교합 정밀 조정(processing 중 발생한 오차 보정)\n- 유지·흡착·balanced occlusion 확인, 착탈·세척·보관(야간 제거·건조 방지) 교육',
+    assessment: '- 유지·적합·교합 양호',
+    plan: '- **리콜: 24시간 → 1주 → (필요 시) 추가** 로 sore spot relief 완결 후 종결\n- 연 1회 점검, 치조제 흡수 시 이장/재제작 안내\n\n<div class="tip"><b>💡 보철과 디테일</b>총의치는 온성 과정(acrylic 중합 수축)에서 필연적으로 교합이 미세하게 어긋납니다. 구내 조정만으로는 한계가 있으므로 <u>clinical remount</u>(장착일 교합기 재부착 조정)가 균형교합 완성의 핵심입니다.</div>',
   },
 
   // ── 4. 임플란트 보철 (Implant Prosthetics) ──
   {
     title: '임플란트 4-1 · 2차 수술 및 연조직 형성',
     category: '임플란트', order: 1,
-    subjective: '식립부 경과, 자각 증상',
-    objective: '**Healing abutment** 체결, gingival cuff 형성 대기(2~3주); 연조직 상태·osseointegration(방사선) 확인',
-    assessment: '치유 양호, cuff 형성 대기',
-    plan: '- 인상 예약 (2~3주 후)',
+    subjective: '- 식립부 경과(동통·부종·감각이상), 자각 증상',
+    objective: '- **골유착 확인**: percussion(청명음), 방사선상 fixture-bone 경계·**marginal bone level**, 필요 시 ISQ(공진주파수)\n- **Healing abutment** 체결 → **gingival cuff/emergence 형성 대기 2~3주**\n- 각화점막 폭(< 2 mm면 연조직 이식 고려), 인접·대합 관계',
+    assessment: '- 골유착 양호, 연조직 치유·cuff 형성 대기\n- 각화점막·연조직 프로파일 평가',
+    plan: '- 인상 예약(2~3주 후, 연조직 성숙 후)\n\n<details><summary>🔬 근거 — 임플란트 성공 기준</summary>\n\nAlbrektsson 등(1986): 동요 없음, 방사선 투과대 없음, 첫 1년 후 연간 변연골 소실 <mark style="background:#fef08a">&lt;0.2 mm</mark>, 통증·감염·감각이상 없음. ICOI(Pisa 2007)는 Success/Satisfactory survival/Compromised/Failure의 4단계로 세분합니다.\n\n</details>',
   },
   {
     title: '임플란트 4-2 · 인상 채득 (Impression)',
     category: '임플란트', order: 2,
-    subjective: '특이사항',
-    objective: '**Pick-up(open tray) / Transfer(closed tray) / Scanbody 스캔**, custom abutment 디자인 수립, 대합 인상, shade, **방사선으로 인상 코핑 완전 안착 확인**',
-    assessment: '안착·연조직 양호',
-    plan: '- abutment / crown 제작 의뢰\n- 다음 예약\n\n<div class="warning"><b>⚠️ 주의</b>impression coping이 완전히 안착되지 않으면 보철물 전체가 부정합. 육안·촉진만 믿지 말고 <u>방사선</u> 확인이 원칙.</div>',
+    subjective: '- 특이사항',
+    objective: '- **인상 방식**: pick-up(open tray, 다수·비평행에 유리) / transfer(closed tray) / **scan body 디지털 스캔**\n- **인상코핑 완전 안착을 방사선으로 확인**(mismatch 시 전체 부정합)\n- custom(맞춤) abutment 설계 방향 수립(emergence·margin 위치·각도), 대합 인상, shade\n- 연조직 프로파일·emergence 기록',
+    assessment: '- 인상코핑 안착·연조직·대합 관계 양호',
+    plan: '- custom abutment / crown 제작 의뢰, 다음 예약\n\n<div class="warning"><b>⚠️ 주의</b>impression coping이 완전히 안착되지 않으면 보철물 전체가 부정합이 되어 나사풀림·파절·변연골 소실로 이어집니다. 육안·촉진만 믿지 말고 반드시 <u>방사선</u>으로 안착을 확인하세요.</div>',
   },
   {
     title: '임플란트 4-3 · Abutment & Crown Try-in',
     category: '임플란트', order: 3,
-    subjective: '특이사항',
-    objective: '**Custom abutment 적합 및 torque 체결(<mark style="background:#fef08a">20~35 Ncm</mark>)**, crown **fit / contact / occlusion** 점검, 방사선 확인',
-    assessment: 'abutment 적합, crown 적합·교합 acceptable',
-    plan: '- (수정 시 재의뢰)\n- 장착 예약',
+    subjective: '- 특이사항',
+    objective: '- **Custom abutment 적합·방향 확인 후 제조사 지정 토크로 체결**(통상 <mark style="background:#fef08a">20~35 Ncm</mark>)\n- Crown **fit / proximal contact / occlusion** 점검, **방사선으로 abutment-fixture·abutment-crown 완전 안착 확인**\n- **Implant-protected occlusion** 확인: 경(가벼운) 교합에서 약접촉, 강교합에서 자연치와 균등, **측방·전방 운동 시 임플란트 무접촉/무간섭**',
+    assessment: '- abutment 적합·안착, crown 적합·접촉·교합 acceptable',
+    plan: '- (수정 필요 시 재의뢰), 최종 장착 예약',
   },
   {
     title: '임플란트 4-4 · 최종 장착 및 종결',
     category: '임플란트', order: 4,
-    subjective: '특이사항',
-    objective: '- 나사유지: **screw hole sealing**(teflon tape + composite resin), 제조사 지정 토크\n- 시멘트유지: **잉여 시멘트 완전 제거**\n- **Occlusion**(implant-protected: 경교합 약접촉, 측방운동 무접촉), contact, **Final PA로 완전 안착 확인**',
-    assessment: '적합·교합·안착 양호',
-    plan: '- 유지관리 (6개월 리콜)로 이관\n- 위생 교육',
+    subjective: '- 특이사항',
+    objective: '- **나사유지형**: abutment 최종 토크(제조사 규정) → **screw access sealing**(teflon tape + composite resin), 접근공 심미 마감\n- **시멘트유지형**: margin을 가능한 치은연상/얕게, **잉여 시멘트 완전 제거**(방사선 확인)\n- **교합**: implant-protected(경교합 약접촉·측방 무접촉·cantilever/과부하 회피), 인접 접촉(<mark style="background:#fef08a">8 μm</mark> shimstock 통과 저항)\n- **Final PA**로 완전 안착·잔여 시멘트 확인',
+    assessment: '- 적합·교합·안착 양호, 나사/시멘트 마감 적절',
+    plan: '- **유지관리 프로그램 이관**: 6개월 리콜(주위 probing·방사선 변연골·나사 풀림·교합), 전용 위생(임플란트 치실·저마모)\n\n<div class="danger"><b>🚫 역효과 주의</b>시멘트유지형의 치은연하 잉여 시멘트는 peri-implantitis·변연골 소실의 주요 원인입니다(Wilson 2009). 심부 마진이 불가피하면 나사유지형 또는 맞춤 abutment로 마진을 얕게 올리는 설계를 우선 고려하세요.</div>',
   },
 
   // ── 5. 임시·즉시의치 (Interim / Immediate Denture) ──
   {
     title: '임시의치 5-1 · 임시의치 장착',
     category: '임시의치', order: 1,
-    subjective: '내원 목적, 심미·발음·기능 기대, "임시"임을 이해하는지',
-    objective: '- 장착 — 유형(interim RPD / flipper / 치료용 의치), 재질(acrylic resin ± wire clasp)\n- 확인·조정: 조직면 적합, 유지(클래스프 / undercut), 변연 신장·조직 압박, **교합(조기접촉 제거)**, 심미, 발음\n- (임플란트 대기 중) **임플란트 부위 relief** — 수술 후 2~4개월 하중 회피',
-    assessment: '**잠정(임시) 보철임을 명시** + 목적(심미·공간유지·기능·조직 및 환자 적응·의문 지대치 예후 관찰 중 해당); 유지·안정·적합은 **임시 수준에서 acceptable**(확정 기준 아님)',
-    plan: '- **확정 치료 계획·시기** (치유 후 확정 RPD / 임플란트 / 이장)\n- 환자 지침 (임시성·제한된 저작효율·위생·야간 제거)\n- informed consent (한계·이행 계획)\n- 조정 재내원',
+    subjective: '- 내원 목적, 심미·발음·기능 기대, **"임시" 보철임을 이해하는지** 확인',
+    objective: '- 장착 — 유형(interim RPD / flipper / 치료용 의치), 재질(acrylic resin ± wire clasp)\n- 확인·조정: 조직면 적합, 유지(클래스프·undercut), 변연 신장·조직 압박, **교합(조기접촉 제거)**, 심미, 발음\n- (임플란트 대기 중) **식립부 relief** — 치유·비하중 기간(통상 2~4개월) 동안 하중 회피',
+    assessment: '- **잠정(임시) 보철임을 명시** + 목적(심미·공간유지·기능·조직 및 환자 적응·의문 지대치 예후 관찰)\n- 유지·안정·적합은 **임시 수준에서 acceptable**(확정 보철 기준 아님)',
+    plan: '- **확정 치료 계획·시기 기재**(치유 후 확정 RPD / 임플란트 / 이장)\n- 환자 지침: 임시성·제한된 저작효율·위생·야간 제거\n- informed consent(한계·이행 계획), 조정 재내원',
   },
   {
     title: '임시의치 5-2 · 즉시의치 장착 (Immediate Denture)',
     category: '임시의치', order: 2,
-    subjective: '발치·창상 관련 자각, 심미 기대',
-    objective: '- 발치 부위 위 장착, **지혈 확인**, (필요시) tissue conditioner / 연성 이장재 적용\n- 유지·변연·교합 확인',
-    assessment: '발치와 위 장착으로 **골흡수에 따른 이장이 예정된** 이행기 보철임을 명시',
-    plan: '- **첫 24시간 제거 금지** (창상 보호·지혈·부종 조절)\n- 후속 예약: **24시간 / 1주 / 1개월** — 필요시 tissue conditioner·연성 이장\n- **이장 시기**: 흡수는 첫 6개월에 집중 → 초기 이장은 곧 헐거워짐. **발치 후 4~6개월경 확정 의치 제작 또는 경성 이장**\n- 연식이·소독 지침, informed consent\n\n<div class="warning"><b>⚠️ 주의</b>즉시의치는 첫 24시간 제거 금지 — 이 시기가 창상 보호·지혈·부종 조절의 핵심. 다음 날 내원 시 처음 제거·조정.</div>',
+    subjective: '- 발치·창상 관련 자각(통증·출혈), 심미 기대',
+    objective: '- 발치와 위 장착, **지혈 확인**, (필요 시) tissue conditioner / 연성 이장재 적용\n- 유지·변연·교합 확인(발치 직후 조직 부종 고려한 최소 조정)',
+    assessment: '- 발치와 위 장착으로 **골흡수에 따른 이장(reline)이 예정된 이행기 보철**임을 명시',
+    plan: '- **첫 24시간 제거 금지**(창상 보호·지혈·부종 조절), 다음 날 첫 제거·조정\n- 후속: **24시간 → 1주 → 1개월** — 필요 시 tissue conditioner·연성 이장\n- **이장/재제작 시기**: 흡수는 발치 후 첫 6개월에 집중 → 초기 이장은 곧 헐거워짐 → **발치 후 4~6개월경 경성 이장 또는 확정 의치 제작**\n- 연식이·소독·야간 관리 지침, informed consent(치유 중 형태 변화·이장 필요)\n\n<div class="warning"><b>⚠️ 주의</b>즉시의치는 첫 24시간 제거 금지가 원칙 — 이 시기가 창상 보호·지혈·부종 억제(의치가 압박드레싱 역할)의 핵심입니다. 임의로 빼면 부종으로 재장착이 어려워집니다.</div>',
   },
 ];
 
@@ -4227,19 +4227,35 @@ function _soapDocId(title) {
 }
 
 async function _loadSOAP() {
-  const [snap, metaSnap] = await Promise.all([
-    db.collection('soapTemplates').get().catch(() => null),
-    db.collection('appMeta').doc('soapSeed').get().catch(() => null)
-  ]);
-  if (!snap) { renderSOAP(); return; }
-  const ver = (metaSnap && metaSnap.exists) ? (metaSnap.data().version || 0) : 0;
-  if (snap.empty || ver < SOAP_SEED_VERSION) {
-    await _seedSOAP(snap);
-    const s2 = await db.collection('soapTemplates').get();
-    _soapItems = s2.docs.map(d => ({ id: d.id, ...d.data() }));
-  } else {
-    _soapItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // 로컬 시드를 기본값으로 — Firestore 실패·권한·캐시와 무관하게 항상 내용이 보이도록
+  const base = SOAP_SEED.map(t => ({ id: _soapDocId(t.title), ...t, seed: true }));
+  const newIds = new Set(base.map(b => b.id));
+  try {
+    const [snap, metaSnap] = await Promise.all([
+      db.collection('soapTemplates').get(),
+      db.collection('appMeta').doc('soapSeed').get().catch(() => null)
+    ]);
+    const ver = (metaSnap && metaSnap.exists) ? (metaSnap.data().version || 0) : 0;
+
+    if (isAdmin && (snap.empty || ver < SOAP_SEED_VERSION)) {
+      // 관리자만 재시드 시도 (쓰기 권한 필요) — 실패해도 화면은 로컬 시드로 렌더
+      try { await _seedSOAP(snap); } catch (e) { console.warn('[soap reseed]', e); }
+      const s2 = await db.collection('soapTemplates').get().catch(() => null);
+      _soapItems = s2 ? s2.docs.map(d => ({ id: d.id, ...d.data() })) : base;
+    } else if (!snap.empty) {
+      // Firestore 내용을 로컬 시드 위에 덮어씀 (관리자 편집·추가 반영, 옛 시드는 정리)
+      const byId = {};
+      base.forEach(it => { byId[it.id] = it; });
+      snap.docs.forEach(d => { byId[d.id] = { id: d.id, ...d.data() }; });
+      _soapItems = Object.values(byId).filter(it => it.userCreated || newIds.has(it.id));
+    } else {
+      _soapItems = base;
+    }
+  } catch (e) {
+    console.warn('[soap load]', e);
+    _soapItems = base;
   }
+  if (!_soapItems.length) _soapItems = base;
   renderSOAP();
 }
 
@@ -4254,8 +4270,10 @@ async function _seedSOAP(existingSnap) {
     });
   }
   SOAP_SEED.forEach(t => batch.set(db.collection('soapTemplates').doc(_soapDocId(t.title)), { ...t, seed: true }));
-  batch.set(db.collection('appMeta').doc('soapSeed'), { version: SOAP_SEED_VERSION });
   await batch.commit();
+  // 버전 마커는 별도 커밋 — appMeta 쓰기가 막혀도 템플릿 저장은 유지
+  try { await db.collection('appMeta').doc('soapSeed').set({ version: SOAP_SEED_VERSION }); }
+  catch (e) { console.warn('[soap seed meta]', e); }
 }
 
 function _soapCatOrder(cat) {
