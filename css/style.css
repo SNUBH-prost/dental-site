@@ -3091,7 +3091,31 @@ a.cite-link .cite-sup {
 .soap-sec-o .soap-sec-letter { background: #22c55e; }
 .soap-sec-a .soap-sec-letter { background: #f59e0b; }
 .soap-sec-p .soap-sec-letter { background: #a855f7; }
+/* Tx — SOAP와 구분되는 시행 술식 기록 */
+.soap-sec-tx {
+  border-color: #0d9488;
+  background: rgba(13,148,136,0.045);
+  border-radius: 0 9px 9px 0;
+  padding: 0.55rem 0.9rem 0.35rem;
+  margin-top: 1.2rem;
+}
+.soap-sec-tx .soap-sec-letter { background: #0d9488; width: auto; padding: 0 0.35rem; font-size: 0.7rem; }
+[data-theme="dark"] .soap-sec-tx { background: rgba(13,148,136,0.09); }
 .soap-sec-body { font-size: 0.88rem; line-height: 1.7; color: var(--text); }
+/* 차팅 예시 문장 */
+.soap-sec-body .chart-eg {
+  margin: 0.5rem 0 0.2rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 7px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.soap-sec-body .chart-eg b { display: block; margin-bottom: 0.25rem; font-family: inherit; color: var(--primary); font-size: 0.75rem; letter-spacing: 0.02em; }
 .soap-sec-body ul, .soap-sec-body ol { padding-left: 1.2rem; margin: 0.3rem 0; }
 .soap-sec-body li { margin: 0.15rem 0; }
 .soap-sec-body p:first-child { margin-top: 0; }
