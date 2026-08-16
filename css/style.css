@@ -3096,6 +3096,113 @@ a.cite-link .cite-sup {
 .soap-sec-body li { margin: 0.15rem 0; }
 .soap-sec-body p:first-child { margin-top: 0; }
 .soap-sec-body u { text-decoration-color: var(--primary); text-underline-offset: 2px; }
+.soap-sec-body strong { font-weight: 700; }
+.soap-sec-body mark { border-radius: 3px; padding: 0 0.15em; color: #78350f; }
+[data-theme="dark"] .soap-sec-body mark { background: rgba(250,204,21,0.22) !important; color: #fde68a; }
+
+/* SOAP 본문 — 정의 목록 */
+.soap-sec-body dl { margin: 0.5rem 0 0.7rem; padding-left: 0.1rem; }
+.soap-sec-body dt {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 0.84rem;
+  margin-top: 0.5rem;
+}
+.soap-sec-body dd { margin-left: 0.9rem; font-size: 0.86rem; margin-bottom: 0.15rem; }
+
+/* SOAP 본문 — 접이식 근거 박스 */
+.soap-sec-body details {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0.7rem 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+.soap-sec-body summary {
+  padding: 0.55rem 0.85rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--text);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.soap-sec-body summary::-webkit-details-marker { display: none; }
+.soap-sec-body summary::before { content: '▶'; font-size: 0.62rem; color: var(--primary); transition: transform 0.18s; }
+.soap-sec-body details[open] summary::before { transform: rotate(90deg); }
+.soap-sec-body details[open] summary { border-bottom: 1px solid var(--border); }
+.soap-sec-body details > *:not(summary) { padding: 0.1rem 0.9rem; }
+.soap-sec-body details > *:last-child:not(summary) { padding-bottom: 0.7rem; }
+.soap-sec-body details .tip,
+.soap-sec-body details .warning,
+.soap-sec-body details .danger,
+.soap-sec-body details .note { margin-left: 0.9rem; margin-right: 0.9rem; }
+
+/* SOAP 본문 — 표 */
+.soap-sec-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6rem 0 0.9rem;
+  font-size: 0.82rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.soap-sec-body th {
+  background: var(--bg);
+  font-weight: 700;
+  text-align: left;
+  padding: 0.42rem 0.6rem;
+  border-bottom: 1.5px solid var(--border);
+  color: var(--text);
+}
+.soap-sec-body td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.soap-sec-body tr:last-child td { border-bottom: none; }
+
+/* 근거 문헌 패널 */
+.soap-refs {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.soap-refs > summary {
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.soap-refs > summary::-webkit-details-marker { display: none; }
+.soap-refs[open] > summary { border-bottom: 1px solid var(--border); }
+.soap-refs-body { padding: 0.8rem 1.1rem 1rem; font-size: 0.82rem; line-height: 1.65; color: var(--text); }
+.soap-refs-body b { display: block; margin: 0.7rem 0 0.25rem; color: var(--primary); font-size: 0.8rem; }
+.soap-refs-body b:first-child { margin-top: 0; }
+.soap-refs-body ul { margin: 0; padding-left: 1.1rem; color: var(--text-muted); }
+.soap-refs-body li { margin: 0.12rem 0; }
+.soap-refs-note {
+  margin: 0.9rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 7px;
+  background: var(--bg);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
 /* 편집 모달 */
 .soap-edit-modal { max-width: 640px; }
 .soap-f-row { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
