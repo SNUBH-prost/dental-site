@@ -4128,7 +4128,7 @@ function renderSOAP() {
   if (_soapCatFilter !== 'all') items = items.filter(i => i.category === _soapCatFilter);
   if (_soapSearch) items = items.filter(i =>
     (i.title || '').toLowerCase().includes(_soapSearch) ||
-    [i.subjective, i.objective, i.assessment, i.plan].join(' ').toLowerCase().includes(_soapSearch));
+    [i.subjective, i.objective, i.assessment, i.plan, i.tx].join(' ').toLowerCase().includes(_soapSearch));
 
   items.sort((a, b) =>
     _soapCatOrder(a.category) - _soapCatOrder(b.category) ||
@@ -4154,6 +4154,7 @@ function renderSOAP() {
         ${_soapBlock('O', 'Objective 객관적', it.objective)}
         ${_soapBlock('A', 'Assessment 평가', it.assessment)}
         ${_soapBlock('P', 'Plan 계획', it.plan)}
+        ${_soapBlock('Tx', '시행 술식 (Treatment)', it.tx)}
       </div>` : '';
     html += `<div class="soap-card${open ? ' open' : ''}">
       <div class="soap-card-head" onclick="_soapToggle('${it.id}')">
@@ -4198,6 +4199,7 @@ function _openSoapEdit(id) {
         ${ta('soap-f-o', 'O — Objective (객관적)', fv('objective'))}
         ${ta('soap-f-a', 'A — Assessment (평가)', fv('assessment'))}
         ${ta('soap-f-p', 'P — Plan (계획)', fv('plan'))}
+        ${ta('soap-f-tx', 'Tx — 시행 술식 (SOAP와 별개, 당일 시행한 처치 기록)', fv('tx'))}
         <div class="soap-f-btns">
           ${it ? `<button class="card-admin-btn del" onclick="_deleteSoap('${id}')">🗑 삭제</button>` : ''}
           <button class="cal-cancel-btn" onclick="_closeSoapEdit()">취소</button>
@@ -4226,6 +4228,7 @@ async function _saveSoap(id) {
     objective: g('soap-f-o').trim(),
     assessment: g('soap-f-a').trim(),
     plan: g('soap-f-p').trim(),
+    tx: g('soap-f-tx').trim(),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   if (!id) data.userCreated = true; // 관리자가 새로 만든 항목은 재시드 시 보존
