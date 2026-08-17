@@ -82,9 +82,44 @@ function _renderWithCitations(text, refs) {
   return marked.parse(processed);
 }
 
+// ── marked 미로드 대비 폴백 ──────────────────────────────────
+// CDN(jsdelivr) 차단·지연 시 marked 가 없으면 아래 setupMarked 가 예외를 던지고,
+// 그 뒤의 모든 최상위 선언(_currentPage 등)이 초기화되지 않아 화면 전체가 죽는다.
+// → 최소 파서를 세워 두어 콘텐츠가 평문으로라도 보이게 한다.
+if (typeof marked === 'undefined' || typeof marked.Renderer !== 'function') {
+  console.warn('[marked] CDN 로드 실패 — 폴백 파서 사용');
+  const esc = s => String(s);
+  window.marked = {
+    setOptions() {},
+    Renderer: function () {},
+    parse(src) {
+      const lines = esc(src).split('\n');
+      let html = '', inList = false;
+      const inline = t => t
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+      for (const line of lines) {
+        const li = line.match(/^\s*[-*]\s+(.*)$/);
+        if (li) {
+          if (!inList) { html += '<ul>'; inList = true; }
+          html += '<li>' + inline(li[1]) + '</li>';
+          continue;
+        }
+        if (inList) { html += '</ul>'; inList = false; }
+        if (!line.trim()) continue;
+        // 블록 HTML 은 그대로 통과
+        html += /^\s*</.test(line) ? line : '<p>' + inline(line) + '</p>';
+      }
+      if (inList) html += '</ul>';
+      return html;
+    }
+  };
+}
+
 // ── marked 커스텀 렌더러 (이미지 크기 + Fig 자동 번호) ───────
 let _figNum = 0; // marked.parse 호출마다 리셋 (아래 래퍼)
 (function setupMarked() {
+ try {
   const renderer = new marked.Renderer();
   const sizeMap  = { sm: '30%', md: '50%', lg: '75%' };
   // marked v5+ 는 객체 인수, v4 이하는 (href, title, text) 개별 인수
@@ -137,6 +172,7 @@ let _figNum = 0; // marked.parse 호출마다 리셋 (아래 래퍼)
     _figNum = 0;
     return _origParse.apply(this, arguments);
   };
+ } catch (e) { console.warn('[marked] 렌더러 설정 실패 — 기본 파서로 동작', e); }
 })();
 
 const DEPARTMENTS = [
@@ -4029,6 +4065,7 @@ async function _schedImportCommit() {
 // SOAP_CATS / SOAP_SEED_VERSION / SOAP_SEED 는 js/soap-seed.js 에 정의됨
 
 let _soapItems = [];
+let _soapLoadError = '';
 let _soapCatFilter = 'all';
 let _soapSearch = '';
 let _soapOpenId = null;
@@ -4038,6 +4075,15 @@ function _soapDocId(title) {
 }
 
 async function _loadSOAP() {
+  // 시드 파일(js/soap-seed.js) 미로드 방어 — 예외로 렌더가 통째로 중단되는 것을 막는다
+  if (typeof SOAP_SEED === 'undefined' || !Array.isArray(SOAP_SEED) || !SOAP_SEED.length) {
+    console.error('[soap] SOAP_SEED 로드 실패 — js/soap-seed.js 확인 필요');
+    _soapItems = [];
+    _soapLoadError = '템플릿 파일을 불러오지 못했습니다.';
+    renderSOAP();
+    return;
+  }
+  _soapLoadError = '';
   // 로컬 시드를 기본값으로 — Firestore 실패·권한·캐시와 무관하게 항상 내용이 보이도록
   const base = SOAP_SEED.map(t => ({ id: _soapDocId(t.title), ...t, seed: true }));
   const newIds = new Set(base.map(b => b.id));
@@ -4136,7 +4182,14 @@ function renderSOAP() {
     (a.title || '').localeCompare(b.title || ''));
 
   if (!items.length) {
-    list.innerHTML = '<div class="empty" style="padding:2.5rem;text-align:center;color:var(--text-muted)">항목이 없습니다.</div>';
+    list.innerHTML = _soapLoadError
+      ? `<div class="empty" style="padding:2.5rem 1.5rem;text-align:center;color:var(--text-muted);line-height:1.8">
+           <div style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:0.5rem">SOAP 템플릿을 불러오지 못했습니다</div>
+           ${_esc(_soapLoadError)}<br>
+           네트워크 또는 캐시 문제일 수 있습니다.<br>
+           <button class="soap-add-btn" style="margin-top:0.9rem" onclick="_soapHardReload()">캐시 지우고 다시 불러오기</button>
+         </div>`
+      : '<div class="empty" style="padding:2.5rem;text-align:center;color:var(--text-muted)">항목이 없습니다.</div>';
     return;
   }
 
@@ -4171,10 +4224,28 @@ function renderSOAP() {
 
 function _soapBlock(letter, label, md) {
   if (!md || !String(md).trim()) return '';
+  let body;
+  try { body = marked.parse(String(md)); }
+  catch (e) { console.warn('[soap] 마크다운 파싱 실패', label, e); body = _esc(String(md)).replace(/\n/g, '<br>'); }
   return `<div class="soap-sec soap-sec-${letter.toLowerCase()}">
     <div class="soap-sec-label"><span class="soap-sec-letter">${letter}</span>${label}</div>
-    <div class="soap-sec-body markdown-body">${marked.parse(String(md))}</div>
+    <div class="soap-sec-body markdown-body">${body}</div>
   </div>`;
+}
+
+// 서비스워커 캐시까지 비우고 강제 재로드 (SOAP 로드 실패 시 사용자 조치)
+async function _soapHardReload() {
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if (navigator.serviceWorker) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  } catch (e) { console.warn('[soap] 캐시 정리 실패', e); }
+  location.reload();
 }
 
 function _openSoapEdit(id) {
