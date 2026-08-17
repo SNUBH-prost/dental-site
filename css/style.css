@@ -3091,6 +3091,94 @@ a.cite-link .cite-sup {
 .soap-sec-o .soap-sec-letter { background: #22c55e; }
 .soap-sec-a .soap-sec-letter { background: #f59e0b; }
 .soap-sec-p .soap-sec-letter { background: #a855f7; }
+/* ── 차팅 용어 (검색 우선 목록) ── */
+.term-search { margin-bottom: 0.7rem; }
+.term-sec-tabs { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; flex-wrap: wrap; }
+.term-sec-tab {
+  padding: 0.3rem 0.75rem;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.term-sec-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.term-sec-tab.term-sec-O.active { background: #22c55e; border-color: #22c55e; }
+.term-sec-tab.term-sec-A.active { background: #f59e0b; border-color: #f59e0b; }
+
+.term-row {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  margin-bottom: 0.35rem;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+.term-row.open { border-color: var(--primary); }
+.term-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.8rem;
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+.term-head:hover { background: var(--bg-hover, rgba(0,0,0,0.02)); }
+.term-sec-badge {
+  flex-shrink: 0;
+  min-width: 1.9rem;
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 800;
+  padding: 0.12rem 0.35rem;
+  border-radius: 5px;
+  color: #fff;
+}
+.term-sec-badge.sec-o  { background: #22c55e; }
+.term-sec-badge.sec-a  { background: #f59e0b; }
+.term-sec-badge.sec-oa { background: #64748b; }
+.term-ko { font-weight: 600; font-size: 0.89rem; color: var(--text); }
+.term-arrow { color: var(--text-muted); font-size: 0.8rem; }
+.term-en {
+  flex: 1;
+  min-width: 8rem;
+  font-size: 0.85rem;
+  color: var(--primary);
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.term-detail { padding: 0.2rem 0.85rem 0.85rem; border-top: 1px solid var(--border); }
+.term-field { display: flex; gap: 0.6rem; margin-top: 0.7rem; align-items: flex-start; }
+.term-flabel {
+  flex-shrink: 0;
+  width: 2.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding-top: 0.15rem;
+  letter-spacing: 0.02em;
+}
+.term-flabel.warn { color: #dc2626; }
+.term-field .markdown-body { flex: 1; font-size: 0.85rem; line-height: 1.7; color: var(--text); }
+.term-field .markdown-body p { margin: 0 0 0.3rem; }
+.term-field .markdown-body p:last-child { margin-bottom: 0; }
+.term-field .markdown-body dl { margin: 0.2rem 0 0; }
+.term-field .markdown-body dt { font-weight: 700; color: var(--primary); font-size: 0.82rem; margin-top: 0.4rem; }
+.term-field .markdown-body dd { margin-left: 0.9rem; font-size: 0.84rem; }
+.term-example {
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  padding: 0.5rem 0.7rem;
+  border-radius: 7px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  color: var(--text);
+}
+
 /* 임상검사 카드 — 5단 구성 (목적·술기·기준·해석·함정) */
 .exam-sec-purpose { border-color: #6366f1; }
 .exam-sec-tech    { border-color: #0ea5e9; }
