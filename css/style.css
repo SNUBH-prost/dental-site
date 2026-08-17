@@ -3109,13 +3109,59 @@ a.cite-link .cite-sup {
 .term-sec-tab.term-sec-O.active { background: #22c55e; border-color: #22c55e; }
 .term-sec-tab.term-sec-A.active { background: #f59e0b; border-color: #f59e0b; }
 
+/* 주제 아코디언 */
+.term-expand-row { display: flex; gap: 0.4rem; margin-bottom: 0.8rem; }
+.term-expand-btn {
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.term-expand-btn:hover { color: var(--primary); border-color: var(--primary); }
+
+.term-group {
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+.term-group.open { border-color: var(--primary); }
+.term-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+  user-select: none;
+}
+.term-group-head:hover { background: var(--bg-hover, rgba(0,0,0,0.02)); }
+.term-group.open .term-group-head { border-bottom: 1px solid var(--border); }
+.term-group-caret { color: var(--primary); font-size: 0.8rem; width: 0.8rem; }
+.term-group-title { flex: 1; font-weight: 700; font-size: 0.9rem; color: var(--text); }
+.term-group-count {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+}
+.term-group-body { padding: 0.5rem 0.55rem 0.6rem; }
+
 .term-row {
   border: 1px solid var(--border);
   border-radius: 9px;
   margin-bottom: 0.35rem;
   overflow: hidden;
-  background: var(--bg-card);
+  background: var(--bg);
 }
+.term-group-body .term-row:last-child { margin-bottom: 0; }
 .term-row.open { border-color: var(--primary); }
 .term-head {
   display: flex;
