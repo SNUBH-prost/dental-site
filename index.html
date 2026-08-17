@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=82">
+  <link rel="stylesheet" href="css/style.css?v=83">
   <link rel="stylesheet" href="css/editor.css?v=28">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -303,6 +303,11 @@
     <input class="soap-search term-search" id="term-search" placeholder="🔍 한글·영어 모두 검색 (예: 탈락, 흔들, mobility)" oninput="_termFilter(this.value)">
     <div class="term-sec-tabs" id="term-sec-tabs"></div>
     <div class="soap-cat-tabs" id="term-cat-tabs"></div>
+    <div class="term-expand-row">
+      <button class="term-expand-btn" onclick="_termExpandAll(true)">모두 펼치기</button>
+      <button class="term-expand-btn" onclick="_termExpandAll(false)">모두 접기</button>
+    </div>
+    <datalist id="term-topic-list"></datalist>
     <div id="term-list"></div>
   </div>
 
@@ -417,8 +422,8 @@
 <script defer src="js/cloudinary-config.js?v=21"></script>
 <script defer src="js/soap-seed.js?v=8"></script>
 <script defer src="js/exam-seed.js?v=1"></script>
-<script defer src="js/term-seed.js?v=1"></script>
-<script defer src="js/app.js?v=109"></script>
+<script defer src="js/term-seed.js?v=2"></script>
+<script defer src="js/app.js?v=110"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {

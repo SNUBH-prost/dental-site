@@ -4486,6 +4486,7 @@ let _termCatFilter = 'all';
 let _termSecFilter = 'all';   // all | O | A
 let _termSearch = '';
 let _termOpenId = null;
+let _termOpenTopics = new Set();   // 펼쳐진 주제(category|topic)
 let _termLoadError = '';
 
 const TERM_SECS = [['all', '전체'], ['O', 'O 소견'], ['A', 'A 진단']];
@@ -4552,6 +4553,16 @@ function _setTermCat(cat) { _termCatFilter = cat; renderTerm(); }
 function _setTermSec(sec) { _termSecFilter = sec; renderTerm(); }
 function _termFilter(v) { _termSearch = (v || '').trim().toLowerCase(); renderTerm(); }
 function _termToggle(id) { _termOpenId = _termOpenId === id ? null : id; renderTerm(); }
+function _termToggleTopic(key) {
+  if (_termOpenTopics.has(key)) _termOpenTopics.delete(key);
+  else _termOpenTopics.add(key);
+  renderTerm();
+}
+function _termExpandAll(open) {
+  _termOpenTopics = new Set();
+  if (open) _termItems.forEach(i => _termOpenTopics.add(i.category + '|' + (i.topic || '기타')));
+  renderTerm();
+}
 
 function renderTerm() {
   const list = document.getElementById('term-list');
@@ -4568,6 +4579,10 @@ function renderTerm() {
       `<button class="term-sec-tab${_termSecFilter === v ? ' active' : ''} term-sec-${v}" onclick="_setTermSec('${v}')">${label}</button>`
     ).join('');
   }
+
+  const dl = document.getElementById('term-topic-list');
+  if (dl) dl.innerHTML = [...new Set(_termItems.map(i => i.topic).filter(Boolean))]
+    .map(t => `<option value="${_esc(t)}">`).join('');
 
   const usedCats = TERM_CATS.filter(c => _termItems.some(i => i.category === c));
   if (catTabs) {
@@ -4600,34 +4615,59 @@ function renderTerm() {
     return;
   }
 
-  let html = '', lastCat = null;
-  const showCat = _termCatFilter === 'all' && !_termSearch;
+  // 주제(topic)별로 묶기 — 검색 중에는 모두 펼침
+  const groups = [];
+  const byKey = new Map();
   items.forEach(it => {
-    if (showCat && it.category !== lastCat) {
-      html += `<div class="soap-cat-label">${_esc(it.category || '')}</div>`;
-      lastCat = it.category;
+    const topic = it.topic || '기타';
+    const key = it.category + '|' + topic;
+    if (!byKey.has(key)) { const g = { key, category: it.category, topic, terms: [] }; byKey.set(key, g); groups.push(g); }
+    byKey.get(key).terms.push(it);
+  });
+
+  // 검색·섹션 필터로 범위를 좁혔을 때는 자동으로 펼침 (분류 필터는 훑어보기용이라 접힌 상태 유지)
+  const searching = !!_termSearch || _termSecFilter !== 'all';
+  let html = '', lastCat = null;
+  groups.forEach(g => {
+    if (_termCatFilter === 'all' && g.category !== lastCat) {
+      html += `<div class="soap-cat-label">${_esc(g.category)}</div>`;
+      lastCat = g.category;
     }
-    const open = _termOpenId === it.id;
-    const secCls = (it.section || '').startsWith('A') ? 'a' : (it.section || '').startsWith('O') ? 'o' : 'oa';
-    const editBtn = isAdmin
-      ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openTermEdit('${it.id}')">✏️</button>` : '';
-    const detail = open ? `<div class="term-detail">
-        ${it.meaning  ? `<div class="term-field"><span class="term-flabel">뜻</span><div class="markdown-body">${_termMd(it.meaning)}</div></div>` : ''}
-        ${it.variants ? `<div class="term-field"><span class="term-flabel">구분</span><div class="markdown-body">${_termMd(it.variants)}</div></div>` : ''}
-        ${it.example  ? `<div class="term-field"><span class="term-flabel">예문</span><div class="term-example">${_esc(it.example)}</div></div>` : ''}
-        ${it.caution  ? `<div class="term-field"><span class="term-flabel warn">주의</span><div class="markdown-body">${_termMd(it.caution)}</div></div>` : ''}
-      </div>` : '';
-    html += `<div class="term-row${open ? ' open' : ''}">
-      <div class="term-head" onclick="_termToggle('${it.id}')">
-        <span class="term-sec-badge sec-${secCls}">${_esc(it.section || '')}</span>
-        <span class="term-ko">${_esc(it.ko || '')}</span>
-        <span class="term-arrow">→</span>
-        <span class="term-en">${_esc(it.en || '')}</span>
-        ${editBtn}
-        <span class="soap-chevron">${open ? '▲' : '▼'}</span>
-      </div>
-      ${detail}
-    </div>`;
+    const open = searching || _termOpenTopics.has(g.key);
+    html += `<div class="term-group${open ? ' open' : ''}">
+      <div class="term-group-head" onclick="_termToggleTopic('${_esc(g.key).replace(/'/g, "\\'")}')">
+        <span class="term-group-caret">${open ? '▾' : '▸'}</span>
+        <span class="term-group-title">${_esc(g.topic)}</span>
+        <span class="term-group-count">${g.terms.length}</span>
+      </div>`;
+    if (open) {
+      html += '<div class="term-group-body">';
+      g.terms.forEach(it => {
+        const rowOpen = _termOpenId === it.id;
+        const secCls = (it.section || '').startsWith('A') ? 'a' : (it.section || '').startsWith('O') ? 'o' : 'oa';
+        const editBtn = isAdmin
+          ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openTermEdit('${it.id}')">✏️</button>` : '';
+        const detail = rowOpen ? `<div class="term-detail">
+            ${it.meaning  ? `<div class="term-field"><span class="term-flabel">뜻</span><div class="markdown-body">${_termMd(it.meaning)}</div></div>` : ''}
+            ${it.variants ? `<div class="term-field"><span class="term-flabel">구분</span><div class="markdown-body">${_termMd(it.variants)}</div></div>` : ''}
+            ${it.example  ? `<div class="term-field"><span class="term-flabel">예문</span><div class="term-example">${_esc(it.example)}</div></div>` : ''}
+            ${it.caution  ? `<div class="term-field"><span class="term-flabel warn">주의</span><div class="markdown-body">${_termMd(it.caution)}</div></div>` : ''}
+          </div>` : '';
+        html += `<div class="term-row${rowOpen ? ' open' : ''}">
+          <div class="term-head" onclick="_termToggle('${it.id}')">
+            <span class="term-sec-badge sec-${secCls}">${_esc(it.section || '')}</span>
+            <span class="term-ko">${_esc(it.ko || '')}</span>
+            <span class="term-arrow">→</span>
+            <span class="term-en">${_esc(it.en || '')}</span>
+            ${editBtn}
+            <span class="soap-chevron">${rowOpen ? '▲' : '▼'}</span>
+          </div>
+          ${detail}
+        </div>`;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
   });
   list.innerHTML = html;
 }
@@ -4656,6 +4696,7 @@ function _openTermEdit(id) {
         </div>
         <div class="soap-f-row">
           <label class="soap-f-label" style="flex:1">분류<select id="term-f-cat" class="soap-f-input">${catOpts}</select></label>
+          <label class="soap-f-label" style="flex:1">주제<input id="term-f-topic" class="soap-f-input" value="${_esc(fv('topic'))}" placeholder="예: TMJ — 골 변화" list="term-topic-list"></label>
           <label class="soap-f-label" style="width:7rem">섹션<select id="term-f-sec" class="soap-f-input">${secOpts}</select></label>
           <label class="soap-f-label" style="width:5rem">순서<input id="term-f-order" type="number" class="soap-f-input" value="${fv('order', 0)}"></label>
         </div>
@@ -4688,6 +4729,7 @@ async function _saveTerm(id) {
   const data = {
     ko, en,
     category: g('term-f-cat') || TERM_CATS[0],
+    topic: g('term-f-topic').trim() || '기타',
     section: g('term-f-sec') || 'O',
     order: Number(g('term-f-order')) || 0,
     meaning: g('term-f-meaning').trim(),
