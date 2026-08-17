@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=81">
+  <link rel="stylesheet" href="css/style.css?v=82">
   <link rel="stylesheet" href="css/editor.css?v=28">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -59,6 +59,7 @@
       <a href="javascript:void(0)" data-page="inventory" class="nav-link" onclick="showPage('inventory')">재고</a>
       <a href="javascript:void(0)" data-page="soap" class="nav-link" onclick="showPage('soap')">SOAP</a>
       <a href="javascript:void(0)" data-page="exam" class="nav-link" onclick="showPage('exam')">임상검사</a>
+      <a href="javascript:void(0)" data-page="term" class="nav-link" onclick="showPage('term')">용어</a>
       <a href="javascript:void(0)" data-page="stats" class="nav-link" onclick="showPage('stats')">통계</a>
       <a href="admin.html?v=1" class="nav-link nav-admin">관리</a>
     </nav>
@@ -95,6 +96,7 @@
     <a href="javascript:void(0)" onclick="showPage('inventory');toggleMobileMenu()"><span class="di">🔩</span>재고</a>
     <a href="javascript:void(0)" onclick="showPage('soap');toggleMobileMenu()"><span class="di">📝</span>SOAP</a>
     <a href="javascript:void(0)" onclick="showPage('exam');toggleMobileMenu()"><span class="di">🔬</span>임상검사</a>
+    <a href="javascript:void(0)" onclick="showPage('term');toggleMobileMenu()"><span class="di">🔤</span>용어</a>
     <a href="javascript:void(0)" onclick="showPage('stats');toggleMobileMenu()"><span class="di">📊</span>통계</a>
     <a href="admin.html?v=1"><span class="di">⚙</span>관리</a>
   </div>
@@ -289,6 +291,21 @@
     <div id="exam-list"></div>
   </div>
 
+  <!-- ── 차팅 용어 ── -->
+  <div id="page-term" class="page">
+    <div class="soap-header">
+      <div>
+        <h2 class="soap-title">차팅 용어</h2>
+        <p class="soap-sub">한국어 임상 표현 → 영어 차팅 표현. O(소견)와 A(진단) 용어를 태그로 구분했습니다.</p>
+      </div>
+      <div id="term-admin-btns"></div>
+    </div>
+    <input class="soap-search term-search" id="term-search" placeholder="🔍 한글·영어 모두 검색 (예: 탈락, 흔들, mobility)" oninput="_termFilter(this.value)">
+    <div class="term-sec-tabs" id="term-sec-tabs"></div>
+    <div class="soap-cat-tabs" id="term-cat-tabs"></div>
+    <div id="term-list"></div>
+  </div>
+
   <!-- ── 통계 ── -->
   <div id="page-stats" class="page">
     <div class="stats-header">
@@ -400,7 +417,8 @@
 <script defer src="js/cloudinary-config.js?v=21"></script>
 <script defer src="js/soap-seed.js?v=8"></script>
 <script defer src="js/exam-seed.js?v=1"></script>
-<script defer src="js/app.js?v=108"></script>
+<script defer src="js/term-seed.js?v=1"></script>
+<script defer src="js/app.js?v=109"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {

@@ -229,6 +229,7 @@ function _renderAll() {
   // 로그인/로그아웃 직후 관리 버튼이 바로 반영되도록 (이미 로드된 경우에만)
   if (_soapItems.length) renderSOAP();
   if (_examItems.length) renderExam();
+  if (_termItems.length) renderTerm();
 }
 
 function _createdAtMs(item) {
@@ -318,6 +319,7 @@ function showPage(pageId) {
   if (pageId === 'inventory') { _setInvCat(_invCat); if (_invCat === 'diamond' && !_burItems.length) _loadInventory(); }
   if (pageId === 'soap') { if (!_soapItems.length) _loadSOAP(); else renderSOAP(); }
   if (pageId === 'exam') { if (!_examItems.length) _loadExam(); else renderExam(); }
+  if (pageId === 'term') { if (!_termItems.length) _loadTerm(); else renderTerm(); }
   if (pageId === 'stats') renderStats();
   if (!_isPopState) {
     history.pushState({ page: pageId }, '');
@@ -4471,6 +4473,252 @@ async function _deleteExam(id) {
     if (_examOpenId === id) _examOpenId = null;
     _closeExamEdit();
     renderExam();
+    _edToast('삭제되었습니다.');
+  } catch (e) {
+    _edToast('삭제 실패: ' + (e.message || e), 'error');
+  }
+}
+
+// ── 차팅 용어 (Charting Terminology) ─────────────────────────
+// 한국어 임상 표현 → 영어 차팅 표현. 검색 우선 UI.
+let _termItems = [];
+let _termCatFilter = 'all';
+let _termSecFilter = 'all';   // all | O | A
+let _termSearch = '';
+let _termOpenId = null;
+let _termLoadError = '';
+
+const TERM_SECS = [['all', '전체'], ['O', 'O 소견'], ['A', 'A 진단']];
+
+function _termDocId(ko, en) {
+  return 'term-' + (ko + '-' + (en || '').split(/[ /(]/)[0])
+    .replace(/\s+/g, '-').replace(/[^\w가-힣-]/g, '').slice(0, 60);
+}
+
+async function _loadTerm() {
+  if (typeof TERM_SEED === 'undefined' || !Array.isArray(TERM_SEED) || !TERM_SEED.length) {
+    console.error('[term] TERM_SEED 로드 실패 — js/term-seed.js 확인 필요');
+    _termItems = [];
+    _termLoadError = '용어 자료 파일을 불러오지 못했습니다.';
+    renderTerm();
+    return;
+  }
+  _termLoadError = '';
+  const base = TERM_SEED.map(t => ({ id: _termDocId(t.ko, t.en), ...t, seed: true }));
+  const newIds = new Set(base.map(b => b.id));
+  try {
+    const [snap, metaSnap] = await Promise.all([
+      db.collection('termTemplates').get(),
+      db.collection('appMeta').doc('termSeed').get().catch(() => null)
+    ]);
+    const ver = (metaSnap && metaSnap.exists) ? (metaSnap.data().version || 0) : 0;
+
+    if (isAdmin && (snap.empty || ver < TERM_SEED_VERSION)) {
+      try { await _seedTerm(snap); } catch (e) { console.warn('[term reseed]', e); }
+      const s2 = await db.collection('termTemplates').get().catch(() => null);
+      _termItems = s2 && !s2.empty ? s2.docs.map(d => ({ id: d.id, ...d.data() })) : base;
+    } else if (!snap.empty) {
+      const byId = {};
+      base.forEach(it => { byId[it.id] = it; });
+      snap.docs.forEach(d => { byId[d.id] = { id: d.id, ...d.data() }; });
+      _termItems = Object.values(byId).filter(it => it.userCreated || newIds.has(it.id));
+    } else {
+      _termItems = base;
+    }
+  } catch (e) {
+    console.warn('[term load]', e);
+    _termItems = base;
+  }
+  if (!_termItems.length) _termItems = base;
+  renderTerm();
+}
+
+async function _seedTerm(existingSnap) {
+  const batch = db.batch();
+  const newIds = new Set(TERM_SEED.map(t => _termDocId(t.ko, t.en)));
+  if (existingSnap) {
+    existingSnap.forEach(d => {
+      const data = d.data() || {};
+      if (!data.userCreated && !newIds.has(d.id)) batch.delete(d.ref);
+    });
+  }
+  TERM_SEED.forEach(t => batch.set(db.collection('termTemplates').doc(_termDocId(t.ko, t.en)), { ...t, seed: true }));
+  await batch.commit();
+  try { await db.collection('appMeta').doc('termSeed').set({ version: TERM_SEED_VERSION }); }
+  catch (e) { console.warn('[term seed meta]', e); }
+}
+
+function _setTermCat(cat) { _termCatFilter = cat; renderTerm(); }
+function _setTermSec(sec) { _termSecFilter = sec; renderTerm(); }
+function _termFilter(v) { _termSearch = (v || '').trim().toLowerCase(); renderTerm(); }
+function _termToggle(id) { _termOpenId = _termOpenId === id ? null : id; renderTerm(); }
+
+function renderTerm() {
+  const list = document.getElementById('term-list');
+  const catTabs = document.getElementById('term-cat-tabs');
+  const secTabs = document.getElementById('term-sec-tabs');
+  const adminEl = document.getElementById('term-admin-btns');
+  if (!list) return;
+
+  if (adminEl) adminEl.innerHTML = isAdmin
+    ? '<button class="soap-add-btn" onclick="_openTermEdit(null)">+ 용어 추가</button>' : '';
+
+  if (secTabs) {
+    secTabs.innerHTML = TERM_SECS.map(([v, label]) =>
+      `<button class="term-sec-tab${_termSecFilter === v ? ' active' : ''} term-sec-${v}" onclick="_setTermSec('${v}')">${label}</button>`
+    ).join('');
+  }
+
+  const usedCats = TERM_CATS.filter(c => _termItems.some(i => i.category === c));
+  if (catTabs) {
+    catTabs.innerHTML = ['all'].concat(usedCats).map(c =>
+      `<button class="soap-cat-tab${_termCatFilter === c ? ' active' : ''}" onclick="_setTermCat('${c}')">${c === 'all' ? '전체' : c}</button>`
+    ).join('');
+  }
+
+  let items = _termItems.slice();
+  if (_termCatFilter !== 'all') items = items.filter(i => i.category === _termCatFilter);
+  if (_termSecFilter !== 'all') items = items.filter(i => (i.section || '').includes(_termSecFilter));
+  if (_termSearch) items = items.filter(i =>
+    [i.ko, i.en, i.meaning, i.variants, i.example, i.caution].join(' ').toLowerCase().includes(_termSearch));
+
+  items.sort((a, b) =>
+    TERM_CATS.indexOf(a.category) - TERM_CATS.indexOf(b.category) ||
+    (a.order || 0) - (b.order || 0) ||
+    (a.ko || '').localeCompare(b.ko || ''));
+
+  if (!items.length) {
+    list.innerHTML = _termLoadError
+      ? `<div class="empty" style="padding:2.5rem 1.5rem;text-align:center;color:var(--text-muted);line-height:1.8">
+           <div style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:0.5rem">용어 자료를 불러오지 못했습니다</div>
+           ${_esc(_termLoadError)}<br>네트워크 또는 캐시 문제일 수 있습니다.<br>
+           <button class="soap-add-btn" style="margin-top:0.9rem" onclick="_soapHardReload()">캐시 지우고 다시 불러오기</button>
+         </div>`
+      : `<div class="empty" style="padding:2.5rem;text-align:center;color:var(--text-muted)">
+           검색 결과가 없습니다.${_termSearch ? `<br><span style="font-size:0.85rem">“${_esc(_termSearch)}”</span>` : ''}
+         </div>`;
+    return;
+  }
+
+  let html = '', lastCat = null;
+  const showCat = _termCatFilter === 'all' && !_termSearch;
+  items.forEach(it => {
+    if (showCat && it.category !== lastCat) {
+      html += `<div class="soap-cat-label">${_esc(it.category || '')}</div>`;
+      lastCat = it.category;
+    }
+    const open = _termOpenId === it.id;
+    const secCls = (it.section || '').startsWith('A') ? 'a' : (it.section || '').startsWith('O') ? 'o' : 'oa';
+    const editBtn = isAdmin
+      ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openTermEdit('${it.id}')">✏️</button>` : '';
+    const detail = open ? `<div class="term-detail">
+        ${it.meaning  ? `<div class="term-field"><span class="term-flabel">뜻</span><div class="markdown-body">${_termMd(it.meaning)}</div></div>` : ''}
+        ${it.variants ? `<div class="term-field"><span class="term-flabel">구분</span><div class="markdown-body">${_termMd(it.variants)}</div></div>` : ''}
+        ${it.example  ? `<div class="term-field"><span class="term-flabel">예문</span><div class="term-example">${_esc(it.example)}</div></div>` : ''}
+        ${it.caution  ? `<div class="term-field"><span class="term-flabel warn">주의</span><div class="markdown-body">${_termMd(it.caution)}</div></div>` : ''}
+      </div>` : '';
+    html += `<div class="term-row${open ? ' open' : ''}">
+      <div class="term-head" onclick="_termToggle('${it.id}')">
+        <span class="term-sec-badge sec-${secCls}">${_esc(it.section || '')}</span>
+        <span class="term-ko">${_esc(it.ko || '')}</span>
+        <span class="term-arrow">→</span>
+        <span class="term-en">${_esc(it.en || '')}</span>
+        ${editBtn}
+        <span class="soap-chevron">${open ? '▲' : '▼'}</span>
+      </div>
+      ${detail}
+    </div>`;
+  });
+  list.innerHTML = html;
+}
+
+function _termMd(md) {
+  try { return marked.parse(String(md)); }
+  catch (e) { return _esc(String(md)).replace(/\n/g, '<br>'); }
+}
+
+function _openTermEdit(id) {
+  if (!isAdmin) return;
+  const it = id ? _termItems.find(x => x.id === id) : null;
+  const fv = (k, d = '') => it ? (it[k] != null ? it[k] : d) : d;
+  const catOpts = TERM_CATS.map(c => `<option value="${c}"${fv('category', TERM_CATS[0]) === c ? ' selected' : ''}>${c}</option>`).join('');
+  const secOpts = ['O', 'A', 'O·A', 'A·P'].map(v => `<option value="${v}"${fv('section', 'O') === v ? ' selected' : ''}>${v}</option>`).join('');
+  const ta = (id2, label, val) =>
+    `<label class="soap-f-label">${label}<textarea id="${id2}" class="soap-f-ta">${_esc(val)}</textarea></label>`;
+  const html = `<div id="term-edit-overlay" class="modal-overlay open" onclick="if(event.target.id==='term-edit-overlay')_closeTermEdit()">
+    <div class="modal soap-edit-modal">
+      <button class="modal-close" onclick="_closeTermEdit()">✕</button>
+      <div class="modal-body">
+        <h3 style="margin:0 0 1rem">${it ? '용어 편집' : '새 용어'}</h3>
+        <div class="soap-f-row">
+          <label class="soap-f-label" style="flex:1">한글 표현<input id="term-f-ko" class="soap-f-input" value="${_esc(fv('ko'))}" placeholder="예: 보철물 탈락"></label>
+          <label class="soap-f-label" style="flex:1.4">영어 표현<input id="term-f-en" class="soap-f-input" value="${_esc(fv('en'))}" placeholder="예: decementation / debonding"></label>
+        </div>
+        <div class="soap-f-row">
+          <label class="soap-f-label" style="flex:1">분류<select id="term-f-cat" class="soap-f-input">${catOpts}</select></label>
+          <label class="soap-f-label" style="width:7rem">섹션<select id="term-f-sec" class="soap-f-input">${secOpts}</select></label>
+          <label class="soap-f-label" style="width:5rem">순서<input id="term-f-order" type="number" class="soap-f-input" value="${fv('order', 0)}"></label>
+        </div>
+        <p class="soap-f-hint">뜻·구분·주의 칸은 마크다운 지원 (**굵게**, dl 정의목록 등). 예문은 영문 차팅 문장 그대로.</p>
+        ${ta('term-f-meaning', '뜻 — 무엇을 가리키는가', fv('meaning'))}
+        ${ta('term-f-variants', '구분 — 대상·원인에 따라 갈리는 단어 (없으면 비워둠)', fv('variants'))}
+        ${ta('term-f-example', '예문 — 영문 차팅 문장', fv('example'))}
+        ${ta('term-f-caution', '주의 — 혼동·오용 (없으면 비워둠)', fv('caution'))}
+        <div class="soap-f-btns">
+          ${it ? `<button class="card-admin-btn del" onclick="_deleteTerm('${id}')">🗑 삭제</button>` : ''}
+          <button class="cal-cancel-btn" onclick="_closeTermEdit()">취소</button>
+          <button class="cal-save-btn" onclick="_saveTerm('${id || ''}')">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _closeTermEdit() {
+  document.getElementById('term-edit-overlay')?.remove();
+}
+
+async function _saveTerm(id) {
+  if (!isAdmin) return;
+  const g = s => document.getElementById(s)?.value ?? '';
+  const ko = g('term-f-ko').trim();
+  const en = g('term-f-en').trim();
+  if (!ko || !en) { _edToast('한글 표현과 영어 표현을 모두 입력하세요.', 'error'); return; }
+  const data = {
+    ko, en,
+    category: g('term-f-cat') || TERM_CATS[0],
+    section: g('term-f-sec') || 'O',
+    order: Number(g('term-f-order')) || 0,
+    meaning: g('term-f-meaning').trim(),
+    variants: g('term-f-variants').trim(),
+    example: g('term-f-example').trim(),
+    caution: g('term-f-caution').trim(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (!id) data.userCreated = true;
+  const docId = id || _termDocId(ko, en);
+  try {
+    await db.collection('termTemplates').doc(docId).set(data, { merge: true });
+    const idx = _termItems.findIndex(x => x.id === docId);
+    if (idx >= 0) _termItems[idx] = { ...(_termItems[idx]), id: docId, ...data };
+    else _termItems.push({ id: docId, ...data });
+    _closeTermEdit();
+    renderTerm();
+    _edToast('저장되었습니다.');
+  } catch (e) {
+    _edToast('저장 실패: ' + (e.message || e), 'error');
+  }
+}
+
+async function _deleteTerm(id) {
+  if (!confirm('이 용어를 삭제하시겠습니까?')) return;
+  try {
+    await db.collection('termTemplates').doc(id).delete();
+    _termItems = _termItems.filter(x => x.id !== id);
+    if (_termOpenId === id) _termOpenId = null;
+    _closeTermEdit();
+    renderTerm();
     _edToast('삭제되었습니다.');
   } catch (e) {
     _edToast('삭제 실패: ' + (e.message || e), 'error');
