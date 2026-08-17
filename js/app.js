@@ -314,6 +314,7 @@ function showPage(pageId) {
   if (pageId === 'calendar') renderCalendar();
   if (pageId === 'inventory') { _setInvCat(_invCat); if (_invCat === 'diamond' && !_burItems.length) _loadInventory(); }
   if (pageId === 'soap') { if (!_soapItems.length) _loadSOAP(); else renderSOAP(); }
+  if (pageId === 'exam') renderExam();
   if (pageId === 'stats') renderStats();
   if (!_isPopState) {
     history.pushState({ page: pageId }, '');
@@ -4229,6 +4230,97 @@ function _soapBlock(letter, label, md) {
   catch (e) { console.warn('[soap] 마크다운 파싱 실패', label, e); body = _esc(String(md)).replace(/\n/g, '<br>'); }
   return `<div class="soap-sec soap-sec-${letter.toLowerCase()}">
     <div class="soap-sec-label"><span class="soap-sec-letter">${letter}</span>${label}</div>
+    <div class="soap-sec-body markdown-body">${body}</div>
+  </div>`;
+}
+
+// ── 임상검사 (Clinical Examination) ──────────────────────────
+// SOAP의 O를 "어떻게 파악하는가" — 검사 술기 참고. 로컬 시드만 사용(Firestore 미연동)
+let _examCatFilter = 'all';
+let _examSearch = '';
+let _examOpenId = null;
+
+function _examDocId(title) {
+  return 'exam-' + title.replace(/\s+/g, '-').replace(/[^\w가-힣-]/g, '').slice(0, 60);
+}
+
+function _setExamCat(cat) { _examCatFilter = cat; renderExam(); }
+function _examFilter(v) { _examSearch = (v || '').trim().toLowerCase(); renderExam(); }
+function _examToggle(id) { _examOpenId = _examOpenId === id ? null : id; renderExam(); }
+
+function renderExam() {
+  const list = document.getElementById('exam-list');
+  const tabs = document.getElementById('exam-cat-tabs');
+  if (!list) return;
+
+  if (typeof EXAM_SEED === 'undefined' || !Array.isArray(EXAM_SEED) || !EXAM_SEED.length) {
+    list.innerHTML = `<div class="empty" style="padding:2.5rem 1.5rem;text-align:center;color:var(--text-muted);line-height:1.8">
+        <div style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:0.5rem">임상검사 자료를 불러오지 못했습니다</div>
+        네트워크 또는 캐시 문제일 수 있습니다.<br>
+        <button class="soap-add-btn" style="margin-top:0.9rem" onclick="_soapHardReload()">캐시 지우고 다시 불러오기</button>
+      </div>`;
+    return;
+  }
+
+  const items0 = EXAM_SEED.map(t => ({ id: _examDocId(t.title), ...t }));
+  const usedCats = EXAM_CATS.filter(c => items0.some(i => i.category === c));
+  if (tabs) {
+    tabs.innerHTML = ['all'].concat(usedCats).map(c =>
+      `<button class="soap-cat-tab${_examCatFilter === c ? ' active' : ''}" onclick="_setExamCat('${c}')">${c === 'all' ? '전체' : c}</button>`
+    ).join('');
+  }
+
+  let items = items0;
+  if (_examCatFilter !== 'all') items = items.filter(i => i.category === _examCatFilter);
+  if (_examSearch) items = items.filter(i =>
+    (i.title || '').toLowerCase().includes(_examSearch) ||
+    [i.purpose, i.technique, i.criteria, i.interpretation, i.pitfalls].join(' ').toLowerCase().includes(_examSearch));
+
+  items.sort((a, b) =>
+    EXAM_CATS.indexOf(a.category) - EXAM_CATS.indexOf(b.category) ||
+    (a.order || 0) - (b.order || 0));
+
+  if (!items.length) {
+    list.innerHTML = '<div class="empty" style="padding:2.5rem;text-align:center;color:var(--text-muted)">항목이 없습니다.</div>';
+    return;
+  }
+
+  let html = '', lastCat = null;
+  items.forEach(it => {
+    if (it.category !== lastCat && _examCatFilter === 'all') {
+      html += `<div class="soap-cat-label">${_esc(it.category || '')}</div>`;
+      lastCat = it.category;
+    }
+    const open = _examOpenId === it.id;
+    const body = open ? `<div class="soap-body">
+        ${_examBlock('목적', 'Purpose 무엇을 알아내는가', it.purpose)}
+        ${_examBlock('술기', 'Technique 어떻게 하는가', it.technique)}
+        ${_examBlock('기준', 'Criteria 정상치·판정 기준', it.criteria)}
+        ${_examBlock('해석', 'Interpretation 무엇을 의미하는가', it.interpretation)}
+        ${_examBlock('함정', 'Pitfalls 값을 틀리게 만드는 것', it.pitfalls)}
+      </div>` : '';
+    html += `<div class="soap-card exam-card${open ? ' open' : ''}">
+      <div class="soap-card-head" onclick="_examToggle('${it.id}')">
+        <span class="soap-cat-badge">${_esc(it.category || '')}</span>
+        <span class="soap-card-title">${_esc(it.title || '')}</span>
+        <span class="soap-chevron">${open ? '▲' : '▼'}</span>
+      </div>
+      ${body}
+    </div>`;
+  });
+  list.innerHTML = html;
+}
+
+const _EXAM_KEY = { '목적': 'purpose', '술기': 'tech', '기준': 'crit', '해석': 'interp', '함정': 'pit' };
+
+function _examBlock(label, sub, md) {
+  if (!md || !String(md).trim()) return '';
+  let body;
+  try { body = marked.parse(String(md)); }
+  catch (e) { console.warn('[exam] 마크다운 파싱 실패', label, e); body = _esc(String(md)).replace(/\n/g, '<br>'); }
+  const key = _EXAM_KEY[label] || 'purpose';
+  return `<div class="soap-sec exam-sec-${key}">
+    <div class="soap-sec-label"><span class="soap-sec-letter exam-letter">${label}</span>${sub}</div>
     <div class="soap-sec-body markdown-body">${body}</div>
   </div>`;
 }

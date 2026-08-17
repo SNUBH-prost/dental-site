@@ -3091,6 +3091,26 @@ a.cite-link .cite-sup {
 .soap-sec-o .soap-sec-letter { background: #22c55e; }
 .soap-sec-a .soap-sec-letter { background: #f59e0b; }
 .soap-sec-p .soap-sec-letter { background: #a855f7; }
+/* 임상검사 카드 — 5단 구성 (목적·술기·기준·해석·함정) */
+.exam-sec-purpose { border-color: #6366f1; }
+.exam-sec-tech    { border-color: #0ea5e9; }
+.exam-sec-crit    { border-color: #14b8a6; }
+.exam-sec-interp  { border-color: #f59e0b; }
+.exam-sec-pit     { border-color: #ef4444; }
+.exam-sec-purpose .exam-letter { background: #6366f1; }
+.exam-sec-tech    .exam-letter { background: #0ea5e9; }
+.exam-sec-crit    .exam-letter { background: #14b8a6; }
+.exam-sec-interp  .exam-letter { background: #f59e0b; }
+.exam-sec-pit     .exam-letter { background: #ef4444; }
+.soap-sec-letter.exam-letter {
+  width: auto;
+  padding: 0 0.42rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+.exam-sec-tech .soap-sec-body ol { padding-left: 1.3rem; }
+.exam-sec-tech .soap-sec-body ol li { margin: 0.28rem 0; }
+
 /* Tx — SOAP와 구분되는 시행 술식 기록 */
 .soap-sec-tx {
   border-color: #0d9488;

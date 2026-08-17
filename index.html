@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=80">
+  <link rel="stylesheet" href="css/style.css?v=81">
   <link rel="stylesheet" href="css/editor.css?v=28">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -58,6 +58,7 @@
       <a href="javascript:void(0)" data-page="calendar" class="nav-link" onclick="showPage('calendar')">일정</a>
       <a href="javascript:void(0)" data-page="inventory" class="nav-link" onclick="showPage('inventory')">재고</a>
       <a href="javascript:void(0)" data-page="soap" class="nav-link" onclick="showPage('soap')">SOAP</a>
+      <a href="javascript:void(0)" data-page="exam" class="nav-link" onclick="showPage('exam')">임상검사</a>
       <a href="javascript:void(0)" data-page="stats" class="nav-link" onclick="showPage('stats')">통계</a>
       <a href="admin.html?v=1" class="nav-link nav-admin">관리</a>
     </nav>
@@ -93,6 +94,7 @@
     <a href="javascript:void(0)" onclick="showPage('calendar');toggleMobileMenu()"><span class="di">📅</span>일정</a>
     <a href="javascript:void(0)" onclick="showPage('inventory');toggleMobileMenu()"><span class="di">🔩</span>재고</a>
     <a href="javascript:void(0)" onclick="showPage('soap');toggleMobileMenu()"><span class="di">📝</span>SOAP</a>
+    <a href="javascript:void(0)" onclick="showPage('exam');toggleMobileMenu()"><span class="di">🔬</span>임상검사</a>
     <a href="javascript:void(0)" onclick="showPage('stats');toggleMobileMenu()"><span class="di">📊</span>통계</a>
     <a href="admin.html?v=1"><span class="di">⚙</span>관리</a>
   </div>
@@ -273,6 +275,20 @@
     <div id="soap-list"></div>
   </div>
 
+  <!-- ── 임상검사 ── -->
+  <div id="page-exam" class="page">
+    <div class="soap-header">
+      <div>
+        <h2 class="soap-title">임상검사</h2>
+        <p class="soap-sub">SOAP의 O(소견)를 어떻게 파악하는지 — 검사 술기·기준·해석·함정.</p>
+      </div>
+      <div id="exam-admin-btns"></div>
+    </div>
+    <div class="soap-cat-tabs" id="exam-cat-tabs"></div>
+    <input class="soap-search" id="exam-search" placeholder="🔍 검사명·내용 검색" oninput="_examFilter(this.value)">
+    <div id="exam-list"></div>
+  </div>
+
   <!-- ── 통계 ── -->
   <div id="page-stats" class="page">
     <div class="stats-header">
@@ -382,8 +398,9 @@
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/contrib/auto-render.min.js"></script>
 <script defer src="js/firebase-config.js?v=21"></script>
 <script defer src="js/cloudinary-config.js?v=21"></script>
-<script defer src="js/soap-seed.js?v=7"></script>
-<script defer src="js/app.js?v=106"></script>
+<script defer src="js/soap-seed.js?v=8"></script>
+<script defer src="js/exam-seed.js?v=1"></script>
+<script defer src="js/app.js?v=107"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {
