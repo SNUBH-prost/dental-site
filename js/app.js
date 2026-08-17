@@ -226,6 +226,9 @@ function _renderAll() {
   renderDeptPages();
   _injectAdminControls();
   _injectPageBottomBtns();
+  // 로그인/로그아웃 직후 관리 버튼이 바로 반영되도록 (이미 로드된 경우에만)
+  if (_soapItems.length) renderSOAP();
+  if (_examItems.length) renderExam();
 }
 
 function _createdAtMs(item) {
@@ -314,7 +317,7 @@ function showPage(pageId) {
   if (pageId === 'calendar') renderCalendar();
   if (pageId === 'inventory') { _setInvCat(_invCat); if (_invCat === 'diamond' && !_burItems.length) _loadInventory(); }
   if (pageId === 'soap') { if (!_soapItems.length) _loadSOAP(); else renderSOAP(); }
-  if (pageId === 'exam') renderExam();
+  if (pageId === 'exam') { if (!_examItems.length) _loadExam(); else renderExam(); }
   if (pageId === 'stats') renderStats();
   if (!_isPopState) {
     history.pushState({ page: pageId }, '');
@@ -4235,13 +4238,83 @@ function _soapBlock(letter, label, md) {
 }
 
 // ── 임상검사 (Clinical Examination) ──────────────────────────
-// SOAP의 O를 "어떻게 파악하는가" — 검사 술기 참고. 로컬 시드만 사용(Firestore 미연동)
+// SOAP의 O를 "어떻게 파악하는가" — 검사 술기 참고.
+// 로컬 시드를 기본값으로, Firestore(examTemplates)를 그 위에 덮어써 관리자 편집을 반영.
+let _examItems = [];
 let _examCatFilter = 'all';
 let _examSearch = '';
 let _examOpenId = null;
+let _examLoadError = '';
+
+const EXAM_FIELDS = [
+  ['purpose',        '목적', 'Purpose 무엇을 알아내는가'],
+  ['technique',      '술기', 'Technique 어떻게 하는가'],
+  ['criteria',       '기준', 'Criteria 정상치·판정 기준'],
+  ['interpretation', '해석', 'Interpretation 무엇을 의미하는가'],
+  ['pitfalls',       '함정', 'Pitfalls 값을 틀리게 만드는 것'],
+];
 
 function _examDocId(title) {
   return 'exam-' + title.replace(/\s+/g, '-').replace(/[^\w가-힣-]/g, '').slice(0, 60);
+}
+
+async function _loadExam() {
+  if (typeof EXAM_SEED === 'undefined' || !Array.isArray(EXAM_SEED) || !EXAM_SEED.length) {
+    console.error('[exam] EXAM_SEED 로드 실패 — js/exam-seed.js 확인 필요');
+    _examItems = [];
+    _examLoadError = '검사 자료 파일을 불러오지 못했습니다.';
+    renderExam();
+    return;
+  }
+  _examLoadError = '';
+  const base = EXAM_SEED.map(t => ({ id: _examDocId(t.title), ...t, seed: true }));
+  const newIds = new Set(base.map(b => b.id));
+  try {
+    const [snap, metaSnap] = await Promise.all([
+      db.collection('examTemplates').get(),
+      db.collection('appMeta').doc('examSeed').get().catch(() => null)
+    ]);
+    const ver = (metaSnap && metaSnap.exists) ? (metaSnap.data().version || 0) : 0;
+
+    if (isAdmin && (snap.empty || ver < EXAM_SEED_VERSION)) {
+      try { await _seedExam(snap); } catch (e) { console.warn('[exam reseed]', e); }
+      const s2 = await db.collection('examTemplates').get().catch(() => null);
+      _examItems = s2 && !s2.empty ? s2.docs.map(d => ({ id: d.id, ...d.data() })) : base;
+    } else if (!snap.empty) {
+      const byId = {};
+      base.forEach(it => { byId[it.id] = it; });
+      snap.docs.forEach(d => { byId[d.id] = { id: d.id, ...d.data() }; });
+      _examItems = Object.values(byId).filter(it => it.userCreated || newIds.has(it.id));
+    } else {
+      _examItems = base;
+    }
+  } catch (e) {
+    console.warn('[exam load]', e);
+    _examItems = base;
+  }
+  if (!_examItems.length) _examItems = base;
+  renderExam();
+}
+
+// 시드 항목을 최신 EXAM_SEED로 교체. 관리자가 만든 항목(userCreated)은 보존.
+async function _seedExam(existingSnap) {
+  const batch = db.batch();
+  const newIds = new Set(EXAM_SEED.map(t => _examDocId(t.title)));
+  if (existingSnap) {
+    existingSnap.forEach(d => {
+      const data = d.data() || {};
+      if (!data.userCreated && !newIds.has(d.id)) batch.delete(d.ref);
+    });
+  }
+  EXAM_SEED.forEach(t => batch.set(db.collection('examTemplates').doc(_examDocId(t.title)), { ...t, seed: true }));
+  await batch.commit();
+  try { await db.collection('appMeta').doc('examSeed').set({ version: EXAM_SEED_VERSION }); }
+  catch (e) { console.warn('[exam seed meta]', e); }
+}
+
+function _examCatOrder(cat) {
+  const i = EXAM_CATS.indexOf(cat);
+  return i < 0 ? 99 : i;
 }
 
 function _setExamCat(cat) { _examCatFilter = cat; renderExam(); }
@@ -4251,37 +4324,38 @@ function _examToggle(id) { _examOpenId = _examOpenId === id ? null : id; renderE
 function renderExam() {
   const list = document.getElementById('exam-list');
   const tabs = document.getElementById('exam-cat-tabs');
+  const adminEl = document.getElementById('exam-admin-btns');
   if (!list) return;
 
-  if (typeof EXAM_SEED === 'undefined' || !Array.isArray(EXAM_SEED) || !EXAM_SEED.length) {
-    list.innerHTML = `<div class="empty" style="padding:2.5rem 1.5rem;text-align:center;color:var(--text-muted);line-height:1.8">
-        <div style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:0.5rem">임상검사 자료를 불러오지 못했습니다</div>
-        네트워크 또는 캐시 문제일 수 있습니다.<br>
-        <button class="soap-add-btn" style="margin-top:0.9rem" onclick="_soapHardReload()">캐시 지우고 다시 불러오기</button>
-      </div>`;
-    return;
-  }
+  if (adminEl) adminEl.innerHTML = isAdmin
+    ? '<button class="soap-add-btn" onclick="_openExamEdit(null)">+ 검사 추가</button>' : '';
 
-  const items0 = EXAM_SEED.map(t => ({ id: _examDocId(t.title), ...t }));
-  const usedCats = EXAM_CATS.filter(c => items0.some(i => i.category === c));
+  const usedCats = EXAM_CATS.filter(c => _examItems.some(i => i.category === c));
   if (tabs) {
     tabs.innerHTML = ['all'].concat(usedCats).map(c =>
       `<button class="soap-cat-tab${_examCatFilter === c ? ' active' : ''}" onclick="_setExamCat('${c}')">${c === 'all' ? '전체' : c}</button>`
     ).join('');
   }
 
-  let items = items0;
+  let items = _examItems.slice();
   if (_examCatFilter !== 'all') items = items.filter(i => i.category === _examCatFilter);
   if (_examSearch) items = items.filter(i =>
     (i.title || '').toLowerCase().includes(_examSearch) ||
-    [i.purpose, i.technique, i.criteria, i.interpretation, i.pitfalls].join(' ').toLowerCase().includes(_examSearch));
+    EXAM_FIELDS.map(([k]) => i[k] || '').join(' ').toLowerCase().includes(_examSearch));
 
   items.sort((a, b) =>
-    EXAM_CATS.indexOf(a.category) - EXAM_CATS.indexOf(b.category) ||
-    (a.order || 0) - (b.order || 0));
+    _examCatOrder(a.category) - _examCatOrder(b.category) ||
+    (a.order || 0) - (b.order || 0) ||
+    (a.title || '').localeCompare(b.title || ''));
 
   if (!items.length) {
-    list.innerHTML = '<div class="empty" style="padding:2.5rem;text-align:center;color:var(--text-muted)">항목이 없습니다.</div>';
+    list.innerHTML = _examLoadError
+      ? `<div class="empty" style="padding:2.5rem 1.5rem;text-align:center;color:var(--text-muted);line-height:1.8">
+           <div style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:0.5rem">임상검사 자료를 불러오지 못했습니다</div>
+           ${_esc(_examLoadError)}<br>네트워크 또는 캐시 문제일 수 있습니다.<br>
+           <button class="soap-add-btn" style="margin-top:0.9rem" onclick="_soapHardReload()">캐시 지우고 다시 불러오기</button>
+         </div>`
+      : '<div class="empty" style="padding:2.5rem;text-align:center;color:var(--text-muted)">항목이 없습니다.</div>';
     return;
   }
 
@@ -4292,17 +4366,16 @@ function renderExam() {
       lastCat = it.category;
     }
     const open = _examOpenId === it.id;
-    const body = open ? `<div class="soap-body">
-        ${_examBlock('목적', 'Purpose 무엇을 알아내는가', it.purpose)}
-        ${_examBlock('술기', 'Technique 어떻게 하는가', it.technique)}
-        ${_examBlock('기준', 'Criteria 정상치·판정 기준', it.criteria)}
-        ${_examBlock('해석', 'Interpretation 무엇을 의미하는가', it.interpretation)}
-        ${_examBlock('함정', 'Pitfalls 값을 틀리게 만드는 것', it.pitfalls)}
-      </div>` : '';
+    const editBtn = isAdmin
+      ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openExamEdit('${it.id}')">✏️</button>` : '';
+    const body = open
+      ? `<div class="soap-body">${EXAM_FIELDS.map(([k, label, sub]) => _examBlock(label, sub, it[k])).join('')}</div>`
+      : '';
     html += `<div class="soap-card exam-card${open ? ' open' : ''}">
       <div class="soap-card-head" onclick="_examToggle('${it.id}')">
         <span class="soap-cat-badge">${_esc(it.category || '')}</span>
         <span class="soap-card-title">${_esc(it.title || '')}</span>
+        ${editBtn}
         <span class="soap-chevron">${open ? '▲' : '▼'}</span>
       </div>
       ${body}
@@ -4323,6 +4396,85 @@ function _examBlock(label, sub, md) {
     <div class="soap-sec-label"><span class="soap-sec-letter exam-letter">${label}</span>${sub}</div>
     <div class="soap-sec-body markdown-body">${body}</div>
   </div>`;
+}
+
+function _openExamEdit(id) {
+  if (!isAdmin) return;
+  const it = id ? _examItems.find(x => x.id === id) : null;
+  const fv = (k, d = '') => it ? (it[k] != null ? it[k] : d) : d;
+  const catOpts = EXAM_CATS.map(c => `<option value="${c}"${fv('category', EXAM_CATS[0]) === c ? ' selected' : ''}>${c}</option>`).join('');
+  const ta = (id2, label, val) =>
+    `<label class="soap-f-label">${label}<textarea id="${id2}" class="soap-f-ta">${_esc(val)}</textarea></label>`;
+  const html = `<div id="exam-edit-overlay" class="modal-overlay open" onclick="if(event.target.id==='exam-edit-overlay')_closeExamEdit()">
+    <div class="modal soap-edit-modal">
+      <button class="modal-close" onclick="_closeExamEdit()">✕</button>
+      <div class="modal-body">
+        <h3 style="margin:0 0 1rem">${it ? '검사 편집' : '새 검사'}</h3>
+        <div class="soap-f-row">
+          <label class="soap-f-label" style="flex:2">검사명<input id="exam-f-title" class="soap-f-input" value="${_esc(fv('title'))}" placeholder="예: 치주 탐침 — PD · CAL · BOP"></label>
+          <label class="soap-f-label" style="flex:1">분류<select id="exam-f-cat" class="soap-f-input">${catOpts}</select></label>
+          <label class="soap-f-label" style="width:5rem">순서<input id="exam-f-order" type="number" class="soap-f-input" value="${fv('order', 0)}"></label>
+        </div>
+        <p class="soap-f-hint">각 칸은 마크다운 지원 (- 목록, **굵게**, tip/warning/danger 박스, dl 정의목록 등).</p>
+        ${ta('exam-f-purpose', '목적 — 무엇을 알아내는가', fv('purpose'))}
+        ${ta('exam-f-technique', '술기 — 어떻게 하는가 (힘·시간·각도 등 조건 포함)', fv('technique'))}
+        ${ta('exam-f-criteria', '기준 — 정상치·판정 기준', fv('criteria'))}
+        ${ta('exam-f-interpretation', '해석 — 무엇을 의미하는가', fv('interpretation'))}
+        ${ta('exam-f-pitfalls', '함정 — 값을 틀리게 만드는 것', fv('pitfalls'))}
+        <div class="soap-f-btns">
+          ${it ? `<button class="card-admin-btn del" onclick="_deleteExam('${id}')">🗑 삭제</button>` : ''}
+          <button class="cal-cancel-btn" onclick="_closeExamEdit()">취소</button>
+          <button class="cal-save-btn" onclick="_saveExam('${id || ''}')">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _closeExamEdit() {
+  document.getElementById('exam-edit-overlay')?.remove();
+}
+
+async function _saveExam(id) {
+  if (!isAdmin) return;
+  const g = s => document.getElementById(s)?.value ?? '';
+  const title = g('exam-f-title').trim();
+  if (!title) { _edToast('검사명을 입력하세요.', 'error'); return; }
+  const data = {
+    title,
+    category: g('exam-f-cat') || EXAM_CATS[0],
+    order: Number(g('exam-f-order')) || 0,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  EXAM_FIELDS.forEach(([k]) => { data[k] = g('exam-f-' + k).trim(); });
+  if (!id) data.userCreated = true; // 관리자가 새로 만든 항목은 재시드 시 보존
+  const docId = id || _examDocId(title);
+  try {
+    await db.collection('examTemplates').doc(docId).set(data, { merge: true });
+    const idx = _examItems.findIndex(x => x.id === docId);
+    if (idx >= 0) _examItems[idx] = { ...(_examItems[idx]), id: docId, ...data };
+    else _examItems.push({ id: docId, ...data });
+    _closeExamEdit();
+    renderExam();
+    _edToast('저장되었습니다.');
+  } catch (e) {
+    _edToast('저장 실패: ' + (e.message || e), 'error');
+  }
+}
+
+async function _deleteExam(id) {
+  if (!confirm('이 검사 항목을 삭제하시겠습니까?')) return;
+  try {
+    await db.collection('examTemplates').doc(id).delete();
+    _examItems = _examItems.filter(x => x.id !== id);
+    if (_examOpenId === id) _examOpenId = null;
+    _closeExamEdit();
+    renderExam();
+    _edToast('삭제되었습니다.');
+  } catch (e) {
+    _edToast('삭제 실패: ' + (e.message || e), 'error');
+  }
 }
 
 // 서비스워커 캐시까지 비우고 강제 재로드 (SOAP 로드 실패 시 사용자 조치)
