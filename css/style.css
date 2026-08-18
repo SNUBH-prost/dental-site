@@ -3393,3 +3393,8 @@ a.cite-link .cite-sup {
   .soap-f-row { flex-direction: column; }
   .soap-f-row .soap-f-label { width: auto !important; flex: unset !important; }
 }
+
+/* 용어 상세 — 감별 항목 */
+.term-flabel.dist { color: #0d9488; }
+.term-field .markdown-body ul { margin: 0.15rem 0 0; padding-left: 1.05rem; }
+.term-field .markdown-body li { margin: 0.1rem 0; }

@@ -4595,7 +4595,7 @@ function renderTerm() {
   if (_termCatFilter !== 'all') items = items.filter(i => i.category === _termCatFilter);
   if (_termSecFilter !== 'all') items = items.filter(i => (i.section || '').includes(_termSecFilter));
   if (_termSearch) items = items.filter(i =>
-    [i.ko, i.en, i.meaning, i.variants, i.example, i.caution].join(' ').toLowerCase().includes(_termSearch));
+    [i.ko, i.en, i.meaning, i.variants, i.distinguish, i.example, i.caution].join(' ').toLowerCase().includes(_termSearch));
 
   items.sort((a, b) =>
     TERM_CATS.indexOf(a.category) - TERM_CATS.indexOf(b.category) ||
@@ -4648,10 +4648,11 @@ function renderTerm() {
         const editBtn = isAdmin
           ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openTermEdit('${it.id}')">✏️</button>` : '';
         const detail = rowOpen ? `<div class="term-detail">
-            ${it.meaning  ? `<div class="term-field"><span class="term-flabel">뜻</span><div class="markdown-body">${_termMd(it.meaning)}</div></div>` : ''}
-            ${it.variants ? `<div class="term-field"><span class="term-flabel">구분</span><div class="markdown-body">${_termMd(it.variants)}</div></div>` : ''}
-            ${it.example  ? `<div class="term-field"><span class="term-flabel">예문</span><div class="term-example">${_esc(it.example)}</div></div>` : ''}
-            ${it.caution  ? `<div class="term-field"><span class="term-flabel warn">주의</span><div class="markdown-body">${_termMd(it.caution)}</div></div>` : ''}
+            ${it.meaning     ? `<div class="term-field"><span class="term-flabel">뜻</span><div class="markdown-body">${_termMd(it.meaning)}</div></div>` : ''}
+            ${it.variants    ? `<div class="term-field"><span class="term-flabel">갈래</span><div class="markdown-body">${_termMd(it.variants)}</div></div>` : ''}
+            ${it.distinguish ? `<div class="term-field"><span class="term-flabel dist">감별</span><div class="markdown-body">${_termMd(it.distinguish)}</div></div>` : ''}
+            ${it.example     ? `<div class="term-field"><span class="term-flabel">예문</span><div class="term-example">${_esc(it.example)}</div></div>` : ''}
+            ${it.caution     ? `<div class="term-field"><span class="term-flabel warn">주의</span><div class="markdown-body">${_termMd(it.caution)}</div></div>` : ''}
           </div>` : '';
         html += `<div class="term-row${rowOpen ? ' open' : ''}">
           <div class="term-head" onclick="_termToggle('${it.id}')">
@@ -4702,7 +4703,8 @@ function _openTermEdit(id) {
         </div>
         <p class="soap-f-hint">뜻·구분·주의 칸은 마크다운 지원 (**굵게**, dl 정의목록 등). 예문은 영문 차팅 문장 그대로.</p>
         ${ta('term-f-meaning', '뜻 — 무엇을 가리키는가', fv('meaning'))}
-        ${ta('term-f-variants', '구분 — 대상·원인에 따라 갈리는 단어 (없으면 비워둠)', fv('variants'))}
+        ${ta('term-f-variants', '갈래 — 대상·원인에 따라 갈리는 단어 (없으면 비워둠)', fv('variants'))}
+        ${ta('term-f-distinguish', '감별 — 비슷한 것과 어떻게 구별하는가', fv('distinguish'))}
         ${ta('term-f-example', '예문 — 영문 차팅 문장', fv('example'))}
         ${ta('term-f-caution', '주의 — 혼동·오용 (없으면 비워둠)', fv('caution'))}
         <div class="soap-f-btns">
@@ -4733,6 +4735,7 @@ async function _saveTerm(id) {
     section: g('term-f-sec') || 'O',
     order: Number(g('term-f-order')) || 0,
     meaning: g('term-f-meaning').trim(),
+    distinguish: g('term-f-distinguish').trim(),
     variants: g('term-f-variants').trim(),
     example: g('term-f-example').trim(),
     caution: g('term-f-caution').trim(),
