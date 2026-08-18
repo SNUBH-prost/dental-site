@@ -32,7 +32,7 @@
  * ───────────────────────────────────────────────────────────── */
 
 const TERM_CATS = ["기술 어휘", "판정 어휘", "구강내과", "구강외과", "치아·수복물", "치수·치근단", "치주", "교정", "교합·악관절", "의치", "임플란트", "방사선"];
-const TERM_SEED_VERSION = 6;
+const TERM_SEED_VERSION = 7;
 
 const TERM_SEED = [
   // ── 기술 어휘 · 원발진·속발진 ──
@@ -1829,7 +1829,7 @@ const TERM_SEED = [
   },
   { ko: "변연골 소실", en: "marginal bone loss", section: "O", category: "임플란트", topic: "골·유착", order: 2,
     meaning: "임플란트 주위 변연골 수준이 낮아지는 것. 식립·연결 직후의 개조(remodeling)와 병적 소실을 구분해야 한다.",
-    distinguish: "- **baseline과의 비교가 유일한 판단 근거** — 기준 영상이 없으면 “소실”을 말할 수 없다\n- **초기 개조 vs 진행성 소실**: 첫 1년 개조는 흔하고, 그 이후 **연간 0.2 mm 이상**이면 진행성으로 본다\n- **촬영 조건이 같아야** 비교가 성립한다 — 평행법·홀더 사용\n- 나사산 노출 개수로 세면 대략적 추적이 쉬워진다",
+    distinguish: "- **baseline과의 비교가 유일한 판단 근거** — 기준 영상이 없으면 “소실”을 말할 수 없다\n- **초기 개조 vs 진행성 소실**: Albrektsson 기준으로 **첫 해 1.5 mm 이내**의 개조는 허용되며, 그 이후 **연간 0.2 mm 이상**이면 진행성으로 본다\n- **촬영 조건이 같아야** 비교가 성립한다 — 평행법·홀더 사용\n- 나사산 노출 개수로 세면 대략적 추적이 쉬워진다",
     example: "Marginal bone loss 2.5 mm compared with the baseline radiograph, saucer-shaped defect.",
     caution: "**baseline 대비**임을 반드시 명시한다. 기준 영상이 없으면 판독 근거가 약해진다.",
   },

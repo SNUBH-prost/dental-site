@@ -11,7 +11,7 @@
  * ───────────────────────────────────────────────────────────── */
 
 const EXAM_CATS = ["전신 평가", "구강내과", "치주", "치아·치수", "교합", "악관절·근육", "보철 적합", "무치악 평가", "임플란트", "계측·기록"];
-const EXAM_SEED_VERSION = 3;
+const EXAM_SEED_VERSION = 4;
 
 const EXAM_SEED = [
   // ═══════════ 전신 평가 ═══════════
@@ -342,7 +342,7 @@ const EXAM_SEED = [
     category: "보철 적합", order: 6,
     source: "Zarb·Boucher, Prosthodontic Treatment for Edentulous Patients / McCracken's",
     purpose: "- 환자의 호소를 **세 축으로 분해**해 원인 구조를 특정\n- 조정·이장·재제작 중 무엇이 필요한지 판단",
-    technique: "**유지(retention)**\n- 전방·후방으로 당겨 이탈 저항 확인\n- 개구·혀 운동·연하 시 들리는지\n- (상악) 후연을 눌러 post-dam 폐쇄 확인\n\n**안정(stability)**\n- 교합면을 **좌우 교대로 눌러** rocking 확인\n- 전후방 회전 확인\n- 저작 시 이동 관찰\n\n**지지(support)**\n- **PIP**로 조직면 접촉 분포 확인\n- 주지지역이 실제로 지지하고 있는지, 완화부가 눌리는지\n- 점막 압통·궤양 부위와 대조",
+    technique: "**유지(retention)**\n- 전방·후방으로 당겨 이탈 저항 확인\n- 개구·혀 운동·연하 시 들리는지\n- (상악) **전치부를 아래·앞으로 당기거나 전방을 눌러 후연이 들리는지** 확인 — post-dam이 부족하면 후연에서 폐쇄가 먼저 깨진다\n\n**안정(stability)**\n- 교합면을 **좌우 교대로 눌러** rocking 확인\n- 전후방 회전 확인\n- 저작 시 이동 관찰\n\n**지지(support)**\n- **PIP**로 조직면 접촉 분포 확인\n- 주지지역이 실제로 지지하고 있는지, 완화부가 눌리는지\n- 점막 압통·궤양 부위와 대조",
     criteria: "- 세 축을 각각 **good / fair / poor** 로 기록\n- 부족한 축의 **원인 구조**를 함께 특정",
     interpretation: "<dl><dt>“빠진다·들린다”</dt><dd>유지 → 변연 폐쇄·변연 길이·post-dam</dd><dt>“움직인다·돌아간다”</dt><dd>안정 → 교합·연마면 형태·neutral zone·인공치 위치</dd><dt>“아프다·눌린다”</dt><dd>지지 → 지지영역·과압박·완화부</dd></dl>\n\n- 세 축을 나누어 적으면 다음 방문에서 **어느 축이 나빠졌는지** 추적된다",
     pitfalls: "<div class=\"warning\"><b>⚠️ 조직면부터 깎지 마세요</b>궤양이 있어도 원인이 <u>교합 조기접촉</u>이면 아무리 깎아도 재발하고 의치만 얇아집니다. 지지 축을 평가하기 전에 교합을 먼저 확인하세요.</div>",
@@ -355,8 +355,8 @@ const EXAM_SEED = [
     source: "Zarb·Boucher, Prosthodontic Treatment for Edentulous Patients / Cawood & Howell (1988) / Atwood (1971)",
     purpose: "- 총의치의 **지지·안정 예후를 결정하는 1차 인자**를 정량화\n- 이장·재제작 시기 예측, 임플란트 오버덴처 상담의 근거\n- 초진, 재제작 전, 정기 검진마다 (변화 추적)",
     technique: "1. **시진**: 치조제를 정면·측방·교합면 방향에서 관찰\n2. **촉진**: 검지로 치조정을 따라 훑어 **폭·예리함·언더컷**을 확인\n   - 정상 조직 위에서 손가락을 좌우로 굴려 **아래 골의 형태**를 읽는다\n3. **상하악을 따로** 기록 — 흡수 속도가 다르다\n4. **방사선(파노라마)**: 하악 최소 수직 골 높이를 mm로 계측\n5. **변화 추적**: 이전 모형·사진과 비교. 기준이 없으면 이번에 진단모형을 보관",
-    criteria: "**형태 기술 — Cawood & Howell 분류**\n<dl><dt>Class III</dt><dd>볼록한 형태, <b>높이·폭 모두 충분</b> — 예후 양호</dd><dt>Class IV</dt><dd><b>knife-edge</b>, 높이는 있으나 폭 부족</dd><dt>Class V</dt><dd>평탄, 높이·폭 모두 부족</dd><dt>Class VI</dt><dd>함몰, <b>기저골까지 소실</b></dd></dl>\n\n**Atwood 흡수 단계**(Order I–VI)도 같은 개념을 순차 기술한다 — III 높고 둥근 형태 → IV knife-edge → V 낮고 둥근 형태 → VI 함몰.\n\n**ACP PDI(완전무치악) 하악 골 높이** — 파노라마상 최소 수직 높이 기준\n- **Type A ≥21 mm / B 16–20 / C 11–15 / D ≤10 mm**\n\n간이 기술(**ridge form**): **well-formed / knife-edge / flat / resorbed**\n\n**언더컷(undercut)**: 위치·깊이, 착탈로 방해 여부\n**융기(tori / exostoses)**: 구개융기·하악융기의 크기와 언더컷",
-    interpretation: "- **Class III(well-formed)** — 통상 총의치로 양호한 지지 기대\n- **Class IV(knife-edge)** — 예리한 골정이 통증원. 완화 또는 골정 정형 검토\n- **Class V–VI, 하악 Type C–D** — 통상 총의치의 유지·안정 한계가 명확 → **임플란트 오버덴처를 조기에 상담**해야 하는 근거\n- 흡수는 **첫 해에 급격하고 이후 평생 지속**되며 하악이 상악보다 빠르다(Tallgren) → 이장·재제작을 처음부터 예고",
+    criteria: "**형태 기술 — Cawood & Howell 분류**\n<dl><dt>Class III</dt><dd>볼록한 형태, <b>높이·폭 모두 충분</b> — 예후 양호</dd><dt>Class IV</dt><dd><b>knife-edge</b>, 높이는 있으나 폭 부족</dd><dt>Class V</dt><dd>평탄, 높이·폭 모두 부족</dd><dt>Class VI</dt><dd>함몰, <b>기저골까지 소실</b></dd></dl>\n\n**Atwood 흡수 단계**(Order I–VI)도 같은 개념을 순차 기술한다 — III 높고 둥근 형태 → IV knife-edge → V 낮고 둥근 형태 → VI 함몰.\n\n**ACP PDI(완전무치악) 하악 골 높이** — 파노라마상 최소 수직 높이 기준(McGarry, *J Prosthodont* 1999)\n- **Class I ≥21 mm / II 16–20 mm / III 11–15 mm / IV ≤10 mm**\n\n간이 기술(**ridge form**): **well-formed / knife-edge / flat / resorbed**\n\n**언더컷(undercut)**: 위치·깊이, 착탈로 방해 여부\n**융기(tori / exostoses)**: 구개융기·하악융기의 크기와 언더컷",
+    interpretation: "- **Class III(well-formed)** — 통상 총의치로 양호한 지지 기대\n- **Class IV(knife-edge)** — 예리한 골정이 통증원. 완화 또는 골정 정형 검토\n- **Cawood & Howell Class V–VI, ACP PDI Class III–IV** — 통상 총의치의 유지·안정 한계가 명확 → **임플란트 오버덴처를 조기에 상담**해야 하는 근거\n- 흡수는 **첫 해에 급격하고 이후 평생 지속**되며 하악이 상악보다 빠르다(Tallgren) → 이장·재제작을 처음부터 예고",
     pitfalls: "<div class=\"warning\"><b>⚠️ 상하악을 뭉뚱그리지 마세요</b>“치조제 흡수 심함”이라고만 적으면 어느 쪽이 문제인지, 얼마나 진행했는지 알 수 없습니다. <u>상악·하악을 나누고, 분류명 또는 mm</u>로 적어야 다음 방문과 비교됩니다.</div>\n\n- 촉진 없이 시진만 하면 **점막 두께에 가려 골 형태를 오판**한다 — 반드시 만져서 확인",
   },
   {
@@ -435,7 +435,7 @@ const EXAM_SEED = [
     source: "ACP Prosthodontic Diagnostic Index — McGarry et al., J Prosthodont 1999·2004 / House classification",
     purpose: "- 치료 난이도를 **미리 층화**해 상담·시간·비용·의뢰를 결정\n- 예후 설명의 근거를 문서로 남긴다",
     technique: "**ACP PDI(완전무치악) 판정 요소를 순서대로 확인**\n1. **하악 골 높이**(파노라마 최소 수직 높이, mm)\n2. **상악 잔존 치조제 형태**\n3. **근부착 위치**(전정 깊이·소대)\n4. **악간 관계**(Class I / II / III)\n\n**적응 유형(House 분류)** — 문진과 태도 관찰로 판단\n- 과거 의치 적응 경험, 기대 수준, 설명에 대한 반응",
-    criteria: "**ACP PDI Class I–IV** — 위 네 요소를 종합하며, **가장 불리한 항목이 등급을 결정**한다\n- 하악 골 높이 **Type A ≥21 / B 16–20 / C 11–15 / D ≤10 mm**\n\n**House 적응 유형**\n<dl><dt>Philosophical</dt><dd>현실적이고 협조적 — <b>예후 가장 양호</b></dd><dt>Exacting</dt><dd>요구가 정밀·과도. 설명과 문서화가 특히 중요</dd><dt>Indifferent</dt><dd>무관심·비협조 — 유지관리 이행이 낮다</dd><dt>Hysterical</dt><dd>정서적으로 불안정 — <b>예후 가장 불량</b>, 기대 조정이 선행</dd></dl>",
+    criteria: "**ACP PDI Class I–IV** — 위 네 요소를 종합하며, **가장 불리한 항목이 등급을 결정**한다\n- 하악 골 높이 **Class I ≥21 / II 16–20 / III 11–15 / IV ≤10 mm** (네 요소 중 가장 불리한 항목이 전체 Class 를 결정)\n\n**House 적응 유형**\n<dl><dt>Philosophical</dt><dd>현실적이고 협조적 — <b>예후 가장 양호</b></dd><dt>Exacting</dt><dd>요구가 정밀·과도. 설명과 문서화가 특히 중요</dd><dt>Indifferent</dt><dd>무관심·비협조 — 유지관리 이행이 낮다</dd><dt>Hysterical</dt><dd>정서적으로 불안정 — <b>예후 가장 불량</b>, 기대 조정이 선행</dd></dl>",
     interpretation: "- **Class III–IV**면 통상 총의치의 한계를 **처음 상담에서** 명시하고 임플란트 오버덴처를 함께 제시\n- **해부학적 조건이 좋아도 적응 유형이 불리하면 실패한다** — 총의치 성공의 최대 변수는 환자 요인이라는 점을 반영\n- 등급과 근거를 함께 적으면 이후 불만 상황에서 설명의 근거가 된다",
     pitfalls: "<div class=\"tip\"><b>💡 난이도는 상담을 위한 도구입니다</b>등급을 매기는 목적은 분류가 아니라, <u>무엇이 어려울지 미리 말하고 기대를 맞추는 것</u>입니다. 완성 후에 설명하면 변명이 되고, 시작 전에 설명하면 동의가 됩니다.</div>",
   },
