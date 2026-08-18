@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=84">
+  <link rel="stylesheet" href="css/style.css?v=85">
   <link rel="stylesheet" href="css/editor.css?v=28">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -57,9 +57,17 @@
 
       <a href="javascript:void(0)" data-page="calendar" class="nav-link" onclick="showPage('calendar')">일정</a>
       <a href="javascript:void(0)" data-page="inventory" class="nav-link" onclick="showPage('inventory')">재고</a>
-      <a href="javascript:void(0)" data-page="soap" class="nav-link" onclick="showPage('soap')">SOAP</a>
-      <a href="javascript:void(0)" data-page="exam" class="nav-link" onclick="showPage('exam')">임상검사</a>
-      <a href="javascript:void(0)" data-page="term" class="nav-link" onclick="showPage('term')">용어</a>
+      <!-- 임상 기록 참고 (SOAP · 임상검사 · 용어) -->
+      <div class="nav-group" id="nav-group-ref">
+        <button class="nav-group-btn" id="ref-btn" onclick="toggleRefMenu(event)">
+          임상 기록 <span class="arrow">▾</span>
+        </button>
+        <div class="nav-group-panel" id="nav-ref-links">
+          <a href="javascript:void(0)" data-page="soap" onclick="showPage('soap');closeRefMenu()"><b>SOAP</b><span>진료별 차팅 템플릿</span></a>
+          <a href="javascript:void(0)" data-page="exam" onclick="showPage('exam');closeRefMenu()"><b>임상검사</b><span>O 소견을 얻는 술기</span></a>
+          <a href="javascript:void(0)" data-page="term" onclick="showPage('term');closeRefMenu()"><b>용어</b><span>O·A 영문 차팅 어휘</span></a>
+        </div>
+      </div>
       <a href="javascript:void(0)" data-page="stats" class="nav-link" onclick="showPage('stats')">통계</a>
       <a href="admin.html?v=1" class="nav-link nav-admin">관리</a>
     </nav>
@@ -91,12 +99,14 @@
     <a href="javascript:void(0)" onclick="showPage('cases');toggleMobileMenu()"><span class="di">📋</span>임상 케이스</a>
     <div class="drawer-section-label">부문별 자료</div>
     <div id="drawer-dept-links"></div>
-    <div class="drawer-section-label">기타</div>
+    <div class="drawer-section-label">운영</div>
     <a href="javascript:void(0)" onclick="showPage('calendar');toggleMobileMenu()"><span class="di">📅</span>일정</a>
     <a href="javascript:void(0)" onclick="showPage('inventory');toggleMobileMenu()"><span class="di">🔩</span>재고</a>
+    <div class="drawer-section-label">임상 기록</div>
     <a href="javascript:void(0)" onclick="showPage('soap');toggleMobileMenu()"><span class="di">📝</span>SOAP</a>
     <a href="javascript:void(0)" onclick="showPage('exam');toggleMobileMenu()"><span class="di">🔬</span>임상검사</a>
     <a href="javascript:void(0)" onclick="showPage('term');toggleMobileMenu()"><span class="di">🔤</span>용어</a>
+    <div class="drawer-section-label">기타</div>
     <a href="javascript:void(0)" onclick="showPage('stats');toggleMobileMenu()"><span class="di">📊</span>통계</a>
     <a href="admin.html?v=1"><span class="di">⚙</span>관리</a>
   </div>
@@ -423,7 +433,7 @@
 <script defer src="js/soap-seed.js?v=8"></script>
 <script defer src="js/exam-seed.js?v=1"></script>
 <script defer src="js/term-seed.js?v=6"></script>
-<script defer src="js/app.js?v=112"></script>
+<script defer src="js/app.js?v=113"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {
@@ -435,8 +445,16 @@ document.addEventListener('DOMContentLoaded', function() {
   window.closeDeptMenu = function() {
     document.getElementById('nav-group-dept').classList.remove('open');
   };
+  window.toggleRefMenu = function(e) {
+    e.stopPropagation();
+    document.getElementById('nav-group-ref').classList.toggle('open');
+  };
+  window.closeRefMenu = function() {
+    document.getElementById('nav-group-ref').classList.remove('open');
+  };
   document.addEventListener('click', function(e) {
     if (!e.target.closest('#nav-group-dept')) window.closeDeptMenu();
+    if (!e.target.closest('#nav-group-ref')) window.closeRefMenu();
   });
   document.getElementById('nav-group-dept').addEventListener('click', function(e) {
     const link = e.target.closest('a[data-page]');
