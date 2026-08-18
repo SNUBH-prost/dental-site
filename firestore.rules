@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────
+// 이 파일은 참고용 템플릿입니다.
+//
+// 실제 규칙은 Firebase 콘솔(Firestore Database → 규칙)에서 관리되고
+// 있습니다. 콘솔에 이미 규칙이 있다면 이 파일 전체를 붙여넣어
+// "덮어쓰지" 마시고, 아래에서 빠져 있는 컬렉션 블록만 골라 추가하세요.
+// 통째로 붙여넣으면 기존 규칙에만 있던 조건이 사라집니다.
+//
+// 이 앱의 인증 모델
+//   · 관리자 로그인은 이메일/비밀번호 방식이고, 앱 안에 회원가입 경로가
+//     없습니다. 코드상 isAdmin 판정도 "로그인했으면 관리자"입니다.
+//     (js/app.js — const nowAdmin = !!user)
+//   · 따라서 쓰기 조건은 request.auth != null 로 두는 것이 앱 동작과
+//     일치합니다.
+//
+//   ※ 다만 Firebase Authentication에서 이메일/비밀번호 공급자가 켜져
+//     있으면, 콘솔 밖에서도 계정을 만들 수 있습니다. 계정이 늘어나는
+//     것을 원치 않으면 Authentication → Settings 에서 가입을 제한하거나,
+//     아래 isAdmin() 을 UID 목록 방식으로 바꿔 쓰는 편이 안전합니다.
+//
+//     function isAdmin() {
+//       return request.auth != null
+//         && request.auth.uid in ['여기에-관리자-UID'];
+//     }
+// ─────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null;
+    }
+
+    // 임상 케이스·부문별 자료 (기존)
+    match /cases/{doc}        { allow read: if true; allow write: if isAdmin(); }
+    match /departmentContents/{doc} { allow read: if true; allow write: if isAdmin(); }
+    match /departments/{doc}  { allow read: if true; allow write: if isAdmin(); }
+
+    // 일정·재고 (기존)
+    match /schedules/{doc}     { allow read: if true; allow write: if isAdmin(); }
+    match /burInventory/{doc}  { allow read: if true; allow write: if isAdmin(); }
+
+    // 진료별 SOAP 템플릿 (기존)
+    match /soapTemplates/{doc} { allow read: if true; allow write: if isAdmin(); }
+
+    // ── 아래 두 개가 새로 추가된 컬렉션입니다 ──
+    // 없으면 조회는 되지만(로컬 시드로 표시) 편집 저장 시 permission-denied 가 납니다.
+    match /examTemplates/{doc} { allow read: if true; allow write: if isAdmin(); }
+    match /termTemplates/{doc} { allow read: if true; allow write: if isAdmin(); }
+
+    // 시드 버전 마커 (soapSeed / examSeed / termSeed)
+    match /appMeta/{doc}       { allow read: if true; allow write: if isAdmin(); }
+  }
+}

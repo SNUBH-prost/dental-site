@@ -4094,10 +4094,11 @@ async function _schedImportCommit() {
   if (!valid.length) { _edToast('등록할 유효한 일정이 없습니다. 날짜(YYYY-MM-DD)를 확인하세요.', 'error'); return; }
   const skipped = _schedImportRows.length - valid.length;
   try {
-    const batch = db.batch();
+    // 붙여넣기 건수는 제한이 없으므로 batch 상한(500)을 넘을 수 있다 → 분할 커밋
+    const ops = [];
     valid.forEach(r => {
       const ref = db.collection('schedules').doc();
-      batch.set(ref, {
+      ops.push({ type: 'set', ref, data: {
         date: r.date,
         time: _normTime(r.time) || '',
         treatment: r.treatment || '',
@@ -4107,9 +4108,9 @@ async function _schedImportCommit() {
         done: false,
         caseIds: [],
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      } });
     });
-    await batch.commit();
+    await _commitOps(ops);
     await loadSchedules(_calYear, _calMonth, true);
     _refreshCalViews();
     _closeSchedImport();
@@ -4176,16 +4177,16 @@ async function _loadSOAP() {
 
 // 시드 항목을 최신 SOAP_SEED로 교체. 관리자가 직접 만든 항목(userCreated)은 보존.
 async function _seedSOAP(existingSnap) {
-  const batch = db.batch();
+  const ops = [];
   const newIds = new Set(SOAP_SEED.map(t => _soapDocId(t.title)));
   if (existingSnap) {
     existingSnap.forEach(d => {
       const data = d.data() || {};
-      if (!data.userCreated && !newIds.has(d.id)) batch.delete(d.ref); // 옛 시드 정리
+      if (!data.userCreated && !newIds.has(d.id)) ops.push({ type: 'del', ref: d.ref }); // 옛 시드 정리
     });
   }
-  SOAP_SEED.forEach(t => batch.set(db.collection('soapTemplates').doc(_soapDocId(t.title)), { ...t, seed: true }));
-  await batch.commit();
+  SOAP_SEED.forEach(t => ops.push({ type: 'set', ref: db.collection('soapTemplates').doc(_soapDocId(t.title)), data: { ...t, seed: true } }));
+  await _commitOps(ops);
   // 버전 마커는 별도 커밋 — appMeta 쓰기가 막혀도 템플릿 저장은 유지
   try { await db.collection('appMeta').doc('soapSeed').set({ version: SOAP_SEED_VERSION }); }
   catch (e) { console.warn('[soap seed meta]', e); }
@@ -4354,16 +4355,16 @@ async function _loadExam() {
 
 // 시드 항목을 최신 EXAM_SEED로 교체. 관리자가 만든 항목(userCreated)은 보존.
 async function _seedExam(existingSnap) {
-  const batch = db.batch();
+  const ops = [];
   const newIds = new Set(EXAM_SEED.map(t => _examDocId(t.title)));
   if (existingSnap) {
     existingSnap.forEach(d => {
       const data = d.data() || {};
-      if (!data.userCreated && !newIds.has(d.id)) batch.delete(d.ref);
+      if (!data.userCreated && !newIds.has(d.id)) ops.push({ type: 'del', ref: d.ref });
     });
   }
-  EXAM_SEED.forEach(t => batch.set(db.collection('examTemplates').doc(_examDocId(t.title)), { ...t, seed: true }));
-  await batch.commit();
+  EXAM_SEED.forEach(t => ops.push({ type: 'set', ref: db.collection('examTemplates').doc(_examDocId(t.title)), data: { ...t, seed: true } }));
+  await _commitOps(ops);
   try { await db.collection('appMeta').doc('examSeed').set({ version: EXAM_SEED_VERSION }); }
   catch (e) { console.warn('[exam seed meta]', e); }
 }
@@ -4516,7 +4517,7 @@ async function _saveExam(id) {
     renderExam();
     _edToast('저장되었습니다.');
   } catch (e) {
-    _edToast('저장 실패: ' + (e.message || e), 'error');
+    _edToast(_fbErrMsg(e, 'examTemplates'), 'error');
   }
 }
 
@@ -4530,7 +4531,7 @@ async function _deleteExam(id) {
     renderExam();
     _edToast('삭제되었습니다.');
   } catch (e) {
-    _edToast('삭제 실패: ' + (e.message || e), 'error');
+    _edToast(_fbErrMsg(e, 'examTemplates'), 'error');
   }
 }
 
@@ -4596,6 +4597,32 @@ async function _copyExample(el, btn) {
   btn.textContent = '복사됨';
   btn.classList.add('done');
   setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('done'); }, 1400);
+}
+
+// ── Firestore 공통 헬퍼 ──────────────────────────────────────
+// 한 batch 는 500 쓰기가 상한이다. 시드 항목이 늘면(용어 331개 + 옛 문서 삭제)
+// 한 번에 넘길 수 있으므로 나누어 커밋한다.
+const FB_BATCH_LIMIT = 400;
+
+async function _commitOps(ops) {
+  for (let i = 0; i < ops.length; i += FB_BATCH_LIMIT) {
+    const batch = db.batch();
+    ops.slice(i, i + FB_BATCH_LIMIT).forEach(op =>
+      op.type === 'set' ? batch.set(op.ref, op.data) : batch.delete(op.ref));
+    await batch.commit();
+  }
+}
+
+// 권한 오류는 원인이 코드가 아니라 보안 규칙이므로 그대로 알려준다
+function _fbErrMsg(e, collection) {
+  const code = String((e && (e.code || e.message)) || '');
+  if (code.includes('permission-denied')) {
+    return `저장 권한이 없습니다 — Firestore 보안 규칙에 '${collection}' 컬렉션 허용 규칙을 추가해야 합니다.`;
+  }
+  if (code.includes('unavailable') || code.includes('offline')) {
+    return '네트워크에 연결되지 않아 저장하지 못했습니다.';
+  }
+  return '실패: ' + (e && e.message ? e.message : e);
 }
 
 // ── 참고자료 딥링크 (SOAP · 임상검사 · 용어) ─────────────────
@@ -4737,16 +4764,16 @@ async function _loadTerm() {
 }
 
 async function _seedTerm(existingSnap) {
-  const batch = db.batch();
+  const ops = [];
   const newIds = new Set(TERM_SEED.map(t => _termDocId(t.ko, t.en)));
   if (existingSnap) {
     existingSnap.forEach(d => {
       const data = d.data() || {};
-      if (!data.userCreated && !newIds.has(d.id)) batch.delete(d.ref);
+      if (!data.userCreated && !newIds.has(d.id)) ops.push({ type: 'del', ref: d.ref });
     });
   }
-  TERM_SEED.forEach(t => batch.set(db.collection('termTemplates').doc(_termDocId(t.ko, t.en)), { ...t, seed: true }));
-  await batch.commit();
+  TERM_SEED.forEach(t => ops.push({ type: 'set', ref: db.collection('termTemplates').doc(_termDocId(t.ko, t.en)), data: { ...t, seed: true } }));
+  await _commitOps(ops);
   try { await db.collection('appMeta').doc('termSeed').set({ version: TERM_SEED_VERSION }); }
   catch (e) { console.warn('[term seed meta]', e); }
 }
@@ -4955,7 +4982,7 @@ async function _saveTerm(id) {
     renderTerm();
     _edToast('저장되었습니다.');
   } catch (e) {
-    _edToast('저장 실패: ' + (e.message || e), 'error');
+    _edToast(_fbErrMsg(e, 'termTemplates'), 'error');
   }
 }
 
@@ -4969,7 +4996,7 @@ async function _deleteTerm(id) {
     renderTerm();
     _edToast('삭제되었습니다.');
   } catch (e) {
-    _edToast('삭제 실패: ' + (e.message || e), 'error');
+    _edToast(_fbErrMsg(e, 'termTemplates'), 'error');
   }
 }
 
@@ -5053,7 +5080,7 @@ async function _saveSoap(id) {
     renderSOAP();
     _edToast('저장되었습니다.');
   } catch (e) {
-    _edToast('저장 실패: ' + (e.message || e), 'error');
+    _edToast(_fbErrMsg(e, 'soapTemplates'), 'error');
   }
 }
 
