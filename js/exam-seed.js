@@ -10,8 +10,8 @@
  *   함정 — 값을 틀리게 만드는 흔한 오류
  * ───────────────────────────────────────────────────────────── */
 
-const EXAM_CATS = ["전신 평가", "구강내과", "치주", "치아·치수", "교합", "악관절·근육", "보철 적합", "임플란트", "계측·기록"];
-const EXAM_SEED_VERSION = 2;
+const EXAM_CATS = ["전신 평가", "구강내과", "치주", "치아·치수", "교합", "악관절·근육", "보철 적합", "무치악 평가", "임플란트", "계측·기록"];
+const EXAM_SEED_VERSION = 3;
 
 const EXAM_SEED = [
   // ═══════════ 전신 평가 ═══════════
@@ -346,6 +346,98 @@ const EXAM_SEED = [
     criteria: "- 세 축을 각각 **good / fair / poor** 로 기록\n- 부족한 축의 **원인 구조**를 함께 특정",
     interpretation: "<dl><dt>“빠진다·들린다”</dt><dd>유지 → 변연 폐쇄·변연 길이·post-dam</dd><dt>“움직인다·돌아간다”</dt><dd>안정 → 교합·연마면 형태·neutral zone·인공치 위치</dd><dt>“아프다·눌린다”</dt><dd>지지 → 지지영역·과압박·완화부</dd></dl>\n\n- 세 축을 나누어 적으면 다음 방문에서 **어느 축이 나빠졌는지** 추적된다",
     pitfalls: "<div class=\"warning\"><b>⚠️ 조직면부터 깎지 마세요</b>궤양이 있어도 원인이 <u>교합 조기접촉</u>이면 아무리 깎아도 재발하고 의치만 얇아집니다. 지지 축을 평가하기 전에 교합을 먼저 확인하세요.</div>",
+  },
+
+  // ═══════════ 무치악 평가 ═══════════
+  {
+    title: "무치악 치조제 형태·흡수도 평가",
+    category: "무치악 평가", order: 1,
+    source: "Zarb·Boucher, Prosthodontic Treatment for Edentulous Patients / Cawood & Howell (1988) / Atwood (1971)",
+    purpose: "- 총의치의 **지지·안정 예후를 결정하는 1차 인자**를 정량화\n- 이장·재제작 시기 예측, 임플란트 오버덴처 상담의 근거\n- 초진, 재제작 전, 정기 검진마다 (변화 추적)",
+    technique: "1. **시진**: 치조제를 정면·측방·교합면 방향에서 관찰\n2. **촉진**: 검지로 치조정을 따라 훑어 **폭·예리함·언더컷**을 확인\n   - 정상 조직 위에서 손가락을 좌우로 굴려 **아래 골의 형태**를 읽는다\n3. **상하악을 따로** 기록 — 흡수 속도가 다르다\n4. **방사선(파노라마)**: 하악 최소 수직 골 높이를 mm로 계측\n5. **변화 추적**: 이전 모형·사진과 비교. 기준이 없으면 이번에 진단모형을 보관",
+    criteria: "**형태 기술 — Cawood & Howell 분류**\n<dl><dt>Class III</dt><dd>볼록한 형태, <b>높이·폭 모두 충분</b> — 예후 양호</dd><dt>Class IV</dt><dd><b>knife-edge</b>, 높이는 있으나 폭 부족</dd><dt>Class V</dt><dd>평탄, 높이·폭 모두 부족</dd><dt>Class VI</dt><dd>함몰, <b>기저골까지 소실</b></dd></dl>\n\n**Atwood 흡수 단계**(Order I–VI)도 같은 개념을 순차 기술한다 — III 높고 둥근 형태 → IV knife-edge → V 낮고 둥근 형태 → VI 함몰.\n\n**ACP PDI(완전무치악) 하악 골 높이** — 파노라마상 최소 수직 높이 기준\n- **Type A ≥21 mm / B 16–20 / C 11–15 / D ≤10 mm**\n\n간이 기술(**ridge form**): **well-formed / knife-edge / flat / resorbed**\n\n**언더컷(undercut)**: 위치·깊이, 착탈로 방해 여부\n**융기(tori / exostoses)**: 구개융기·하악융기의 크기와 언더컷",
+    interpretation: "- **Class III(well-formed)** — 통상 총의치로 양호한 지지 기대\n- **Class IV(knife-edge)** — 예리한 골정이 통증원. 완화 또는 골정 정형 검토\n- **Class V–VI, 하악 Type C–D** — 통상 총의치의 유지·안정 한계가 명확 → **임플란트 오버덴처를 조기에 상담**해야 하는 근거\n- 흡수는 **첫 해에 급격하고 이후 평생 지속**되며 하악이 상악보다 빠르다(Tallgren) → 이장·재제작을 처음부터 예고",
+    pitfalls: "<div class=\"warning\"><b>⚠️ 상하악을 뭉뚱그리지 마세요</b>“치조제 흡수 심함”이라고만 적으면 어느 쪽이 문제인지, 얼마나 진행했는지 알 수 없습니다. <u>상악·하악을 나누고, 분류명 또는 mm</u>로 적어야 다음 방문과 비교됩니다.</div>\n\n- 촉진 없이 시진만 하면 **점막 두께에 가려 골 형태를 오판**한다 — 반드시 만져서 확인",
+  },
+  {
+    title: "지지영역·완화부 확인 (무치악)",
+    category: "무치악 평가", order: 2,
+    source: "Zarb·Boucher, Prosthodontic Treatment for Edentulous Patients / Cawood & Howell (1988) / Atwood (1971)",
+    purpose: "- 인상과 의치가 **어디를 눌러야 하고 어디를 피해야 하는지** 결정\n- 통증·궤양의 예방과 원인 규명",
+    technique: "**촉진으로 구조를 하나씩 확인하고 조직 피압축성을 비교한다**\n\n**상악**\n- 주지지역: **수평 경구개 후방 · 치조제 정상**\n- 완화부: **절치유두(incisive papilla)**(비구개신경 통로) · **정중구개봉합(midpalatine raphe)**(피압축성 낮음) · **torus palatinus**\n\n**하악**\n- 주지지역: **buccal shelf**(넓고 치밀한 피질골, 저작압 방향과 수직에 가까움)\n- 보조: 치조제 정상 · retromolar pad\n- 완화부: **mylohyoid ridge**(예리) · **이공(mental foramen)**(치조정 근접 시) · genial tubercle · **torus mandibularis**\n- 후방 설측: **retromylohyoid fossa** 까지 연장 가능한지 확인\n\n**방법**: 손가락으로 눌러 **점막이 얼마나 들어가는지(피압축성)** 를 부위별로 비교하고, 예리한 골연은 통증 유발 여부를 확인",
+    criteria: "- 각 구조의 **존재·크기·예리함·언더컷**을 기록\n- **이공이 치조정에 근접**하면 완화 필요로 표기\n- 피압축성이 크게 다른 부위(flabby 등)는 별도 기재",
+    interpretation: "- **하악의 주지지역은 치조제가 아니라 buccal shelf** — 흡수된 치조정은 지지 능력이 낮다. 이 점을 놓치면 하악 의치가 계속 아프다\n- **완화부를 지지시키면 통증**, **지지역을 이격시키면 유지 상실** — 방향이 반대인 두 실수\n- 압박 궤양의 위치를 이 지도와 대조하면 원인이 바로 나온다",
+    pitfalls: "<div class=\"danger\"><b>🚫 궤양이 보인다고 그 자리를 깎지 마세요</b>완화부(mylohyoid ridge·이공)의 궤양은 완화가 맞지만, <u>주지지역의 궤양은 대개 교합 조기접촉이 원인</u>입니다. 조직면을 깎기 전에 교합을 먼저 확인하세요.</div>",
+  },
+  {
+    title: "가동 치조제(flabby ridge) 평가",
+    category: "무치악 평가", order: 3,
+    source: "Zarb·Boucher, Prosthodontic Treatment for Edentulous Patients / Cawood & Howell (1988) / Atwood (1971)",
+    purpose: "- 인상 방식(무압 window technique)의 적용 여부와 **범위**를 결정\n- 완성 의치의 튀어오름·통증 예방",
+    technique: "1. **손가락 또는 기구 손잡이로 치조정을 눌러** 조직이 움직이는지 확인\n2. 움직이는 **범위를 앞뒤로 훑어 경계를 찾고 mm로 계측**\n3. **양손 촉진**으로 가동 조직 아래 골의 실제 위치를 확인\n4. 진단모형에 범위를 표시하고 사진 기록",
+    criteria: "- **정상 치조제는 눌러도 움직이지 않는다** — 움직이면 flabby\n- 범위(mm)와 부위(상악 전방이 흔함)를 기록\n- 가동 정도(경도·중등도·고도)를 함께 기술",
+    interpretation: "- 상악 전방 flabby는 **잔존 하악 전치와의 조합**(combination syndrome)에서 흔하다 — 하악 상태를 함께 확인\n- **일반 인상을 그대로 뜨면 조직이 눌린 채 기록**되어, 완성 의치가 그 부위에서 튀어오르거나 통증을 만든다\n- 범위가 넓으면 **외과적 제거 vs 무압인상** 중 선택을 상담",
+    pitfalls: "<div class=\"warning\"><b>⚠️ 범위를 mm로 적지 않으면 인상 설계가 안 됩니다</b>“flabby ridge 있음”만으로는 트레이에 창(window)을 어디에 낼지 정할 수 없습니다. <u>전후 경계를 계측해 모형에 표시</u>하세요.</div>",
+  },
+  {
+    title: "구개 형태 및 후방 봉쇄 영역 평가",
+    category: "무치악 평가", order: 4,
+    source: "Zarb·Boucher, Prosthodontic Treatment for Edentulous Patients / Cawood & Howell (1988) / Atwood (1971) / House classification of palatal (throat) form",
+    purpose: "- 상악 의치의 **유지력(변연 폐쇄)** 예후를 예측\n- post-dam 위치·깊이·폭 설계의 근거",
+    technique: "**구개 형태(palatal vault form)**\n- 정면에서 관찰: **U자형 / V자형 / 평탄형(U-shaped / V-shaped / flat)**\n\n**진동선(vibrating line)**\n1. 환자에게 **“아”를 짧게 반복** 발음시킨다(길게 하면 경계가 흐려진다)\n2. 연구개가 움직이기 시작하는 경계를 관찰하고 **구내에 표시**\n3. 좌우로 이어 **hamular notch까지 연결** — 촉진으로 절흔을 확인\n\n**연구개 각도(throat form)**\n- 연구개가 경구개에서 꺾이는 각도와 가동 조직 폭을 관찰",
+    criteria: "**구개 형태**\n- **U자형** — 폐쇄·유지에 가장 유리\n- **V자형** — 변연 폐쇄가 어렵고 측방 안정 불리\n- **평탄형** — 측방 안정 불리\n\n**연구개 각도 (House 분류 개념)**\n- **Class I** 완만하게 내려가며 가동 조직 폭이 넓음 — **폐쇄에 가장 유리**\n- **Class II** 중간\n- **Class III** 급격히 꺾이고 폭이 좁음 — **폐쇄 폭이 좁아 불리**\n(가동 조직 폭의 구체적 수치는 문헌마다 차이가 있어 형태 기술을 우선한다)\n\n**post-dam**: 나비형, 깊이 **1–1.5 mm**를 조직 피압축성에 맞춰 조절",
+    interpretation: "- **V자형 + Class III**는 유지가 어려울 것을 미리 예고하고 상담에 반영\n- 유지 불량을 호소하는 기존 의치에서는 **post-dam 마모·소실**을 먼저 확인\n- 진동선은 **해부학적 경계와 반드시 일치하지 않는다** — 기능적으로 확인해야 한다",
+    pitfalls: "<div class=\"warning\"><b>⚠️ 깊이를 조직에 맞추지 않으면 양쪽으로 실패합니다</b>과하면 통증·구역, 부족하면 유지 상실입니다. <u>피압축성을 눌러 확인하고</u> 깊이를 정하세요.</div>",
+  },
+  {
+    title: "전정 깊이·소대 부착 평가",
+    category: "무치악 평가", order: 5,
+    source: "Zarb·Boucher, Prosthodontic Treatment for Edentulous Patients / Cawood & Howell (1988) / Atwood (1971)",
+    purpose: "- 의치 변연의 **가능한 신장 범위**를 결정\n- 소대에 의한 탈락·궤양 예방, 전정성형술 필요성 판단",
+    technique: "1. **입술·볼을 당기고 밀어** 점막이 움직이는 경계(전정저, **vestibular depth**)를 확인\n2. 치조정에서 전정저까지 **깊이를 mm로** 계측(프로브 사용)\n3. **소대 부착(frenum attachment)** 위치와 높이를 확인 — labial · buccal · lingual frenum\n   - 입술을 당기면서 소대가 **치조정에 얼마나 가까이 붙는지** 관찰\n4. 혀를 좌우·전방으로 움직이게 해 **설측 전정 · 설소대 · retromylohyoid fossa** 를 확인",
+    criteria: "- 전정 깊이(mm)를 부위별로\n- 소대 부착: **치조정에서 떨어짐(양호) / 치조정에 근접 / 치조정에 부착(불리)**\n- 소대 수와 위치를 기록",
+    interpretation: "- **전정이 얕으면 변연 길이가 짧아져 유지가 떨어진다** → 전정성형술 또는 임플란트 대안 검토\n- **소대가 치조정에 부착**되어 있으면 변연에 깊은 절흔이 필요해 그 부위 폐쇄가 끊긴다 → 소대절제술 검토\n- 기능 시 소대가 의치를 밀어내면 **반복 탈락·선상 궤양**의 원인",
+    pitfalls: "<div class=\"tip\"><b>💡 정지 상태로만 보면 놓칩니다</b>소대는 <u>입술·볼·혀를 실제로 움직여야</u> 제 위치가 드러납니다. border molding에서 하는 기능 운동을 검사 단계에서 미리 해보세요.</div>",
+  },
+  {
+    title: "혀 크기·위치 평가",
+    category: "무치악 평가", order: 6,
+    source: "Zarb·Boucher, Prosthodontic Treatment for Edentulous Patients / Cawood & Howell (1988) / Atwood (1971) / Wright classification of tongue position",
+    purpose: "- **하악 의치의 안정** 예후를 예측\n- 인공치 배열 위치(neutral zone)와 설측 변연 설계에 반영",
+    technique: "1. 환자를 이완시키고 **의치를 뺀 상태**에서 혀의 안정 위치를 관찰 (**tongue size & position**)\n2. 입을 벌린 채 **혀를 움직이지 말라고 하고** 위치를 본다 — 지시하면 위치가 바뀐다\n3. 혀의 **크기**(치조제를 넘어 퍼지는지)와 **치흔** 유무 확인\n4. 하악 무치악 기간이 길수록 혀가 커지는 경향을 감안",
+    criteria: "**Wright 분류 개념**\n- **Class I** 혀가 구강저에 있고 **혀끝이 앞쪽 치조제에 닿음** — 유리\n- **Class II** 혀가 넓고 평평해졌으나 혀끝 위치는 정상\n- **Class III** 혀가 **후방으로 당겨지고 아래로 눌림**, 혀끝이 말림 — **불리**\n\n- 크기: normal / enlarged(치조제를 덮음)",
+    interpretation: "- **Class III(retracted)** — 혀가 의치 설측 변연을 덮어 폐쇄를 만들지 못하고, 저작 시 의치를 들어올린다 → **하악 유지 예후 불량**\n- 혀가 크면 **인공치를 설측으로 배열할 공간이 없다** → neutral zone 기법 검토\n- 신경근 조절 저하(파킨슨·뇌졸중)와 겹치면 예후를 더 낮춰 상담한다",
+    pitfalls: "<div class=\"warning\"><b>⚠️ “혀 내미세요”라고 하면 안 됩니다</b>지시하는 순간 평소 위치가 아닙니다. <u>이완 상태에서 관찰</u>해야 실제 안정 위치를 알 수 있습니다.</div>",
+  },
+  {
+    title: "구역반사 평가",
+    category: "무치악 평가", order: 7,
+    source: "Dickinson & Fiske, Gagging Severity Index / Zarb·Boucher",
+    purpose: "- 인상·의치 후연 설계·치료 진행 방식을 미리 조정\n- 실패 위험이 높은 환자를 **처치 전에** 식별",
+    technique: "1. **병력 문진이 먼저** — 칫솔질·인상·엑스레이 촬영·의치 착용 시 구역질(**gag reflex**) 경험, 유발 상황, 회피 행동\n2. **자극 검사는 최소한으로**: 설압자로 설배 후방·연구개를 가볍게 접촉해 반응 관찰\n3. 반응의 **정도와 유발 부위**(촉각성 / 심인성)를 기록\n4. 반복 자극하지 않는다 — 신뢰를 잃으면 이후 처치가 더 어려워진다",
+    criteria: "**Gagging Severity Index 개념 (Grade I–V)**\n- **I** 매우 경미, 가끔 발생하며 환자가 스스로 조절\n- **II** 경미, 진료진의 도움으로 조절 가능\n- **III** 중등도, 일관되게 나타나 처치가 제한됨\n- **IV** 중증, 모든 치과 처치에 영향, 불안 조절 필요\n- **V** 매우 중증, 보조 요법 없이는 처치가 사실상 불가\n(등급 정의는 문헌마다 표현 차이가 있어 **정도와 상황을 함께 서술**하는 편이 안전하다)",
+    interpretation: "- **후방 변연 과신장·과두께**가 가장 흔한 유발 요인 — 설계로 상당 부분 해결된다\n- **심인성 요소**가 크면 단계적 노출·행동 조절이 필요하고 처치 시간을 짧게 나눈다\n- Grade III 이상이면 **인상 방식·진료 시간·상담 내용**을 미리 조정하고 기록",
+    pitfalls: "<div class=\"danger\"><b>🚫 자극 검사를 반복하지 마세요</b>확인하려고 여러 번 유발하면 환자의 불안이 커져 <u>이후 인상과 장착이 훨씬 어려워집니다.</u> 병력 문진으로 대부분 판단되고, 자극은 최소한으로 한 번이면 충분합니다.</div>",
+  },
+  {
+    title: "기존 의치 평가",
+    category: "무치악 평가", order: 8,
+    source: "Zarb·Boucher, Prosthodontic Treatment for Edentulous Patients / Cawood & Howell (1988) / Atwood (1971)",
+    purpose: "- **무엇이 성공했고 무엇이 실패했는지**를 계측해 새 의치에 반영\n- 환자 호소의 원인 구조를 특정",
+    technique: "**의치를 구내에 넣은 상태와 뺀 상태를 나누어 본다**\n\n**변연**\n- **Border extension**: 부위별 under / over-extended\n- **Post-dam** 유무·형태, **border seal** 확인(전방 견인 저항)\n\n**조직면**\n- **PIP**로 조직면 접촉 분포(**intaglio adaptation**) — 주지지역이 실제로 지지하는지\n- 이장·수리 흔적, 조직면 거칠기\n\n**교합**\n- 양측 균등 접촉 여부, **VDO / FWS 계측**\n- **인공치 마모(artificial tooth wear)** 평탄화 정도로 VDO 감소량 추정\n\n**심미**\n- 정중선(midline), 안정 시·미소 시 **절치 노출량(incisal display, mm)**, 순측 지지(lip support)\n\n**위생**\n- 바이오필름·치석 침착, 냄새, 세척 습관\n\n**계측값과 사진을 남긴다** — 새 의치의 출발점이 된다",
+    criteria: "- 각 항목을 **수치 또는 부위로** 기록(“낡음” 같은 표현은 정보가 아니다)\n- 성공 요소(유지되는 부분)와 실패 요소를 나누어 표기",
+    interpretation: "- **환자가 만족하는 부분은 그대로 복제**하고, 불만 부분만 바꾸는 것이 재제작 성공률을 높인다\n- 호소를 세 축으로 분해: 빠진다(유지) / 움직인다(안정) / 아프다(지지)\n- **VDO가 낮아져 있으면** 구각염·저작 효율 저하와 연결해 설명",
+    pitfalls: "<div class=\"warning\"><b>⚠️ 기존 의치를 “참고만” 하고 버리지 마세요</b>환자가 수년간 적응한 <u>순측 지지·절치 위치·구개 두께</u>는 가장 값진 정보입니다. 계측 없이 새로 만들면 “예전 것이 나았다”는 말을 듣게 됩니다.</div>",
+  },
+  {
+    title: "무치악 난이도 분류 및 적응 유형",
+    category: "무치악 평가", order: 9,
+    source: "ACP Prosthodontic Diagnostic Index — McGarry et al., J Prosthodont 1999·2004 / House classification",
+    purpose: "- 치료 난이도를 **미리 층화**해 상담·시간·비용·의뢰를 결정\n- 예후 설명의 근거를 문서로 남긴다",
+    technique: "**ACP PDI(완전무치악) 판정 요소를 순서대로 확인**\n1. **하악 골 높이**(파노라마 최소 수직 높이, mm)\n2. **상악 잔존 치조제 형태**\n3. **근부착 위치**(전정 깊이·소대)\n4. **악간 관계**(Class I / II / III)\n\n**적응 유형(House 분류)** — 문진과 태도 관찰로 판단\n- 과거 의치 적응 경험, 기대 수준, 설명에 대한 반응",
+    criteria: "**ACP PDI Class I–IV** — 위 네 요소를 종합하며, **가장 불리한 항목이 등급을 결정**한다\n- 하악 골 높이 **Type A ≥21 / B 16–20 / C 11–15 / D ≤10 mm**\n\n**House 적응 유형**\n<dl><dt>Philosophical</dt><dd>현실적이고 협조적 — <b>예후 가장 양호</b></dd><dt>Exacting</dt><dd>요구가 정밀·과도. 설명과 문서화가 특히 중요</dd><dt>Indifferent</dt><dd>무관심·비협조 — 유지관리 이행이 낮다</dd><dt>Hysterical</dt><dd>정서적으로 불안정 — <b>예후 가장 불량</b>, 기대 조정이 선행</dd></dl>",
+    interpretation: "- **Class III–IV**면 통상 총의치의 한계를 **처음 상담에서** 명시하고 임플란트 오버덴처를 함께 제시\n- **해부학적 조건이 좋아도 적응 유형이 불리하면 실패한다** — 총의치 성공의 최대 변수는 환자 요인이라는 점을 반영\n- 등급과 근거를 함께 적으면 이후 불만 상황에서 설명의 근거가 된다",
+    pitfalls: "<div class=\"tip\"><b>💡 난이도는 상담을 위한 도구입니다</b>등급을 매기는 목적은 분류가 아니라, <u>무엇이 어려울지 미리 말하고 기대를 맞추는 것</u>입니다. 완성 후에 설명하면 변명이 되고, 시작 전에 설명하면 동의가 됩니다.</div>",
   },
 
   // ═══════════ 임플란트 ═══════════
