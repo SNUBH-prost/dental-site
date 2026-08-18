@@ -4220,6 +4220,8 @@ function renderSOAP() {
 
   if (adminEl) adminEl.innerHTML = isAdmin
     ? '<button class="soap-add-btn" onclick="_openSoapEdit(null)">+ SOAP 추가</button>' : '';
+  const toolsEl = document.getElementById('soap-tools');
+  if (toolsEl) toolsEl.innerHTML = _refToolsHTML('soap', _soapItems.filter(i => _isFav(i.id)).length);
 
   // 카테고리 탭
   const usedCats = SOAP_CATS.filter(c => _soapItems.some(i => i.category === c));
@@ -4230,6 +4232,7 @@ function renderSOAP() {
   }
 
   let items = _soapItems.slice();
+  if (_favOnly.soap) items = items.filter(i => _isFav(i.id));
   if (_soapCatFilter !== 'all') items = items.filter(i => i.category === _soapCatFilter);
   if (_soapSearch) items = items.filter(i =>
     (i.title || '').toLowerCase().includes(_soapSearch) ||
@@ -4258,7 +4261,7 @@ function renderSOAP() {
       html += `<div class="soap-cat-label">${_esc(it.category || '기타')}</div>`;
       lastCat = it.category;
     }
-    const open = _soapOpenId === it.id;
+    const open = _printAll() || _soapOpenId === it.id;
     const editBtn = isAdmin
       ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openSoapEdit('${it.id}')">✏️</button>` : '';
     const body = open ? `<div class="soap-body">
@@ -4273,6 +4276,7 @@ function renderSOAP() {
       <div class="soap-card-head" onclick="_soapToggle('${it.id}')">
         <span class="soap-cat-badge">${_esc(it.category || '')}</span>
         <span class="soap-card-title">${_esc(it.title || '')}</span>
+        ${_favBtn('soap', it.id)}
         ${editBtn}
         <span class="soap-chevron">${open ? '▲' : '▼'}</span>
       </div>
@@ -4386,6 +4390,8 @@ function renderExam() {
 
   if (adminEl) adminEl.innerHTML = isAdmin
     ? '<button class="soap-add-btn" onclick="_openExamEdit(null)">+ 검사 추가</button>' : '';
+  const toolsEl = document.getElementById('exam-tools');
+  if (toolsEl) toolsEl.innerHTML = _refToolsHTML('exam', _examItems.filter(i => _isFav(i.id)).length);
 
   const usedCats = EXAM_CATS.filter(c => _examItems.some(i => i.category === c));
   if (tabs) {
@@ -4395,10 +4401,11 @@ function renderExam() {
   }
 
   let items = _examItems.slice();
+  if (_favOnly.exam) items = items.filter(i => _isFav(i.id));
   if (_examCatFilter !== 'all') items = items.filter(i => i.category === _examCatFilter);
   if (_examSearch) items = items.filter(i =>
     (i.title || '').toLowerCase().includes(_examSearch) ||
-    EXAM_FIELDS.map(([k]) => i[k] || '').join(' ').toLowerCase().includes(_examSearch));
+    (EXAM_FIELDS.map(([k]) => i[k] || '').join(' ') + ' ' + (i.source || '')).toLowerCase().includes(_examSearch));
 
   items.sort((a, b) =>
     _examCatOrder(a.category) - _examCatOrder(b.category) ||
@@ -4422,16 +4429,17 @@ function renderExam() {
       html += `<div class="soap-cat-label">${_esc(it.category || '')}</div>`;
       lastCat = it.category;
     }
-    const open = _examOpenId === it.id;
+    const open = _printAll() || _examOpenId === it.id;
     const editBtn = isAdmin
       ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openExamEdit('${it.id}')">✏️</button>` : '';
     const body = open
-      ? `<div class="soap-body">${EXAM_FIELDS.map(([k, label, sub]) => _examBlock(label, sub, it[k])).join('')}</div>`
+      ? `<div class="soap-body">${EXAM_FIELDS.map(([k, label, sub]) => _examBlock(label, sub, it[k])).join('')}${_sourceHTML(it.source)}</div>`
       : '';
     html += `<div class="soap-card exam-card${open ? ' open' : ''}">
       <div class="soap-card-head" onclick="_examToggle('${it.id}')">
         <span class="soap-cat-badge">${_esc(it.category || '')}</span>
         <span class="soap-card-title">${_esc(it.title || '')}</span>
+        ${_favBtn('exam', it.id)}
         ${editBtn}
         <span class="soap-chevron">${open ? '▲' : '▼'}</span>
       </div>
@@ -4479,6 +4487,7 @@ function _openExamEdit(id) {
         ${ta('exam-f-criteria', '기준 — 정상치·판정 기준', fv('criteria'))}
         ${ta('exam-f-interpretation', '해석 — 무엇을 의미하는가', fv('interpretation'))}
         ${ta('exam-f-pitfalls', '함정 — 값을 틀리게 만드는 것', fv('pitfalls'))}
+        <label class="soap-f-label">출처 — 참고 교과서<input id="exam-f-source" class="soap-f-input" value="${_esc(fv('source'))}" placeholder="예: Newman & Carranza's Clinical Periodontology"></label>
         <div class="soap-f-btns">
           ${it ? `<button class="card-admin-btn del" onclick="_deleteExam('${id}')">🗑 삭제</button>` : ''}
           <button class="cal-cancel-btn" onclick="_closeExamEdit()">취소</button>
@@ -4506,6 +4515,7 @@ async function _saveExam(id) {
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   EXAM_FIELDS.forEach(([k]) => { data[k] = g('exam-f-' + k).trim(); });
+  data.source = g('exam-f-source').trim();
   if (!id) data.userCreated = true; // 관리자가 새로 만든 항목은 재시드 시 보존
   const docId = id || _examDocId(title);
   try {
@@ -4597,6 +4607,111 @@ async function _copyExample(el, btn) {
   btn.textContent = '복사됨';
   btn.classList.add('done');
   setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('done'); }, 1400);
+}
+
+// ── 즐겨찾기 · 인쇄 · 개정 이력 (참고자료 공통) ───────────────
+// 항목 id 는 kind 접두사(soap-/exam-/term-)가 있어 한 저장소로 충분하다.
+const FAV_KEY = 'dental-ref-favs';
+let _favs = new Set();
+try { _favs = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')); } catch (e) { /* 손상 시 무시 */ }
+let _favOnly = { soap: false, exam: false, term: false };
+
+function _isFav(id) { return _favs.has(id); }
+
+function _toggleFav(kind, id) {
+  _favs.has(id) ? _favs.delete(id) : _favs.add(id);
+  try { localStorage.setItem(FAV_KEY, JSON.stringify([..._favs])); } catch (e) { console.warn('[fav]', e); }
+  ({ soap: renderSOAP, exam: renderExam, term: renderTerm })[kind]?.();
+}
+
+function _favBtn(kind, id) {
+  const on = _isFav(id);
+  return `<button class="fav-btn${on ? ' on' : ''}" title="${on ? '즐겨찾기 해제' : '즐겨찾기'}"
+    onclick="event.stopPropagation();_toggleFav('${kind}','${id}')">${on ? '★' : '☆'}</button>`;
+}
+
+function _setFavOnly(kind, v) {
+  _favOnly[kind] = v;
+  ({ soap: renderSOAP, exam: renderExam, term: renderTerm })[kind]?.();
+}
+
+// 탭 상단 도구 막대 — 즐겨찾기 필터 · 인쇄 · 개정 이력
+function _refToolsHTML(kind, favCount) {
+  const on = _favOnly[kind];
+  return `
+    <button class="ref-tool${on ? ' active' : ''}" onclick="_setFavOnly('${kind}',${!on})">★ 즐겨찾기${favCount ? ` <span class="ref-tool-n">${favCount}</span>` : ''}</button>
+    <button class="ref-tool" onclick="_printRef('${kind}')" title="현재 보이는 목록을 인쇄">🖨 인쇄</button>
+    <button class="ref-tool" onclick="_openChangelog()" title="참고자료 개정 이력">🕘 이력</button>`;
+}
+
+// 현재 필터·검색 결과를 그대로, 모두 펼친 상태로 인쇄
+function _printRef(kind) {
+  const saved = {
+    soapOpen: _soapOpenId, examOpen: _examOpenId, termOpen: _termOpenId,
+    topics: new Set(_termOpenTopics),
+  };
+  document.body.classList.add('printing-ref', 'printing-' + kind);
+  if (kind === 'term') {
+    // 인쇄에서는 주제·항목을 모두 펼친다
+    _termItems.forEach(i => _termOpenTopics.add(i.category + '|' + (i.topic || '기타')));
+  }
+  document.body.dataset.printAll = '1';
+  ({ soap: renderSOAP, exam: renderExam, term: renderTerm })[kind]?.();
+
+  const cleanup = () => {
+    delete document.body.dataset.printAll;
+    document.body.classList.remove('printing-ref', 'printing-' + kind);
+    _soapOpenId = saved.soapOpen; _examOpenId = saved.examOpen; _termOpenId = saved.termOpen;
+    _termOpenTopics = saved.topics;
+    ({ soap: renderSOAP, exam: renderExam, term: renderTerm })[kind]?.();
+    window.removeEventListener('afterprint', cleanup);
+  };
+  window.addEventListener('afterprint', cleanup);
+  setTimeout(() => { window.print(); setTimeout(cleanup, 800); }, 120);
+}
+
+// 인쇄 모드에서는 전 항목을 펼친다
+function _printAll() { return document.body.dataset.printAll === '1'; }
+
+function _openChangelog() {
+  const list = (typeof REF_CHANGELOG !== 'undefined' ? REF_CHANGELOG : []).map(c => `
+    <div class="chg-entry">
+      <div class="chg-head"><span class="chg-date">${_esc(c.date)}</span>${_esc(c.title)}</div>
+      <ul>${c.items.map(i => `<li>${_esc(i)}</li>`).join('')}</ul>
+    </div>`).join('') || '<p style="color:var(--text-muted)">기록된 이력이 없습니다.</p>';
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="chg-overlay" class="modal-overlay open" onclick="if(event.target.id==='chg-overlay')_closeChangelog()">
+      <div class="modal soap-edit-modal">
+        <button class="modal-close" onclick="_closeChangelog()">✕</button>
+        <div class="modal-body">
+          <h3 style="margin:0 0 0.3rem">참고자료 개정 이력</h3>
+          <p class="soap-f-hint">SOAP · 임상검사 · 용어의 내용이 바뀐 기록입니다.</p>
+          ${list}
+        </div>
+      </div>
+    </div>`);
+}
+function _closeChangelog() { document.getElementById('chg-overlay')?.remove(); }
+
+// 출처 표기 — 임상검사는 항목별, 용어는 분류별
+const TERM_SOURCE = {
+  '기술 어휘': "Neville, Oral and Maxillofacial Pathology / Burket's Oral Medicine",
+  '판정 어휘': 'ADA·ACP Parameters of Care / 임상 기록 표준 관행',
+  '구강내과': "Burket's Oral Medicine / Neville / Scully, Oral and Maxillofacial Medicine",
+  '구강외과': 'Hupp·Peterson, Contemporary Oral and Maxillofacial Surgery / Fragiskos',
+  '치아·수복물': "Sturdevant's Operative Dentistry / Shillingburg / Rosenstiel",
+  '치수·치근단': "Cohen's Pathways of the Pulp / Ingle's Endodontics",
+  '치주': "Newman & Carranza's Clinical Periodontology / Lindhe / 2017 World Workshop",
+  '교정': 'Proffit, Contemporary Orthodontics',
+  '교합·악관절': 'Okeson, Management of TMD and Occlusion / Dawson, Functional Occlusion / DC/TMD',
+  '의치': "Zarb·Boucher, Prosthodontic Treatment for Edentulous Patients / McCracken's",
+  '임플란트': 'Misch, Dental Implant Prosthetics / ITI Treatment Guide / 2017 World Workshop',
+  '방사선': 'White & Pharoah, Oral Radiology',
+};
+
+function _sourceHTML(text) {
+  if (!text) return '';
+  return `<div class="ref-source"><span>📚 출처</span>${_esc(text)}</div>`;
 }
 
 // ── Firestore 공통 헬퍼 ──────────────────────────────────────
@@ -4802,6 +4917,8 @@ function renderTerm() {
 
   if (adminEl) adminEl.innerHTML = isAdmin
     ? '<button class="soap-add-btn" onclick="_openTermEdit(null)">+ 용어 추가</button>' : '';
+  const toolsEl = document.getElementById('term-tools');
+  if (toolsEl) toolsEl.innerHTML = _refToolsHTML('term', _termItems.filter(i => _isFav(i.id)).length);
 
   if (secTabs) {
     secTabs.innerHTML = TERM_SECS.map(([v, label]) =>
@@ -4821,6 +4938,7 @@ function renderTerm() {
   }
 
   let items = _termItems.slice();
+  if (_favOnly.term) items = items.filter(i => _isFav(i.id));
   if (_termCatFilter !== 'all') items = items.filter(i => i.category === _termCatFilter);
   if (_termSecFilter !== 'all') items = items.filter(i => (i.section || '').includes(_termSecFilter));
   if (_termSearch) items = items.filter(i =>
@@ -4855,7 +4973,7 @@ function renderTerm() {
   });
 
   // 검색·섹션 필터로 범위를 좁혔을 때는 자동으로 펼침 (분류 필터는 훑어보기용이라 접힌 상태 유지)
-  const searching = !!_termSearch || _termSecFilter !== 'all';
+  const searching = _printAll() || !!_termSearch || _termSecFilter !== 'all' || _favOnly.term;
   let html = '', lastCat = null;
   groups.forEach(g => {
     if (_termCatFilter === 'all' && g.category !== lastCat) {
@@ -4872,7 +4990,7 @@ function renderTerm() {
     if (open) {
       html += '<div class="term-group-body">';
       g.terms.forEach(it => {
-        const rowOpen = _termOpenId === it.id;
+        const rowOpen = _printAll() || _termOpenId === it.id;
         const secCls = (it.section || '').startsWith('A') ? 'a' : (it.section || '').startsWith('O') ? 'o' : 'oa';
         const editBtn = isAdmin
           ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openTermEdit('${it.id}')">✏️</button>` : '';
@@ -4882,6 +5000,7 @@ function renderTerm() {
             ${it.distinguish ? `<div class="term-field"><span class="term-flabel dist">감별</span><div class="markdown-body">${_termMd(it.distinguish)}</div></div>` : ''}
             ${it.example     ? `<div class="term-field"><span class="term-flabel">예문</span><div class="term-example">${_esc(it.example)}</div></div>` : ''}
             ${it.caution     ? `<div class="term-field"><span class="term-flabel warn">주의</span><div class="markdown-body">${_termMd(it.caution)}</div></div>` : ''}
+            ${_sourceHTML(TERM_SOURCE[it.category])}
           </div>` : '';
         html += `<div class="term-row${rowOpen ? ' open' : ''}">
           <div class="term-head" onclick="_termToggle('${it.id}')">
@@ -4889,6 +5008,7 @@ function renderTerm() {
             <span class="term-ko">${_esc(it.ko || '')}</span>
             <span class="term-arrow">→</span>
             <span class="term-en">${_esc(it.en || '')}</span>
+            ${_favBtn('term', it.id)}
             ${editBtn}
             <span class="soap-chevron">${rowOpen ? '▲' : '▼'}</span>
           </div>
