@@ -1,6 +1,35 @@
 // ── Firebase 초기화 ───────────────────────────────────────────
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// 오프라인이거나 CDN이 막히면 firebase 가 없다. 여기서 예외가 나면 아래의
+// 모든 최상위 선언이 초기화되지 않아 화면 전체가 죽으므로, 실패해도 앱이
+// 계속 뜨도록 안전한 더미로 대체한다. (로컬 시드만으로 참고자료는 동작)
+let db;
+let _dbReady = false;
+try {
+  if (typeof firebase === 'undefined' || !firebase.initializeApp) throw new Error('firebase SDK 미로드');
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  _dbReady = true;
+} catch (e) {
+  console.warn('[firebase] 초기화 실패 — 오프라인 모드로 동작합니다', e);
+  const offline = () => Promise.reject(new Error('offline'));
+  const stubDoc = { get: offline, set: offline, delete: offline, update: offline };
+  const stubColl = {
+    get: offline, doc: () => stubDoc,
+    orderBy() { return this; }, where() { return this; }, limit() { return this; },
+    onSnapshot() { return () => {}; },
+  };
+  db = {
+    collection: () => stubColl,
+    batch: () => ({ set() {}, delete() {}, commit: offline }),
+  };
+  // auth 도 없으면 관리자 판정 코드가 죽으므로 최소 형태를 세워 둔다
+  if (typeof window !== 'undefined' && typeof firebase === 'undefined') {
+    window.firebase = {
+      auth: () => ({ onAuthStateChanged: cb => setTimeout(() => cb(null), 0), currentUser: null, signOut() {} }),
+      firestore: Object.assign(() => db, { FieldValue: { serverTimestamp: () => null } }),
+    };
+  }
+}
 
 // ── Cloudinary URL 최적화 ─────────────────────────────────────
 function _cld(url, t) {
@@ -944,6 +973,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 인용 위첨자 툴팁
   _setupCiteTip();
+
+  // 해시로 들어온 참고자료 항목 열기 (#soap-… / #exam-… / #term-…)
+  if (/^#(soap|exam|term)-/.test(location.hash)) setTimeout(_openRefFromHash, 300);
+  window.addEventListener('hashchange', () => {
+    if (/^#(soap|exam|term)-/.test(location.hash)) _openRefFromHash();
+  });
 });
 
 // ════════════════════════════════════════════════════════════════
@@ -2599,6 +2634,7 @@ function _setupGalleryZoom() {
 
 // ── 검색 오버레이 ─────────────────────────────────────────────
 function _openSearch() {
+  _ensureRefsLoaded();
   const ov = document.getElementById('search-overlay');
   ov.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -2664,15 +2700,31 @@ function _doSearch(q) {
   }
   const results = _searchIndex.filter(c =>
     c.title.includes(q) || (c.summary||'').includes(q) || (c.tags||[]).some(t => t.includes(q))
-  ).slice(0, 20);
+  ).slice(0, 12);
   const dept = id => _deptById[id];
-  document.getElementById('search-results-list').innerHTML = results.length
-    ? results.map(c => `
+
+  // 참고자료(SOAP · 임상검사 · 용어) 통합 검색
+  const ql = q.toLowerCase();
+  const refHits = _refSearchIndex()
+    .filter(r => r.title.toLowerCase().includes(ql) || r.body.includes(ql))
+    .slice(0, 15);
+
+  const caseHTML = results.map(c => `
         <div class="search-result-item" onclick="_closeSearch();setTimeout(()=>openModal('${c.id}','${c._type}'),200)">
           <div class="search-result-title">${_esc(c.title)}</div>
           <div class="search-result-meta">${dept(c.department)?.name || ''} · ${c.date || ''}</div>
-        </div>`).join('')
-    : '<div class="search-empty">검색 결과가 없습니다.</div>';
+        </div>`).join('');
+  const refHTML = refHits.map(r => `
+        <div class="search-result-item" onclick="_openRef('${r.kind}','${r.id}')">
+          <div class="search-result-title"><span class="sr-kind sr-${r.kind}">${r.kind === 'soap' ? 'SOAP' : r.kind === 'exam' ? '검사' : '용어'}</span>${_esc(r.title)}</div>
+          <div class="search-result-meta">${_esc(r.sub)}</div>
+        </div>`).join('');
+
+  const parts = [];
+  if (caseHTML) parts.push('<div class="search-group-label">케이스 · 자료</div>' + caseHTML);
+  if (refHTML)  parts.push('<div class="search-group-label">임상 기록 참고</div>' + refHTML);
+  document.getElementById('search-results-list').innerHTML =
+    parts.length ? parts.join('') : '<div class="search-empty">검색 결과가 없습니다.</div>';
 }
 
 // ── 전체화면 갤러리 ─────────────────────────────────────────────
@@ -4211,6 +4263,7 @@ function renderSOAP() {
     const body = open ? `<div class="soap-body">
         ${_soapBlock('S', 'Subjective 주관적', it.subjective)}
         ${_soapBlock('O', 'Objective 객관적', it.objective)}
+        ${_relatedExamHTML(it.category)}
         ${_soapBlock('A', 'Assessment 평가', it.assessment)}
         ${_soapBlock('P', 'Plan 계획', it.plan)}
         ${_soapBlock('Tx', '시행 술식 (Treatment)', it.tx)}
@@ -4226,6 +4279,7 @@ function renderSOAP() {
     </div>`;
   });
   list.innerHTML = html;
+  _injectCopyButtons(list);
 }
 
 function _soapBlock(letter, label, md) {
@@ -4384,6 +4438,7 @@ function renderExam() {
     </div>`;
   });
   list.innerHTML = html;
+  _injectCopyButtons(list);
 }
 
 const _EXAM_KEY = { '목적': 'purpose', '술기': 'tech', '기준': 'crit', '해석': 'interp', '함정': 'pit' };
@@ -4477,6 +4532,153 @@ async function _deleteExam(id) {
   } catch (e) {
     _edToast('삭제 실패: ' + (e.message || e), 'error');
   }
+}
+
+// ── SOAP ↔ 임상검사 연결 ─────────────────────────────────────
+// O에 적을 값을 만드는 술기는 임상검사 탭에 있으므로, 항목에서 바로 건너갈 수 있어야 한다.
+const SOAP_RELATED_EXAM = {
+  '고정성':   ['치주 탐침 — PD · CAL · BOP', '치수 생활력 검사 (Cold · EPT)', '균열치 · 수직치근파절 검사 (Crack · VRF)',
+               'Ferrule · 잔존 치질 계측', '변연 · 내면 적합 검사', '인접 접촉 검사 (Proximal contact)', '교합 접촉 검사 (교합지 · shimstock)', '색조 채득 (Shade taking)'],
+  '국소의치': ['치주 탐침 — PD · CAL · BOP', '동요도 · 근분지부 검사 (Mobility · Furcation)',
+               '의치 적합 검사 (PIP · Disclosing wax)', '교합 접촉 검사 (교합지 · shimstock)', '수직고경 계측 (VDO · VDR · FWS)'],
+  '총의치':   ['의치 적합 검사 (PIP · Disclosing wax)', '수직고경 계측 (VDO · VDR · FWS)',
+               '중심위 유도 및 CR–MIP 편위 계측', '교합 접촉 검사 (교합지 · shimstock)'],
+  '임플란트': ['임플란트 주위 탐침 및 변연골 판독', '골유착 평가 (타진 · 동요 · ISQ)',
+               '변연 · 내면 적합 검사', '인접 접촉 검사 (Proximal contact)', '교합 접촉 검사 (교합지 · shimstock)'],
+  '임시의치': ['의치 적합 검사 (PIP · Disclosing wax)', '교합 접촉 검사 (교합지 · shimstock)'],
+  '심미':     ['색조 채득 (Shade taking)', '규격 사진 · 방사선 촬영과 판독', 'Bone sounding (골 탐침)'],
+  '기타':     ['개구량 · 하악 운동 계측', '관절음 · 관절 촉진', '저작근 촉진',
+               '중심위 유도 및 CR–MIP 편위 계측', '수직고경 계측 (VDO · VDR · FWS)', '편심 운동 검사 (Excursive movements)'],
+};
+
+function _relatedExamHTML(category) {
+  const titles = SOAP_RELATED_EXAM[category] || [];
+  if (!titles.length) return '';
+  const chips = titles.map(t => {
+    const id = _examDocId(t);
+    return `<button class="ref-chip" onclick="event.stopPropagation();_openRef('exam','${id}')">${_esc(t)}</button>`;
+  }).join('');
+  return `<div class="ref-links">
+    <span class="ref-links-label">🔬 관련 임상검사</span>
+    <div class="ref-chips">${chips}</div>
+  </div>`;
+}
+
+// ── 차팅 예문 복사 ───────────────────────────────────────────
+// 예문은 EMR에 붙여넣어 쓰는 것이 실제 용도라 한 번에 복사되어야 한다.
+function _injectCopyButtons(root) {
+  (root || document).querySelectorAll('.chart-eg, .term-example').forEach(el => {
+    if (el.querySelector('.copy-btn')) return;
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.type = 'button';
+    btn.title = '예문 복사';
+    btn.textContent = '복사';
+    btn.onclick = e => { e.stopPropagation(); _copyExample(el, btn); };
+    el.appendChild(btn);
+  });
+}
+
+async function _copyExample(el, btn) {
+  // 라벨(차팅 예시)과 버튼 텍스트를 제외한 본문만
+  const clone = el.cloneNode(true);
+  clone.querySelectorAll('.copy-btn, b').forEach(n => n.remove());
+  const text = clone.innerText.replace(/\n{3,}/g, '\n\n').trim();
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e2) { console.warn('[copy]', e2); }
+    ta.remove();
+  }
+  btn.textContent = '복사됨';
+  btn.classList.add('done');
+  setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('done'); }, 1400);
+}
+
+// ── 참고자료 딥링크 (SOAP · 임상검사 · 용어) ─────────────────
+// 세 탭은 서로를 참조하므로 항목 단위로 이동·강조할 수 있어야 한다.
+// URL 해시(#soap-… / #exam-… / #term-…)로 특정 항목을 공유할 수도 있다.
+const REF_KINDS = {
+  soap: { page: 'soap', list: 'soap-list' },
+  exam: { page: 'exam', list: 'exam-list' },
+  term: { page: 'term', list: 'term-list' },
+};
+
+// 항목을 펼친 상태로 해당 탭을 열고 스크롤·강조한다.
+async function _openRef(kind, id, opts = {}) {
+  const k = REF_KINDS[kind];
+  if (!k) return;
+  _closeSearch?.();
+  showPage(k.page);
+
+  // 데이터가 아직 없으면 로드될 때까지 기다린다
+  const items = () => kind === 'soap' ? _soapItems : kind === 'exam' ? _examItems : _termItems;
+  if (!items().length) {
+    (kind === 'soap' ? _loadSOAP : kind === 'exam' ? _loadExam : _loadTerm)();
+    for (let i = 0; i < 40 && !items().length; i++) await new Promise(r => setTimeout(r, 50));
+  }
+  const it = items().find(x => x.id === id);
+  if (!it) return;
+
+  if (kind === 'soap') { _soapCatFilter = 'all'; _soapSearch = ''; _soapOpenId = id; renderSOAP(); }
+  if (kind === 'exam') { _examCatFilter = 'all'; _examSearch = ''; _examOpenId = id; renderExam(); }
+  if (kind === 'term') {
+    _termCatFilter = 'all'; _termSecFilter = 'all'; _termSearch = '';
+    const searchEl = document.getElementById('term-search');
+    if (searchEl) searchEl.value = '';
+    _termOpenTopics.add(it.category + '|' + (it.topic || '기타'));
+    _termOpenId = id;
+    renderTerm();
+  }
+  if (!opts.noHash) history.replaceState(history.state, '', '#' + id);
+  requestAnimationFrame(() => _flashRef(k.list, id));
+}
+
+// 대상 항목으로 스크롤하고 잠시 강조
+function _flashRef(listId, id) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  const esc = (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/["\\]/g, '\\$&');
+  const el = list.querySelector(`[onclick*="${esc}"]`)?.closest('.soap-card, .term-row');
+  if (!el) return;
+  const y = el.getBoundingClientRect().top + window.scrollY - 90;
+  window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+  el.classList.add('ref-flash');
+  setTimeout(() => el.classList.remove('ref-flash'), 1600);
+}
+
+// 페이지 로드 시 해시가 참고자료 항목이면 그 항목을 연다
+function _openRefFromHash() {
+  const h = decodeURIComponent(location.hash.replace(/^#/, ''));
+  const m = h.match(/^(soap|exam|term)-/);
+  if (m) _openRef(m[1], h, { noHash: true });
+}
+
+// 통합 검색용 인덱스 — 세 참고자료를 모두 포함
+function _refSearchIndex() {
+  const idx = [];
+  const push = (kind, arr, title, sub, body) => arr.forEach(it =>
+    idx.push({ kind, id: it.id, title: title(it), sub: sub(it), body: body(it).toLowerCase() }));
+  if (typeof _soapItems !== 'undefined')
+    push('soap', _soapItems, i => i.title, i => 'SOAP · ' + (i.category || ''),
+         i => [i.title, i.subjective, i.objective, i.assessment, i.plan, i.tx].join(' '));
+  if (typeof _examItems !== 'undefined')
+    push('exam', _examItems, i => i.title, i => '임상검사 · ' + (i.category || ''),
+         i => [i.title, i.purpose, i.technique, i.criteria, i.interpretation, i.pitfalls].join(' '));
+  if (typeof _termItems !== 'undefined')
+    push('term', _termItems, i => i.ko + ' — ' + i.en, i => '용어 · ' + (i.section || '') + ' · ' + (i.topic || ''),
+         i => [i.ko, i.en, i.meaning, i.variants, i.distinguish, i.example, i.caution].join(' '));
+  return idx;
+}
+
+// 참고자료가 아직 로드되지 않았으면 조용히 불러온다 (검색 대상에 포함시키기 위해)
+function _ensureRefsLoaded() {
+  if (typeof _soapItems !== 'undefined' && !_soapItems.length) _loadSOAP();
+  if (typeof _examItems !== 'undefined' && !_examItems.length) _loadExam();
+  if (typeof _termItems !== 'undefined' && !_termItems.length) _loadTerm();
 }
 
 // ── 차팅 용어 (Charting Terminology) ─────────────────────────
@@ -4671,6 +4873,7 @@ function renderTerm() {
     html += '</div>';
   });
   list.innerHTML = html;
+  _injectCopyButtons(list);
 }
 
 function _termMd(md) {

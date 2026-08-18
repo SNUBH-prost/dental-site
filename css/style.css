@@ -3398,3 +3398,96 @@ a.cite-link .cite-sup {
 .term-flabel.dist { color: #0d9488; }
 .term-field .markdown-body ul { margin: 0.15rem 0 0; padding-left: 1.05rem; }
 .term-field .markdown-body li { margin: 0.1rem 0; }
+
+/* ── 참고자료 딥링크 · 복사 · 검색 통합 ── */
+
+/* 딥링크 도착 시 잠깐 강조 */
+@keyframes refFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(37,99,235,0.55); }
+  100% { box-shadow: 0 0 0 14px rgba(37,99,235,0); }
+}
+.ref-flash {
+  animation: refFlash 1.4s ease-out;
+  border-color: var(--primary) !important;
+}
+
+/* SOAP → 임상검사 연결 칩 */
+.ref-links {
+  margin: 0.15rem 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 9px;
+  background: rgba(14,165,233,0.06);
+  border: 1px dashed rgba(14,165,233,0.45);
+}
+[data-theme="dark"] .ref-links { background: rgba(14,165,233,0.1); }
+.ref-links-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0284c7;
+  margin-bottom: 0.4rem;
+}
+[data-theme="dark"] .ref-links-label { color: #7dd3fc; }
+.ref-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.ref-chip {
+  font-family: inherit;
+  font-size: 0.75rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.ref-chip:hover { border-color: var(--primary); color: var(--primary); }
+
+/* 예문 복사 버튼 */
+.chart-eg, .term-example { position: relative; padding-right: 3.6rem !important; }
+.copy-btn {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.chart-eg:hover .copy-btn, .term-example:hover .copy-btn, .copy-btn:focus { opacity: 1; }
+.copy-btn:hover { color: var(--primary); border-color: var(--primary); }
+.copy-btn.done { color: #16a34a; border-color: #16a34a; opacity: 1; }
+
+/* 통합 검색 결과 */
+.search-group-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+  margin: 0.9rem 0 0.35rem;
+}
+.search-group-label:first-child { margin-top: 0; }
+.sr-kind {
+  display: inline-block;
+  font-size: 0.63rem;
+  font-weight: 800;
+  padding: 0.08rem 0.32rem;
+  border-radius: 4px;
+  margin-right: 0.4rem;
+  color: #fff;
+  vertical-align: middle;
+}
+.sr-soap { background: #a855f7; }
+.sr-exam { background: #0d9488; }
+.sr-term { background: #2563eb; }
+
+/* 임상 기록 드롭다운 — 설명줄 포함 */
+#nav-ref-links a { display: block; line-height: 1.35; }
+#nav-ref-links a b { display: block; font-size: 0.88rem; }
+#nav-ref-links a span { display: block; font-size: 0.72rem; color: var(--text-muted); }
