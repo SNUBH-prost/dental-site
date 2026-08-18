@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=85">
+  <link rel="stylesheet" href="css/style.css?v=86">
   <link rel="stylesheet" href="css/editor.css?v=28">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -280,7 +280,7 @@
         <h2 class="soap-title">진료별 SOAP</h2>
         <p class="soap-sub">보철과 주요 진료의 SOAP 노트 참고 템플릿입니다.</p>
       </div>
-      <div id="soap-admin-btns"></div>
+      <div class="ref-tools"><div id="soap-tools"></div><div id="soap-admin-btns"></div></div>
     </div>
     <div class="soap-cat-tabs" id="soap-cat-tabs"></div>
     <input class="soap-search" id="soap-search" placeholder="🔍 진료명·내용 검색" oninput="_soapFilter(this.value)">
@@ -294,7 +294,7 @@
         <h2 class="soap-title">임상검사</h2>
         <p class="soap-sub">SOAP의 O(소견)를 어떻게 파악하는지 — 검사 술기·기준·해석·함정.</p>
       </div>
-      <div id="exam-admin-btns"></div>
+      <div class="ref-tools"><div id="exam-tools"></div><div id="exam-admin-btns"></div></div>
     </div>
     <div class="soap-cat-tabs" id="exam-cat-tabs"></div>
     <input class="soap-search" id="exam-search" placeholder="🔍 검사명·내용 검색" oninput="_examFilter(this.value)">
@@ -308,7 +308,7 @@
         <h2 class="soap-title">차팅 용어</h2>
         <p class="soap-sub">SOAP의 <b>O(소견)·A(진단·판정)</b>에 쓰는 어휘만 모았습니다. 한국어 표현 → 영어 차팅 표현.</p>
       </div>
-      <div id="term-admin-btns"></div>
+      <div class="ref-tools"><div id="term-tools"></div><div id="term-admin-btns"></div></div>
     </div>
     <input class="soap-search term-search" id="term-search" placeholder="🔍 한글·영어 모두 검색 (예: 탈락, 흔들, mobility)" oninput="_termFilter(this.value)">
     <div class="term-sec-tabs" id="term-sec-tabs"></div>
@@ -431,9 +431,10 @@
 <script defer src="js/firebase-config.js?v=21"></script>
 <script defer src="js/cloudinary-config.js?v=21"></script>
 <script defer src="js/soap-seed.js?v=8"></script>
-<script defer src="js/exam-seed.js?v=1"></script>
+<script defer src="js/exam-seed.js?v=2"></script>
 <script defer src="js/term-seed.js?v=6"></script>
-<script defer src="js/app.js?v=114"></script>
+<script defer src="js/changelog.js?v=1"></script>
+<script defer src="js/app.js?v=115"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {
