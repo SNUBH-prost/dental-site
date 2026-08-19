@@ -4283,7 +4283,7 @@ function renderSOAP() {
     const body = open ? `<div class="soap-body">
         ${_soapBlock('S', 'Subjective 주관적', it.subjective)}
         ${_soapBlock('O', 'Objective 객관적', it.objective)}
-        ${_relatedExamHTML(it.category)}
+        ${_relatedExamHTML(it.category, it.title)}
         ${_soapBlock('A', 'Assessment 평가', it.assessment)}
         ${_soapBlock('P', 'Plan 계획', it.plan)}
         ${_soapBlock('Tx', '시행 술식 (Treatment)', it.tx)}
@@ -4588,8 +4588,21 @@ const SOAP_RELATED_EXAM = {
                '중심위 유도 및 CR–MIP 편위 계측', '수직고경 계측 (VDO · VDR · FWS)', '편심 운동 검사 (Excursive movements)'],
 };
 
-function _relatedExamHTML(category) {
-  const titles = SOAP_RELATED_EXAM[category] || [];
+// 항목별로 더 정확한 연결이 필요한 경우의 예외표 (분류 기본값보다 우선한다)
+const SOAP_RELATED_EXAM_BY_TITLE = {
+  '기타 7-1 · 초진 상담 및 전신 위험도 평가': [
+    '활력징후 측정 및 ASA 판정', '항응고·항혈소판제 복용 평가',
+    '골흡수억제제 복용력 및 MRONJ 위험 평가', '당뇨 조절 상태 평가 (HbA1c)',
+    '전신질환의 구강 발현 스크리닝'],
+  '기타 7-6 · 전신질환·복약 환자의 침습 처치 전 평가': [
+    '활력징후 측정 및 ASA 판정', '항응고·항혈소판제 복용 평가',
+    '골흡수억제제 복용력 및 MRONJ 위험 평가',
+    '감염성 심내막염 예방적 항생제 적응증 확인', '당뇨 조절 상태 평가 (HbA1c)',
+    '두경부 방사선치료 병력 및 ORN 위험 평가', '전신질환의 구강 발현 스크리닝'],
+};
+
+function _relatedExamHTML(category, title) {
+  const titles = SOAP_RELATED_EXAM_BY_TITLE[title] || SOAP_RELATED_EXAM[category] || [];
   if (!titles.length) return '';
   const chips = titles.map(t => {
     const id = _examDocId(t);
