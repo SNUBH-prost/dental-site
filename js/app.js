@@ -260,6 +260,7 @@ function _renderAll() {
   if (_examItems.length) renderExam();
   if (_termItems.length) renderTerm();
   if (_labItems.length) renderLab();
+  if (_tipItems.length) renderTip();
 }
 
 function _createdAtMs(item) {
@@ -354,6 +355,7 @@ function showPage(pageId) {
   if (pageId === 'exam') { if (!_examItems.length) _loadExam(); else renderExam(); }
   if (pageId === 'term') { if (!_termItems.length) _loadTerm(); else renderTerm(); }
   if (pageId === 'lab') { if (!_labItems.length) _loadLab(); else renderLab(); }
+  if (pageId === 'tip') { if (!_tipItems.length) _loadTip(); else renderTip(); }
   if (pageId === 'stats') renderStats();
   if (!_isPopState) {
     history.pushState({ page: pageId }, '');
@@ -989,9 +991,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   _setupCiteTip();
 
   // 해시로 들어온 참고자료 항목 열기 (#soap-… / #exam-… / #term-… / #lab-…)
-  if (/^#(soap|exam|term|lab)-/.test(location.hash)) setTimeout(_openRefFromHash, 300);
+  if (/^#(soap|exam|term|lab|tip)-/.test(location.hash)) setTimeout(_openRefFromHash, 300);
   window.addEventListener('hashchange', () => {
-    if (/^#(soap|exam|term|lab)-/.test(location.hash)) _openRefFromHash();
+    if (/^#(soap|exam|term|lab|tip)-/.test(location.hash)) _openRefFromHash();
   });
 });
 
@@ -2730,7 +2732,7 @@ function _doSearch(q) {
         </div>`).join('');
   const refHTML = refHits.map(r => `
         <div class="search-result-item" onclick="_openRef('${r.kind}','${r.id}')">
-          <div class="search-result-title"><span class="sr-kind sr-${r.kind}">${r.kind === 'soap' ? 'SOAP' : r.kind === 'exam' ? '검사' : r.kind === 'lab' ? '기공' : '용어'}</span>${_esc(r.title)}</div>
+          <div class="search-result-title"><span class="sr-kind sr-${r.kind}">${r.kind === 'soap' ? 'SOAP' : r.kind === 'exam' ? '검사' : r.kind === 'lab' ? '기공' : r.kind === 'tip' ? '팁' : '용어'}</span>${_esc(r.title)}</div>
           <div class="search-result-meta">${_esc(r.sub)}</div>
         </div>`).join('');
 
@@ -5007,14 +5009,14 @@ async function _copyExample(el, btn) {
 const FAV_KEY = 'dental-ref-favs';
 let _favs = new Set();
 try { _favs = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')); } catch (e) { /* 손상 시 무시 */ }
-let _favOnly = { soap: false, exam: false, term: false, lab: false };
+let _favOnly = { soap: false, exam: false, term: false, lab: false, tip: false };
 
 function _isFav(id) { return _favs.has(id); }
 
 function _toggleFav(kind, id) {
   _favs.has(id) ? _favs.delete(id) : _favs.add(id);
   try { localStorage.setItem(FAV_KEY, JSON.stringify([..._favs])); } catch (e) { console.warn('[fav]', e); }
-  ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab })[kind]?.();
+  ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab, tip: renderTip })[kind]?.();
 }
 
 function _favBtn(kind, id) {
@@ -5025,7 +5027,7 @@ function _favBtn(kind, id) {
 
 function _setFavOnly(kind, v) {
   _favOnly[kind] = v;
-  ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab })[kind]?.();
+  ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab, tip: renderTip })[kind]?.();
 }
 
 // 탭 상단 도구 막대 — 즐겨찾기 필터 · 인쇄 · 개정 이력
@@ -5041,7 +5043,7 @@ function _refToolsHTML(kind, favCount) {
 // 현재 필터·검색 결과를 그대로, 모두 펼친 상태로 인쇄
 function _printRef(kind) {
   const saved = {
-    soapOpen: _soapOpenId, examOpen: _examOpenId, termOpen: _termOpenId, labOpen: _labOpenId,
+    soapOpen: _soapOpenId, examOpen: _examOpenId, termOpen: _termOpenId, labOpen: _labOpenId, tipOpen: _tipOpenId,
     topics: new Set(_termOpenTopics),
   };
   document.body.classList.add('printing-ref', 'printing-' + kind);
@@ -5050,15 +5052,15 @@ function _printRef(kind) {
     _termItems.forEach(i => _termOpenTopics.add(i.category + '|' + (i.topic || '기타')));
   }
   document.body.dataset.printAll = '1';
-  ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab })[kind]?.();
+  ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab, tip: renderTip })[kind]?.();
 
   const cleanup = () => {
     delete document.body.dataset.printAll;
     document.body.classList.remove('printing-ref', 'printing-' + kind);
     _soapOpenId = saved.soapOpen; _examOpenId = saved.examOpen; _termOpenId = saved.termOpen;
-    _labOpenId = saved.labOpen;
+    _labOpenId = saved.labOpen; _tipOpenId = saved.tipOpen;
     _termOpenTopics = saved.topics;
-    ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab })[kind]?.();
+    ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab, tip: renderTip })[kind]?.();
     window.removeEventListener('afterprint', cleanup);
   };
   window.addEventListener('afterprint', cleanup);
@@ -5133,6 +5135,247 @@ function _fbErrMsg(e, collection) {
     return '네트워크에 연결되지 않아 저장하지 못했습니다.';
   }
   return '실패: ' + (e && e.message ? e.message : e);
+}
+
+// ── 임상 팁 (Clinical Tips) ──────────────────────────────────
+// "무엇이 표준인가"가 아니라 "그래서 나는 어떻게 정했는가"를 남기는 탭.
+// 로컬 시드를 기본값으로, Firestore(tipTemplates)를 그 위에 덮어써 편집을 반영.
+let _tipItems = [];
+let _tipCatFilter = 'all';
+let _tipSearch = '';
+let _tipOpenId = null;
+let _tipLoadError = '';
+
+const TIP_FIELDS = [
+  ['situation', '상황', 'Context 언제 이 고민이 생기는가'],
+  ['crossroad', '갈림길', 'Crossroad 무엇과 무엇 사이에서 갈리는가'],
+  ['judgment',  '판단', 'Judgment 나는 어떻게 정하는가'],
+  ['basis',     '근거', 'Basis 그 판단을 받치는 것'],
+  ['memo',      '메모', 'Memo 덧붙임 · 남은 의문'],
+];
+
+function _tipDocId(title) {
+  return 'tip-' + title.replace(/\s+/g, '-').replace(/[^\w가-힣-]/g, '').slice(0, 60);
+}
+
+async function _loadTip() {
+  if (typeof TIP_SEED === 'undefined' || !Array.isArray(TIP_SEED)) {
+    console.error('[tip] TIP_SEED 로드 실패 — js/tip-seed.js 확인 필요');
+    _tipItems = [];
+    _tipLoadError = '임상 팁 자료 파일을 불러오지 못했습니다.';
+    renderTip();
+    return;
+  }
+  _tipLoadError = '';
+  const base = TIP_SEED.map(t => ({ id: _tipDocId(t.title), ...t, seed: true }));
+  const newIds = new Set(base.map(b => b.id));
+  try {
+    const [snap, metaSnap] = await Promise.all([
+      db.collection('tipTemplates').get(),
+      db.collection('appMeta').doc('tipSeed').get().catch(() => null)
+    ]);
+    const ver = (metaSnap && metaSnap.exists) ? (metaSnap.data().version || 0) : 0;
+
+    if (isAdmin && (snap.empty || ver < TIP_SEED_VERSION)) {
+      try { await _seedTip(snap); } catch (e) { console.warn('[tip reseed]', e); }
+      const s2 = await db.collection('tipTemplates').get().catch(() => null);
+      _tipItems = s2 && !s2.empty ? s2.docs.map(d => ({ id: d.id, ...d.data() })) : base;
+    } else if (!snap.empty) {
+      const byId = {};
+      base.forEach(it => { byId[it.id] = it; });
+      snap.docs.forEach(d => { byId[d.id] = { id: d.id, ...d.data() }; });
+      // 팁은 사용자가 만든 항목이 주인공이므로 시드에 없는 문서도 남긴다
+      _tipItems = Object.values(byId);
+    } else {
+      _tipItems = base;
+    }
+  } catch (e) {
+    console.warn('[tip load]', e);
+    _tipItems = base;
+  }
+  if (!_tipItems.length) _tipItems = base;
+  renderTip();
+}
+
+async function _seedTip(existingSnap) {
+  const ops = [];
+  TIP_SEED.forEach(t => ops.push({ type: 'set', ref: db.collection('tipTemplates').doc(_tipDocId(t.title)), data: { ...t, seed: true } }));
+  await _commitOps(ops);
+  try { await db.collection('appMeta').doc('tipSeed').set({ version: TIP_SEED_VERSION }); }
+  catch (e) { console.warn('[tip seed meta]', e); }
+}
+
+function _tipCatOrder(cat) {
+  const i = TIP_CATS.indexOf(cat);
+  return i < 0 ? 99 : i;
+}
+
+function _setTipCat(cat) { _tipCatFilter = cat; renderTip(); _scrollTop(); }
+function _tipFilter(v) { _tipSearch = (v || '').trim().toLowerCase(); renderTip(); }
+function _tipToggle(id) {
+  const opening = _tipOpenId !== id;
+  _tipOpenId = opening ? id : null;
+  _renderKeepingAnchor('tip-list', id, renderTip, opening);
+}
+
+function renderTip() {
+  const list = document.getElementById('tip-list');
+  const tabs = document.getElementById('tip-cat-tabs');
+  const adminEl = document.getElementById('tip-admin-btns');
+  if (!list) return;
+
+  if (adminEl) adminEl.innerHTML = isAdmin
+    ? '<button class="soap-add-btn" onclick="_openTipEdit(null)">+ 팁 추가</button>' : '';
+  const toolsEl = document.getElementById('tip-tools');
+  if (toolsEl) toolsEl.innerHTML = _refToolsHTML('tip', _tipItems.filter(i => _isFav(i.id)).length);
+
+  const usedCats = TIP_CATS.filter(c => _tipItems.some(i => i.category === c));
+  if (tabs) {
+    tabs.innerHTML = ['all'].concat(usedCats).map(c =>
+      `<button class="soap-cat-tab${_tipCatFilter === c ? ' active' : ''}" onclick="_setTipCat('${c}')">${c === 'all' ? '전체' : c}</button>`
+    ).join('');
+  }
+
+  let items = _tipItems.slice();
+  if (_favOnly.tip) items = items.filter(i => _isFav(i.id));
+  if (_tipCatFilter !== 'all') items = items.filter(i => i.category === _tipCatFilter);
+  if (_tipSearch) items = items.filter(i =>
+    (i.title || '').toLowerCase().includes(_tipSearch) ||
+    (TIP_FIELDS.map(([k]) => i[k] || '').join(' ') + ' ' + (i.source || '')).toLowerCase().includes(_tipSearch));
+
+  items.sort((a, b) =>
+    _tipCatOrder(a.category) - _tipCatOrder(b.category) ||
+    (a.order || 0) - (b.order || 0) ||
+    (a.title || '').localeCompare(b.title || ''));
+
+  if (!items.length) {
+    list.innerHTML = _tipLoadError
+      ? `<div class="empty" style="padding:2.5rem 1.5rem;text-align:center;color:var(--text-muted);line-height:1.8">
+           ${_esc(_tipLoadError)}<br>네트워크 또는 캐시 문제일 수 있습니다.
+         </div>`
+      : `<div class="empty" style="padding:2.5rem;text-align:center;color:var(--text-muted)">
+           아직 적어 둔 팁이 없습니다.${isAdmin ? ' 오른쪽 위 <b>+ 팁 추가</b>로 시작하세요.' : ''}
+         </div>`;
+    return;
+  }
+
+  let html = '', lastCat = null;
+  items.forEach(it => {
+    if (it.category !== lastCat && _tipCatFilter === 'all') {
+      html += `<div class="soap-cat-label">${_esc(it.category || '')}</div>`;
+      lastCat = it.category;
+    }
+    const open = _printAll() || _tipOpenId === it.id;
+    const editBtn = isAdmin
+      ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openTipEdit('${it.id}')">✏️</button>` : '';
+    const body = open
+      ? `<div class="soap-body">${TIP_FIELDS.map(([k, label, sub]) => _tipBlock(label, sub, it[k])).join('')}${_sourceHTML(it.source)}</div>`
+      : '';
+    html += `<div class="soap-card tip-card${open ? ' open' : ''}">
+      <div class="soap-card-head" data-ref-id="${it.id}" onclick="_tipToggle('${it.id}')">
+        <span class="soap-cat-badge">${_esc(it.category || '')}</span>
+        <span class="soap-card-title">${_esc(it.title || '')}</span>
+        ${_favBtn('tip', it.id)}
+        ${editBtn}
+        <span class="soap-chevron">${open ? '▲' : '▼'}</span>
+      </div>
+      ${body}
+    </div>`;
+  });
+  list.innerHTML = html;
+  _injectCopyButtons(list);
+}
+
+const _TIP_KEY = { '상황': 'ctx', '갈림길': 'cross', '판단': 'judge', '근거': 'basis', '메모': 'memo' };
+
+function _tipBlock(label, sub, md) {
+  if (!md || !String(md).trim()) return '';
+  let body;
+  try { body = marked.parse(String(md)); }
+  catch (e) { console.warn('[tip] 마크다운 파싱 실패', label, e); body = _esc(String(md)).replace(/\n/g, '<br>'); }
+  const key = _TIP_KEY[label] || 'ctx';
+  return `<div class="soap-sec tip-sec-${key}">
+    <div class="soap-sec-label"><span class="soap-sec-letter tip-letter">${label}</span>${sub}</div>
+    <div class="soap-sec-body markdown-body">${body}</div>
+  </div>`;
+}
+
+function _openTipEdit(id) {
+  if (!isAdmin) return;
+  const it = id ? _tipItems.find(x => x.id === id) : null;
+  const fv = (k, d = '') => it ? (it[k] != null ? it[k] : d) : d;
+  const catOpts = TIP_CATS.map(c => `<option value="${c}"${fv('category', TIP_CATS[0]) === c ? ' selected' : ''}>${c}</option>`).join('');
+  const ta = (id2, label, val) =>
+    `<label class="soap-f-label">${label}<textarea id="${id2}" class="soap-f-ta">${_esc(val)}</textarea></label>`;
+  document.body.insertAdjacentHTML('beforeend', `<div id="tip-edit-overlay" class="modal-overlay open" onclick="if(event.target.id==='tip-edit-overlay')_closeTipEdit()">
+    <div class="modal soap-edit-modal">
+      <button class="modal-close" onclick="_closeTipEdit()">✕</button>
+      <div class="modal-body">
+        <h3 style="margin:0 0 1rem">${it ? '팁 편집' : '새 팁'}</h3>
+        <div class="soap-f-row">
+          <label class="soap-f-label" style="flex:2">제목<input id="tip-f-title" class="soap-f-input" value="${_esc(fv('title'))}" placeholder="예: RPD 설계 — 무엇부터 정하는가"></label>
+          <label class="soap-f-label" style="flex:1">분류<select id="tip-f-cat" class="soap-f-input">${catOpts}</select></label>
+          <label class="soap-f-label" style="width:5rem">순서<input id="tip-f-order" type="number" class="soap-f-input" value="${fv('order', 0)}"></label>
+        </div>
+        <p class="soap-f-hint">칸을 다 채울 필요는 없습니다. 비운 칸은 표시되지 않습니다. 마크다운 지원 (- 목록, **굵게**, tip/warning/danger 박스, details 접기 등).</p>
+        ${ta('tip-f-situation', '상황 — 언제 이 고민이 생기는가', fv('situation'))}
+        ${ta('tip-f-crossroad', '갈림길 — 무엇과 무엇 사이에서 갈리는가', fv('crossroad'))}
+        ${ta('tip-f-judgment', '판단 — 나는 어떻게 정하는가', fv('judgment'))}
+        ${ta('tip-f-basis', '근거 — 그 판단을 받치는 것', fv('basis'))}
+        ${ta('tip-f-memo', '메모 — 덧붙임 · 남은 의문', fv('memo'))}
+        <label class="soap-f-label">출처 — 참고 자료(선택)<input id="tip-f-source" class="soap-f-input" value="${_esc(fv('source'))}"></label>
+        <div class="soap-f-btns">
+          ${it ? `<button class="card-admin-btn del" onclick="_deleteTip('${id}')">🗑 삭제</button>` : ''}
+          <button class="cal-cancel-btn" onclick="_closeTipEdit()">취소</button>
+          <button class="cal-save-btn" onclick="_saveTip('${id || ''}')">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>`);
+}
+
+function _closeTipEdit() { document.getElementById('tip-edit-overlay')?.remove(); }
+
+async function _saveTip(id) {
+  if (!isAdmin) return;
+  const g = s => document.getElementById(s)?.value ?? '';
+  const title = g('tip-f-title').trim();
+  if (!title) { _edToast('제목을 입력하세요.', 'error'); return; }
+  const data = {
+    title,
+    category: g('tip-f-cat') || TIP_CATS[0],
+    order: Number(g('tip-f-order')) || 0,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  TIP_FIELDS.forEach(([k]) => { data[k] = g('tip-f-' + k).trim(); });
+  data.source = g('tip-f-source').trim();
+  if (!id) data.userCreated = true;
+  const docId = id || _tipDocId(title);
+  try {
+    await db.collection('tipTemplates').doc(docId).set(data, { merge: true });
+    const idx = _tipItems.findIndex(x => x.id === docId);
+    if (idx >= 0) _tipItems[idx] = { ...(_tipItems[idx]), id: docId, ...data };
+    else _tipItems.push({ id: docId, ...data });
+    _closeTipEdit();
+    renderTip();
+    _edToast('저장되었습니다.');
+  } catch (e) {
+    _edToast(_fbErrMsg(e, 'tipTemplates'), 'error');
+  }
+}
+
+async function _deleteTip(id) {
+  if (!confirm('이 팁을 삭제하시겠습니까?')) return;
+  try {
+    await db.collection('tipTemplates').doc(id).delete();
+    _tipItems = _tipItems.filter(x => x.id !== id);
+    if (_tipOpenId === id) _tipOpenId = null;
+    _closeTipEdit();
+    renderTip();
+    _edToast('삭제되었습니다.');
+  } catch (e) {
+    _edToast(_fbErrMsg(e, 'tipTemplates'), 'error');
+  }
 }
 
 // ── 기공지시서 빌더 ──────────────────────────────────────────
@@ -5388,6 +5631,7 @@ const REF_KINDS = {
   exam: { page: 'exam', list: 'exam-list' },
   term: { page: 'term', list: 'term-list' },
   lab:  { page: 'lab',  list: 'lab-list' },
+  tip:  { page: 'tip',  list: 'tip-list' },
 };
 
 // 항목을 펼친 상태로 해당 탭을 열고 스크롤·강조한다.
@@ -5398,9 +5642,9 @@ async function _openRef(kind, id, opts = {}) {
   showPage(k.page);
 
   // 데이터가 아직 없으면 로드될 때까지 기다린다
-  const items = () => kind === 'soap' ? _soapItems : kind === 'exam' ? _examItems : kind === 'lab' ? _labItems : _termItems;
+  const items = () => kind === 'soap' ? _soapItems : kind === 'exam' ? _examItems : kind === 'lab' ? _labItems : kind === 'tip' ? _tipItems : _termItems;
   if (!items().length) {
-    (kind === 'soap' ? _loadSOAP : kind === 'exam' ? _loadExam : kind === 'lab' ? _loadLab : _loadTerm)();
+    (kind === 'soap' ? _loadSOAP : kind === 'exam' ? _loadExam : kind === 'lab' ? _loadLab : kind === 'tip' ? _loadTip : _loadTerm)();
     for (let i = 0; i < 40 && !items().length; i++) await new Promise(r => setTimeout(r, 50));
   }
   const it = items().find(x => x.id === id);
@@ -5409,6 +5653,7 @@ async function _openRef(kind, id, opts = {}) {
   if (kind === 'soap') { _soapCatFilter = 'all'; _soapSearch = ''; _soapOpenId = id; renderSOAP(); }
   if (kind === 'exam') { _examCatFilter = 'all'; _examSearch = ''; _examOpenId = id; renderExam(); }
   if (kind === 'lab')  { _labCatFilter = 'all'; _labSearch = ''; _labOpenId = id; renderLab(); }
+  if (kind === 'tip')  { _tipCatFilter = 'all'; _tipSearch = ''; _tipOpenId = id; renderTip(); }
   if (kind === 'term') {
     _termCatFilter = 'all'; _termSecFilter = 'all'; _termSearch = '';
     const searchEl = document.getElementById('term-search');
@@ -5436,7 +5681,7 @@ function _flashRef(listId, id) {
 // 페이지 로드 시 해시가 참고자료 항목이면 그 항목을 연다
 function _openRefFromHash() {
   const h = decodeURIComponent(location.hash.replace(/^#/, ''));
-  const m = h.match(/^(soap|exam|term|lab)-/);
+  const m = h.match(/^(soap|exam|term|lab|tip)-/);
   if (m) _openRef(m[1], h, { noHash: true });
 }
 
@@ -5451,6 +5696,9 @@ function _refSearchIndex() {
   if (typeof _examItems !== 'undefined')
     push('exam', _examItems, i => i.title, i => '임상검사 · ' + (i.category || ''),
          i => [i.title, i.purpose, i.technique, i.criteria, i.interpretation, i.pitfalls].join(' '));
+  if (typeof _tipItems !== 'undefined')
+    push('tip', _tipItems, i => i.title, i => '임상 팁 · ' + (i.category || ''),
+         i => [i.title, i.situation, i.crossroad, i.judgment, i.basis, i.memo].join(' '));
   if (typeof _labItems !== 'undefined')
     push('lab', _labItems, i => i.title, i => '기공지시서 · ' + (i.category || ''),
          i => [i.title, i.purpose, i.decide, i.required, i.enclosure, i.pitfalls, i.example].join(' '));
@@ -5466,6 +5714,7 @@ function _ensureRefsLoaded() {
   if (typeof _examItems !== 'undefined' && !_examItems.length) _loadExam();
   if (typeof _termItems !== 'undefined' && !_termItems.length) _loadTerm();
   if (typeof _labItems !== 'undefined' && !_labItems.length) _loadLab();
+  if (typeof _tipItems !== 'undefined' && !_tipItems.length) _loadTip();
 }
 
 // ── 차팅 용어 (Charting Terminology) ─────────────────────────

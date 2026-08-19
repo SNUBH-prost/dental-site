@@ -50,8 +50,9 @@ service cloud.firestore {
     match /examTemplates/{doc} { allow read: if true; allow write: if isAdmin(); }
     match /termTemplates/{doc} { allow read: if true; allow write: if isAdmin(); }
     match /labTemplates/{doc}  { allow read: if true; allow write: if isAdmin(); }
+    match /tipTemplates/{doc}  { allow read: if true; allow write: if isAdmin(); }
 
-    // 시드 버전 마커 (soapSeed / examSeed / termSeed / labSeed)
+    // 시드 버전 마커 (soapSeed / examSeed / termSeed / labSeed / tipSeed)
     match /appMeta/{doc}       { allow read: if true; allow write: if isAdmin(); }
   }
 }
