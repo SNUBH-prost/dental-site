@@ -49,8 +49,9 @@ service cloud.firestore {
     // 없으면 조회는 되지만(로컬 시드로 표시) 편집 저장 시 permission-denied 가 납니다.
     match /examTemplates/{doc} { allow read: if true; allow write: if isAdmin(); }
     match /termTemplates/{doc} { allow read: if true; allow write: if isAdmin(); }
+    match /labTemplates/{doc}  { allow read: if true; allow write: if isAdmin(); }
 
-    // 시드 버전 마커 (soapSeed / examSeed / termSeed)
+    // 시드 버전 마커 (soapSeed / examSeed / termSeed / labSeed)
     match /appMeta/{doc}       { allow read: if true; allow write: if isAdmin(); }
   }
 }
