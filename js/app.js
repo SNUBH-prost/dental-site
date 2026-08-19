@@ -259,6 +259,7 @@ function _renderAll() {
   if (_soapItems.length) renderSOAP();
   if (_examItems.length) renderExam();
   if (_termItems.length) renderTerm();
+  if (_labItems.length) renderLab();
 }
 
 function _createdAtMs(item) {
@@ -349,6 +350,7 @@ function showPage(pageId) {
   if (pageId === 'soap') { if (!_soapItems.length) _loadSOAP(); else renderSOAP(); }
   if (pageId === 'exam') { if (!_examItems.length) _loadExam(); else renderExam(); }
   if (pageId === 'term') { if (!_termItems.length) _loadTerm(); else renderTerm(); }
+  if (pageId === 'lab') { if (!_labItems.length) _loadLab(); else renderLab(); }
   if (pageId === 'stats') renderStats();
   if (!_isPopState) {
     history.pushState({ page: pageId }, '');
@@ -860,7 +862,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 초기 히스토리 상태 설정
   history.replaceState({ page: 'home' }, '');
 
-  await loadData();
+  // 데이터 로드가 실패해도(오프라인·권한) 이 뒤의 초기화 — 특히 해시 딥링크와
+  // 이벤트 핸들러 등록 — 는 계속되어야 한다. 실패를 여기서 삼킨다.
+  try { await loadData(); }
+  catch (e) { console.warn('[loadData] 실패 — 로컬 시드로 계속합니다', e); }
 
   const _h = location.hash.slice(1);
   if (_h) { const _m = _h.match(/^(case|content)-(.+)$/); if (_m) openModal(_m[2], _m[1]); }
@@ -962,22 +967,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.addEventListener('paste', _edGlobalPasteHandler);
 
-  firebase.auth().onAuthStateChanged(user => {
-    const nowAdmin = !!user;
-    _updateAdminBadge(user);
-    if (isAdmin !== nowAdmin) {
-      isAdmin = nowAdmin;
-      _renderAll();
-    }
-  });
+  // SDK 가 없으면(오프라인·CDN 차단) 여기서 예외가 나 뒤의 초기화가 통째로
+  // 멈춘다 — 해시 딥링크까지 죽으므로 감싼다. 로그인만 못 할 뿐 조회는 된다.
+  try {
+    firebase.auth().onAuthStateChanged(user => {
+      const nowAdmin = !!user;
+      _updateAdminBadge(user);
+      if (isAdmin !== nowAdmin) {
+        isAdmin = nowAdmin;
+        _renderAll();
+      }
+    });
+  } catch (e) {
+    console.warn('[auth] 초기화 실패 — 로그인 없이 조회 전용으로 동작합니다', e);
+  }
 
   // 인용 위첨자 툴팁
   _setupCiteTip();
 
-  // 해시로 들어온 참고자료 항목 열기 (#soap-… / #exam-… / #term-…)
-  if (/^#(soap|exam|term)-/.test(location.hash)) setTimeout(_openRefFromHash, 300);
+  // 해시로 들어온 참고자료 항목 열기 (#soap-… / #exam-… / #term-… / #lab-…)
+  if (/^#(soap|exam|term|lab)-/.test(location.hash)) setTimeout(_openRefFromHash, 300);
   window.addEventListener('hashchange', () => {
-    if (/^#(soap|exam|term)-/.test(location.hash)) _openRefFromHash();
+    if (/^#(soap|exam|term|lab)-/.test(location.hash)) _openRefFromHash();
   });
 });
 
@@ -2703,7 +2714,7 @@ function _doSearch(q) {
   ).slice(0, 12);
   const dept = id => _deptById[id];
 
-  // 참고자료(SOAP · 임상검사 · 용어) 통합 검색
+  // 참고자료(SOAP · 임상검사 · 용어 · 기공지시서) 통합 검색
   const ql = q.toLowerCase();
   const refHits = _refSearchIndex()
     .filter(r => r.title.toLowerCase().includes(ql) || r.body.includes(ql))
@@ -2716,7 +2727,7 @@ function _doSearch(q) {
         </div>`).join('');
   const refHTML = refHits.map(r => `
         <div class="search-result-item" onclick="_openRef('${r.kind}','${r.id}')">
-          <div class="search-result-title"><span class="sr-kind sr-${r.kind}">${r.kind === 'soap' ? 'SOAP' : r.kind === 'exam' ? '검사' : '용어'}</span>${_esc(r.title)}</div>
+          <div class="search-result-title"><span class="sr-kind sr-${r.kind}">${r.kind === 'soap' ? 'SOAP' : r.kind === 'exam' ? '검사' : r.kind === 'lab' ? '기공' : '용어'}</span>${_esc(r.title)}</div>
           <div class="search-result-meta">${_esc(r.sub)}</div>
         </div>`).join('');
 
@@ -4580,10 +4591,268 @@ function _relatedExamHTML(category) {
   </div>`;
 }
 
+// ── 기공지시서 (Lab prescription) ────────────────────────────
+// "무엇을 결정해서 어떻게 적는가" — 기공소에 설계 의도를 전달하는 법.
+// 로컬 시드를 기본값으로, Firestore(labTemplates)를 그 위에 덮어써 관리자 편집을 반영.
+let _labItems = [];
+let _labCatFilter = 'all';
+let _labSearch = '';
+let _labOpenId = null;
+let _labLoadError = '';
+
+const LAB_FIELDS = [
+  ['purpose',   '목적', 'Purpose 이 지시서가 결정하는 것'],
+  ['decide',    '결정', 'Decision 무엇을 고르고 왜 그렇게 적는가'],
+  ['required',  '필수', 'Required 빠지면 제작이 멈추는 항목'],
+  ['enclosure', '동봉', 'Enclosure 함께 보내는 자료'],
+  ['pitfalls',  '함정', 'Pitfalls 자주 나는 사고와 원인'],
+];
+
+function _labDocId(title) {
+  return 'lab-' + title.replace(/\s+/g, '-').replace(/[^\w가-힣-]/g, '').slice(0, 60);
+}
+
+async function _loadLab() {
+  if (typeof LAB_SEED === 'undefined' || !Array.isArray(LAB_SEED) || !LAB_SEED.length) {
+    console.error('[lab] LAB_SEED 로드 실패 — js/lab-seed.js 확인 필요');
+    _labItems = [];
+    _labLoadError = '기공지시서 자료 파일을 불러오지 못했습니다.';
+    renderLab();
+    return;
+  }
+  _labLoadError = '';
+  const base = LAB_SEED.map(t => ({ id: _labDocId(t.title), ...t, seed: true }));
+  const newIds = new Set(base.map(b => b.id));
+  try {
+    const [snap, metaSnap] = await Promise.all([
+      db.collection('labTemplates').get(),
+      db.collection('appMeta').doc('labSeed').get().catch(() => null)
+    ]);
+    const ver = (metaSnap && metaSnap.exists) ? (metaSnap.data().version || 0) : 0;
+
+    if (isAdmin && (snap.empty || ver < LAB_SEED_VERSION)) {
+      try { await _seedLab(snap); } catch (e) { console.warn('[lab reseed]', e); }
+      const s2 = await db.collection('labTemplates').get().catch(() => null);
+      _labItems = s2 && !s2.empty ? s2.docs.map(d => ({ id: d.id, ...d.data() })) : base;
+    } else if (!snap.empty) {
+      const byId = {};
+      base.forEach(it => { byId[it.id] = it; });
+      snap.docs.forEach(d => { byId[d.id] = { id: d.id, ...d.data() }; });
+      _labItems = Object.values(byId).filter(it => it.userCreated || newIds.has(it.id));
+    } else {
+      _labItems = base;
+    }
+  } catch (e) {
+    console.warn('[lab load]', e);
+    _labItems = base;
+  }
+  if (!_labItems.length) _labItems = base;
+  renderLab();
+}
+
+// 시드 항목을 최신 LAB_SEED로 교체. 관리자가 만든 항목(userCreated)은 보존.
+async function _seedLab(existingSnap) {
+  const ops = [];
+  const newIds = new Set(LAB_SEED.map(t => _labDocId(t.title)));
+  if (existingSnap) {
+    existingSnap.forEach(d => {
+      const data = d.data() || {};
+      if (!data.userCreated && !newIds.has(d.id)) ops.push({ type: 'del', ref: d.ref });
+    });
+  }
+  LAB_SEED.forEach(t => ops.push({ type: 'set', ref: db.collection('labTemplates').doc(_labDocId(t.title)), data: { ...t, seed: true } }));
+  await _commitOps(ops);
+  try { await db.collection('appMeta').doc('labSeed').set({ version: LAB_SEED_VERSION }); }
+  catch (e) { console.warn('[lab seed meta]', e); }
+}
+
+function _labCatOrder(cat) {
+  const i = LAB_CATS.indexOf(cat);
+  return i < 0 ? 99 : i;
+}
+
+function _setLabCat(cat) { _labCatFilter = cat; renderLab(); }
+function _labFilter(v) { _labSearch = (v || '').trim().toLowerCase(); renderLab(); }
+function _labToggle(id) { _labOpenId = _labOpenId === id ? null : id; renderLab(); }
+
+function renderLab() {
+  const list = document.getElementById('lab-list');
+  const tabs = document.getElementById('lab-cat-tabs');
+  const adminEl = document.getElementById('lab-admin-btns');
+  if (!list) return;
+
+  if (adminEl) adminEl.innerHTML = isAdmin
+    ? '<button class="soap-add-btn" onclick="_openLabEdit(null)">+ 항목 추가</button>' : '';
+  const toolsEl = document.getElementById('lab-tools');
+  if (toolsEl) toolsEl.innerHTML = _refToolsHTML('lab', _labItems.filter(i => _isFav(i.id)).length);
+
+  const usedCats = LAB_CATS.filter(c => _labItems.some(i => i.category === c));
+  if (tabs) {
+    tabs.innerHTML = ['all'].concat(usedCats).map(c =>
+      `<button class="soap-cat-tab${_labCatFilter === c ? ' active' : ''}" onclick="_setLabCat('${c}')">${c === 'all' ? '전체' : c}</button>`
+    ).join('');
+  }
+
+  let items = _labItems.slice();
+  if (_favOnly.lab) items = items.filter(i => _isFav(i.id));
+  if (_labCatFilter !== 'all') items = items.filter(i => i.category === _labCatFilter);
+  if (_labSearch) items = items.filter(i =>
+    (i.title || '').toLowerCase().includes(_labSearch) ||
+    (LAB_FIELDS.map(([k]) => i[k] || '').join(' ') + ' ' + (i.example || '') + ' ' + (i.source || '')).toLowerCase().includes(_labSearch));
+
+  items.sort((a, b) =>
+    _labCatOrder(a.category) - _labCatOrder(b.category) ||
+    (a.order || 0) - (b.order || 0) ||
+    (a.title || '').localeCompare(b.title || ''));
+
+  if (!items.length) {
+    list.innerHTML = _labLoadError
+      ? `<div class="empty" style="padding:2.5rem 1.5rem;text-align:center;color:var(--text-muted);line-height:1.8">
+           <div style="font-size:1rem;font-weight:600;color:var(--text);margin-bottom:0.5rem">기공지시서 자료를 불러오지 못했습니다</div>
+           ${_esc(_labLoadError)}<br>네트워크 또는 캐시 문제일 수 있습니다.<br>
+           <button class="soap-add-btn" style="margin-top:0.9rem" onclick="_soapHardReload()">캐시 지우고 다시 불러오기</button>
+         </div>`
+      : '<div class="empty" style="padding:2.5rem;text-align:center;color:var(--text-muted)">항목이 없습니다.</div>';
+    return;
+  }
+
+  let html = '', lastCat = null;
+  items.forEach(it => {
+    if (it.category !== lastCat && _labCatFilter === 'all') {
+      html += `<div class="soap-cat-label">${_esc(it.category || '')}</div>`;
+      lastCat = it.category;
+    }
+    const open = _printAll() || _labOpenId === it.id;
+    const editBtn = isAdmin
+      ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openLabEdit('${it.id}')">✏️</button>` : '';
+    const body = open
+      ? `<div class="soap-body">${LAB_FIELDS.map(([k, label, sub]) => _labBlock(label, sub, it[k])).join('')}${_labExampleHTML(it.example)}${_sourceHTML(it.source)}</div>`
+      : '';
+    html += `<div class="soap-card lab-card${open ? ' open' : ''}">
+      <div class="soap-card-head" onclick="_labToggle('${it.id}')">
+        <span class="soap-cat-badge">${_esc(it.category || '')}</span>
+        <span class="soap-card-title">${_esc(it.title || '')}</span>
+        ${_favBtn('lab', it.id)}
+        ${editBtn}
+        <span class="soap-chevron">${open ? '▲' : '▼'}</span>
+      </div>
+      ${body}
+    </div>`;
+  });
+  list.innerHTML = html;
+  _injectCopyButtons(list);
+}
+
+const _LAB_KEY = { '목적': 'purpose', '결정': 'decide', '필수': 'req', '동봉': 'encl', '함정': 'pit' };
+
+function _labBlock(label, sub, md) {
+  if (!md || !String(md).trim()) return '';
+  let body;
+  try { body = marked.parse(String(md)); }
+  catch (e) { console.warn('[lab] 마크다운 파싱 실패', label, e); body = _esc(String(md)).replace(/\n/g, '<br>'); }
+  const key = _LAB_KEY[label] || 'purpose';
+  return `<div class="soap-sec lab-sec-${key}">
+    <div class="soap-sec-label"><span class="soap-sec-letter lab-letter">${label}</span>${sub}</div>
+    <div class="soap-sec-body markdown-body">${body}</div>
+  </div>`;
+}
+
+// 예문은 그대로 복사해 지시서에 붙여 쓰는 것이 용도라 서식을 보존한다.
+function _labExampleHTML(text) {
+  if (!text || !String(text).trim()) return '';
+  return `<div class="soap-sec lab-sec-eg">
+    <div class="soap-sec-label"><span class="soap-sec-letter lab-letter">예문</span>Example 복사해 고쳐 쓰는 문안</div>
+    <div class="lab-example"><b>지시서 예문</b>${_esc(String(text))}</div>
+  </div>`;
+}
+
+function _openLabEdit(id) {
+  if (!isAdmin) return;
+  const it = id ? _labItems.find(x => x.id === id) : null;
+  const fv = (k, d = '') => it ? (it[k] != null ? it[k] : d) : d;
+  const catOpts = LAB_CATS.map(c => `<option value="${c}"${fv('category', LAB_CATS[0]) === c ? ' selected' : ''}>${c}</option>`).join('');
+  const ta = (id2, label, val) =>
+    `<label class="soap-f-label">${label}<textarea id="${id2}" class="soap-f-ta">${_esc(val)}</textarea></label>`;
+  const html = `<div id="lab-edit-overlay" class="modal-overlay open" onclick="if(event.target.id==='lab-edit-overlay')_closeLabEdit()">
+    <div class="modal soap-edit-modal">
+      <button class="modal-close" onclick="_closeLabEdit()">✕</button>
+      <div class="modal-body">
+        <h3 style="margin:0 0 1rem">${it ? '기공지시서 항목 편집' : '새 기공지시서 항목'}</h3>
+        <div class="soap-f-row">
+          <label class="soap-f-label" style="flex:2">항목명<input id="lab-f-title" class="soap-f-input" value="${_esc(fv('title'))}" placeholder="예: 단관 — 모놀리식 지르코니아"></label>
+          <label class="soap-f-label" style="flex:1">분류<select id="lab-f-cat" class="soap-f-input">${catOpts}</select></label>
+          <label class="soap-f-label" style="width:5rem">순서<input id="lab-f-order" type="number" class="soap-f-input" value="${fv('order', 0)}"></label>
+        </div>
+        <p class="soap-f-hint">각 칸은 마크다운 지원 (- 목록, **굵게**, tip/warning/danger 박스, dl 정의목록 등). 예문 칸은 서식이 그대로 보존됩니다.</p>
+        ${ta('lab-f-purpose', '목적 — 이 지시서가 결정하는 것', fv('purpose'))}
+        ${ta('lab-f-decide', '결정 — 무엇을 고르고 왜 그렇게 적는가', fv('decide'))}
+        ${ta('lab-f-required', '필수 — 빠지면 제작이 멈추는 항목', fv('required'))}
+        ${ta('lab-f-enclosure', '동봉 — 함께 보내는 자료', fv('enclosure'))}
+        ${ta('lab-f-pitfalls', '함정 — 자주 나는 사고와 원인', fv('pitfalls'))}
+        ${ta('lab-f-example', '예문 — 복사해 고쳐 쓰는 문안 (마크다운 아님, 서식 보존)', fv('example'))}
+        <label class="soap-f-label">출처 — 참고 교과서·법령<input id="lab-f-source" class="soap-f-input" value="${_esc(fv('source'))}" placeholder="예: Shillingburg, Fundamentals of Fixed Prosthodontics"></label>
+        <div class="soap-f-btns">
+          ${it ? `<button class="card-admin-btn del" onclick="_deleteLab('${id}')">🗑 삭제</button>` : ''}
+          <button class="cal-cancel-btn" onclick="_closeLabEdit()">취소</button>
+          <button class="cal-save-btn" onclick="_saveLab('${id || ''}')">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _closeLabEdit() {
+  document.getElementById('lab-edit-overlay')?.remove();
+}
+
+async function _saveLab(id) {
+  if (!isAdmin) return;
+  const g = s => document.getElementById(s)?.value ?? '';
+  const title = g('lab-f-title').trim();
+  if (!title) { _edToast('항목명을 입력하세요.', 'error'); return; }
+  const data = {
+    title,
+    category: g('lab-f-cat') || LAB_CATS[0],
+    order: Number(g('lab-f-order')) || 0,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  LAB_FIELDS.forEach(([k]) => { data[k] = g('lab-f-' + k).trim(); });
+  data.example = g('lab-f-example').trim();
+  data.source = g('lab-f-source').trim();
+  if (!id) data.userCreated = true; // 관리자가 새로 만든 항목은 재시드 시 보존
+  const docId = id || _labDocId(title);
+  try {
+    await db.collection('labTemplates').doc(docId).set(data, { merge: true });
+    const idx = _labItems.findIndex(x => x.id === docId);
+    if (idx >= 0) _labItems[idx] = { ...(_labItems[idx]), id: docId, ...data };
+    else _labItems.push({ id: docId, ...data });
+    _closeLabEdit();
+    renderLab();
+    _edToast('저장되었습니다.');
+  } catch (e) {
+    _edToast(_fbErrMsg(e, 'labTemplates'), 'error');
+  }
+}
+
+async function _deleteLab(id) {
+  if (!confirm('이 기공지시서 항목을 삭제하시겠습니까?')) return;
+  try {
+    await db.collection('labTemplates').doc(id).delete();
+    _labItems = _labItems.filter(x => x.id !== id);
+    if (_labOpenId === id) _labOpenId = null;
+    _closeLabEdit();
+    renderLab();
+    _edToast('삭제되었습니다.');
+  } catch (e) {
+    _edToast(_fbErrMsg(e, 'labTemplates'), 'error');
+  }
+}
+
 // ── 차팅 예문 복사 ───────────────────────────────────────────
 // 예문은 EMR에 붙여넣어 쓰는 것이 실제 용도라 한 번에 복사되어야 한다.
 function _injectCopyButtons(root) {
-  (root || document).querySelectorAll('.chart-eg, .term-example').forEach(el => {
+  (root || document).querySelectorAll('.chart-eg, .term-example, .lab-example').forEach(el => {
     if (el.querySelector('.copy-btn')) return;
     const btn = document.createElement('button');
     btn.className = 'copy-btn';
@@ -4615,18 +4884,18 @@ async function _copyExample(el, btn) {
 }
 
 // ── 즐겨찾기 · 인쇄 · 개정 이력 (참고자료 공통) ───────────────
-// 항목 id 는 kind 접두사(soap-/exam-/term-)가 있어 한 저장소로 충분하다.
+// 항목 id 는 kind 접두사(soap-/exam-/term-/lab-)가 있어 한 저장소로 충분하다.
 const FAV_KEY = 'dental-ref-favs';
 let _favs = new Set();
 try { _favs = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')); } catch (e) { /* 손상 시 무시 */ }
-let _favOnly = { soap: false, exam: false, term: false };
+let _favOnly = { soap: false, exam: false, term: false, lab: false };
 
 function _isFav(id) { return _favs.has(id); }
 
 function _toggleFav(kind, id) {
   _favs.has(id) ? _favs.delete(id) : _favs.add(id);
   try { localStorage.setItem(FAV_KEY, JSON.stringify([..._favs])); } catch (e) { console.warn('[fav]', e); }
-  ({ soap: renderSOAP, exam: renderExam, term: renderTerm })[kind]?.();
+  ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab })[kind]?.();
 }
 
 function _favBtn(kind, id) {
@@ -4637,7 +4906,7 @@ function _favBtn(kind, id) {
 
 function _setFavOnly(kind, v) {
   _favOnly[kind] = v;
-  ({ soap: renderSOAP, exam: renderExam, term: renderTerm })[kind]?.();
+  ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab })[kind]?.();
 }
 
 // 탭 상단 도구 막대 — 즐겨찾기 필터 · 인쇄 · 개정 이력
@@ -4652,7 +4921,7 @@ function _refToolsHTML(kind, favCount) {
 // 현재 필터·검색 결과를 그대로, 모두 펼친 상태로 인쇄
 function _printRef(kind) {
   const saved = {
-    soapOpen: _soapOpenId, examOpen: _examOpenId, termOpen: _termOpenId,
+    soapOpen: _soapOpenId, examOpen: _examOpenId, termOpen: _termOpenId, labOpen: _labOpenId,
     topics: new Set(_termOpenTopics),
   };
   document.body.classList.add('printing-ref', 'printing-' + kind);
@@ -4661,14 +4930,15 @@ function _printRef(kind) {
     _termItems.forEach(i => _termOpenTopics.add(i.category + '|' + (i.topic || '기타')));
   }
   document.body.dataset.printAll = '1';
-  ({ soap: renderSOAP, exam: renderExam, term: renderTerm })[kind]?.();
+  ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab })[kind]?.();
 
   const cleanup = () => {
     delete document.body.dataset.printAll;
     document.body.classList.remove('printing-ref', 'printing-' + kind);
     _soapOpenId = saved.soapOpen; _examOpenId = saved.examOpen; _termOpenId = saved.termOpen;
+    _labOpenId = saved.labOpen;
     _termOpenTopics = saved.topics;
-    ({ soap: renderSOAP, exam: renderExam, term: renderTerm })[kind]?.();
+    ({ soap: renderSOAP, exam: renderExam, term: renderTerm, lab: renderLab })[kind]?.();
     window.removeEventListener('afterprint', cleanup);
   };
   window.addEventListener('afterprint', cleanup);
@@ -4690,7 +4960,7 @@ function _openChangelog() {
         <button class="modal-close" onclick="_closeChangelog()">✕</button>
         <div class="modal-body">
           <h3 style="margin:0 0 0.3rem">참고자료 개정 이력</h3>
-          <p class="soap-f-hint">SOAP · 임상검사 · 용어의 내용이 바뀐 기록입니다.</p>
+          <p class="soap-f-hint">SOAP · 임상검사 · 용어 · 기공지시서의 내용이 바뀐 기록입니다.</p>
           ${list}
         </div>
       </div>
@@ -4746,12 +5016,13 @@ function _fbErrMsg(e, collection) {
 }
 
 // ── 참고자료 딥링크 (SOAP · 임상검사 · 용어) ─────────────────
-// 세 탭은 서로를 참조하므로 항목 단위로 이동·강조할 수 있어야 한다.
-// URL 해시(#soap-… / #exam-… / #term-…)로 특정 항목을 공유할 수도 있다.
+// 각 탭은 서로를 참조하므로 항목 단위로 이동·강조할 수 있어야 한다.
+// URL 해시(#soap-… / #exam-… / #term-… / #lab-…)로 특정 항목을 공유할 수도 있다.
 const REF_KINDS = {
   soap: { page: 'soap', list: 'soap-list' },
   exam: { page: 'exam', list: 'exam-list' },
   term: { page: 'term', list: 'term-list' },
+  lab:  { page: 'lab',  list: 'lab-list' },
 };
 
 // 항목을 펼친 상태로 해당 탭을 열고 스크롤·강조한다.
@@ -4762,9 +5033,9 @@ async function _openRef(kind, id, opts = {}) {
   showPage(k.page);
 
   // 데이터가 아직 없으면 로드될 때까지 기다린다
-  const items = () => kind === 'soap' ? _soapItems : kind === 'exam' ? _examItems : _termItems;
+  const items = () => kind === 'soap' ? _soapItems : kind === 'exam' ? _examItems : kind === 'lab' ? _labItems : _termItems;
   if (!items().length) {
-    (kind === 'soap' ? _loadSOAP : kind === 'exam' ? _loadExam : _loadTerm)();
+    (kind === 'soap' ? _loadSOAP : kind === 'exam' ? _loadExam : kind === 'lab' ? _loadLab : _loadTerm)();
     for (let i = 0; i < 40 && !items().length; i++) await new Promise(r => setTimeout(r, 50));
   }
   const it = items().find(x => x.id === id);
@@ -4772,6 +5043,7 @@ async function _openRef(kind, id, opts = {}) {
 
   if (kind === 'soap') { _soapCatFilter = 'all'; _soapSearch = ''; _soapOpenId = id; renderSOAP(); }
   if (kind === 'exam') { _examCatFilter = 'all'; _examSearch = ''; _examOpenId = id; renderExam(); }
+  if (kind === 'lab')  { _labCatFilter = 'all'; _labSearch = ''; _labOpenId = id; renderLab(); }
   if (kind === 'term') {
     _termCatFilter = 'all'; _termSecFilter = 'all'; _termSearch = '';
     const searchEl = document.getElementById('term-search');
@@ -4800,11 +5072,11 @@ function _flashRef(listId, id) {
 // 페이지 로드 시 해시가 참고자료 항목이면 그 항목을 연다
 function _openRefFromHash() {
   const h = decodeURIComponent(location.hash.replace(/^#/, ''));
-  const m = h.match(/^(soap|exam|term)-/);
+  const m = h.match(/^(soap|exam|term|lab)-/);
   if (m) _openRef(m[1], h, { noHash: true });
 }
 
-// 통합 검색용 인덱스 — 세 참고자료를 모두 포함
+// 통합 검색용 인덱스 — 참고자료 탭을 모두 포함
 function _refSearchIndex() {
   const idx = [];
   const push = (kind, arr, title, sub, body) => arr.forEach(it =>
@@ -4815,6 +5087,9 @@ function _refSearchIndex() {
   if (typeof _examItems !== 'undefined')
     push('exam', _examItems, i => i.title, i => '임상검사 · ' + (i.category || ''),
          i => [i.title, i.purpose, i.technique, i.criteria, i.interpretation, i.pitfalls].join(' '));
+  if (typeof _labItems !== 'undefined')
+    push('lab', _labItems, i => i.title, i => '기공지시서 · ' + (i.category || ''),
+         i => [i.title, i.purpose, i.decide, i.required, i.enclosure, i.pitfalls, i.example].join(' '));
   if (typeof _termItems !== 'undefined')
     push('term', _termItems, i => i.ko + ' — ' + i.en, i => '용어 · ' + (i.section || '') + ' · ' + (i.topic || ''),
          i => [i.ko, i.en, i.meaning, i.variants, i.distinguish, i.example, i.caution].join(' '));
@@ -4826,6 +5101,7 @@ function _ensureRefsLoaded() {
   if (typeof _soapItems !== 'undefined' && !_soapItems.length) _loadSOAP();
   if (typeof _examItems !== 'undefined' && !_examItems.length) _loadExam();
   if (typeof _termItems !== 'undefined' && !_termItems.length) _loadTerm();
+  if (typeof _labItems !== 'undefined' && !_labItems.length) _loadLab();
 }
 
 // ── 차팅 용어 (Charting Terminology) ─────────────────────────

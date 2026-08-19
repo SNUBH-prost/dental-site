@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=86">
+  <link rel="stylesheet" href="css/style.css?v=87">
   <link rel="stylesheet" href="css/editor.css?v=28">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -57,7 +57,7 @@
 
       <a href="javascript:void(0)" data-page="calendar" class="nav-link" onclick="showPage('calendar')">일정</a>
       <a href="javascript:void(0)" data-page="inventory" class="nav-link" onclick="showPage('inventory')">재고</a>
-      <!-- 임상 기록 참고 (SOAP · 임상검사 · 용어) -->
+      <!-- 임상 기록 참고 (SOAP · 임상검사 · 용어 · 기공지시서) -->
       <div class="nav-group" id="nav-group-ref">
         <button class="nav-group-btn" id="ref-btn" onclick="toggleRefMenu(event)">
           임상 기록 <span class="arrow">▾</span>
@@ -66,6 +66,7 @@
           <a href="javascript:void(0)" data-page="soap" onclick="showPage('soap');closeRefMenu()"><b>SOAP</b><span>진료별 차팅 템플릿</span></a>
           <a href="javascript:void(0)" data-page="exam" onclick="showPage('exam');closeRefMenu()"><b>임상검사</b><span>O 소견을 얻는 술기</span></a>
           <a href="javascript:void(0)" data-page="term" onclick="showPage('term');closeRefMenu()"><b>용어</b><span>O·A 영문 차팅 어휘</span></a>
+          <a href="javascript:void(0)" data-page="lab" onclick="showPage('lab');closeRefMenu()"><b>기공지시서</b><span>무엇을 결정해 어떻게 적는가</span></a>
         </div>
       </div>
       <a href="javascript:void(0)" data-page="stats" class="nav-link" onclick="showPage('stats')">통계</a>
@@ -106,6 +107,7 @@
     <a href="javascript:void(0)" onclick="showPage('soap');toggleMobileMenu()"><span class="di">📝</span>SOAP</a>
     <a href="javascript:void(0)" onclick="showPage('exam');toggleMobileMenu()"><span class="di">🔬</span>임상검사</a>
     <a href="javascript:void(0)" onclick="showPage('term');toggleMobileMenu()"><span class="di">🔤</span>용어</a>
+    <a href="javascript:void(0)" onclick="showPage('lab');toggleMobileMenu()"><span class="di">🧾</span>기공지시서</a>
     <div class="drawer-section-label">기타</div>
     <a href="javascript:void(0)" onclick="showPage('stats');toggleMobileMenu()"><span class="di">📊</span>통계</a>
     <a href="admin.html?v=1"><span class="di">⚙</span>관리</a>
@@ -321,6 +323,20 @@
     <div id="term-list"></div>
   </div>
 
+  <!-- ── 기공지시서 ── -->
+  <div id="page-lab" class="page">
+    <div class="soap-header">
+      <div>
+        <h2 class="soap-title">기공지시서</h2>
+        <p class="soap-sub">양식 채우는 법이 아니라 <b>결정을 글로 옮기는 법</b> — 무엇을 고르고, 왜 그렇게 적는가.</p>
+      </div>
+      <div class="ref-tools"><div id="lab-tools"></div><div id="lab-admin-btns"></div></div>
+    </div>
+    <div class="soap-cat-tabs" id="lab-cat-tabs"></div>
+    <input class="soap-search" id="lab-search" placeholder="🔍 보철 종류·내용 검색 (예: 지르코니아, 색조, passive fit)" oninput="_labFilter(this.value)">
+    <div id="lab-list"></div>
+  </div>
+
   <!-- ── 통계 ── -->
   <div id="page-stats" class="page">
     <div class="stats-header">
@@ -433,8 +449,9 @@
 <script defer src="js/soap-seed.js?v=9"></script>
 <script defer src="js/exam-seed.js?v=4"></script>
 <script defer src="js/term-seed.js?v=7"></script>
-<script defer src="js/changelog.js?v=2"></script>
-<script defer src="js/app.js?v=116"></script>
+<script defer src="js/lab-seed.js?v=2"></script>
+<script defer src="js/changelog.js?v=3"></script>
+<script defer src="js/app.js?v=117"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {

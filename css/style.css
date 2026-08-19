@@ -3245,6 +3245,47 @@ a.cite-link .cite-sup {
 .exam-sec-tech .soap-sec-body ol { padding-left: 1.3rem; }
 .exam-sec-tech .soap-sec-body ol li { margin: 0.28rem 0; }
 
+/* 기공지시서 카드 — 목적·결정·필수·동봉·함정 + 예문 */
+.lab-sec-purpose { border-color: #6366f1; }
+.lab-sec-decide  { border-color: #d946ef; }
+.lab-sec-req     { border-color: #0ea5e9; }
+.lab-sec-encl    { border-color: #14b8a6; }
+.lab-sec-pit     { border-color: #ef4444; }
+.lab-sec-eg      { border-color: #f59e0b; }
+.lab-sec-purpose .lab-letter { background: #6366f1; }
+.lab-sec-decide  .lab-letter { background: #d946ef; }
+.lab-sec-req     .lab-letter { background: #0ea5e9; }
+.lab-sec-encl    .lab-letter { background: #14b8a6; }
+.lab-sec-pit     .lab-letter { background: #ef4444; }
+.lab-sec-eg      .lab-letter { background: #f59e0b; }
+.soap-sec-letter.lab-letter {
+  width: auto;
+  padding: 0 0.42rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+/* 결정 단은 이 탭의 본론이라 조금 더 눈에 띄게 */
+.lab-sec-decide { background: rgba(217,70,239,0.04); border-radius: 0 9px 9px 0; padding-right: 0.9rem; }
+[data-theme="dark"] .lab-sec-decide { background: rgba(217,70,239,0.09); }
+.lab-sec-decide .soap-sec-body table { width: 100%; border-collapse: collapse; margin: 0.4rem 0; font-size: 0.82rem; }
+.lab-sec-decide .soap-sec-body th,
+.lab-sec-decide .soap-sec-body td { border: 1px solid var(--border); padding: 0.3rem 0.5rem; text-align: left; }
+.lab-sec-decide .soap-sec-body th { background: var(--bg); font-weight: 700; }
+/* 예문 — 그대로 복사해 쓰는 문안이므로 서식을 보존한다 */
+.lab-example {
+  margin: 0.2rem 0 0.2rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 7px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--text);
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.lab-example b { display: block; margin-bottom: 0.3rem; font-family: inherit; color: var(--primary); font-size: 0.75rem; letter-spacing: 0.02em; }
+
 /* Tx — SOAP와 구분되는 시행 술식 기록 */
 .soap-sec-tx {
   border-color: #0d9488;
@@ -3443,7 +3484,7 @@ a.cite-link .cite-sup {
 .ref-chip:hover { border-color: var(--primary); color: var(--primary); }
 
 /* 예문 복사 버튼 */
-.chart-eg, .term-example { position: relative; padding-right: 3.6rem !important; }
+.chart-eg, .term-example, .lab-example { position: relative; padding-right: 3.6rem !important; }
 .copy-btn {
   position: absolute;
   top: 0.4rem;
@@ -3460,7 +3501,7 @@ a.cite-link .cite-sup {
   opacity: 0.6;
   transition: opacity 0.15s;
 }
-.chart-eg:hover .copy-btn, .term-example:hover .copy-btn, .copy-btn:focus { opacity: 1; }
+.chart-eg:hover .copy-btn, .term-example:hover .copy-btn, .lab-example:hover .copy-btn, .copy-btn:focus { opacity: 1; }
 .copy-btn:hover { color: var(--primary); border-color: var(--primary); }
 .copy-btn.done { color: #16a34a; border-color: #16a34a; opacity: 1; }
 
@@ -3486,6 +3527,7 @@ a.cite-link .cite-sup {
 .sr-soap { background: #a855f7; }
 .sr-exam { background: #0d9488; }
 .sr-term { background: #2563eb; }
+.sr-lab  { background: #d97706; }
 
 /* 임상 기록 드롭다운 — 설명줄 포함 */
 #nav-ref-links a { display: block; line-height: 1.35; }
@@ -3583,11 +3625,11 @@ a.cite-link .cite-sup {
     background: #fff !important;
   }
   .soap-card-head, .term-head, .term-group-head { background: #f2f2f2 !important; }
-  .soap-sec-body, .term-field .markdown-body, .term-example, .chart-eg {
+  .soap-sec-body, .term-field .markdown-body, .term-example, .chart-eg, .lab-example {
     color: #000 !important;
     background: #fff !important;
   }
-  .chart-eg, .term-example { border: 1px solid #bbb !important; padding-right: 0.75rem !important; }
+  .chart-eg, .term-example, .lab-example { border: 1px solid #bbb !important; padding-right: 0.75rem !important; }
   details { break-inside: avoid; }
   details > *:not(summary) { display: block !important; }
   .soap-title { font-size: 1.1rem; }
