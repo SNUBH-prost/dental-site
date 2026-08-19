@@ -4753,7 +4753,7 @@ function renderLab() {
     const editBtn = isAdmin
       ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openLabEdit('${it.id}')">✏️</button>` : '';
     const body = open
-      ? `<div class="soap-body">${LAB_FIELDS.map(([k, label, sub]) => _labBlock(label, sub, it[k])).join('')}${_labExampleHTML(it.example)}${_relatedSoapHTML(it.title)}${_sourceHTML(it.source)}</div>`
+      ? `<div class="soap-body">${LAB_FIELDS.map(([k, label, sub]) => _labBlock(label, sub, it[k])).join('')}${_labExampleHTML(it.example, it.id)}${_relatedSoapHTML(it.title)}${_sourceHTML(it.source)}</div>`
       : '';
     html += `<div class="soap-card lab-card${open ? ' open' : ''}">
       <div class="soap-card-head" data-ref-id="${it.id}" onclick="_labToggle('${it.id}')">
@@ -4785,11 +4785,12 @@ function _labBlock(label, sub, md) {
 }
 
 // 예문은 그대로 복사해 지시서에 붙여 쓰는 것이 용도라 서식을 보존한다.
-function _labExampleHTML(text) {
+function _labExampleHTML(text, id) {
   if (!text || !String(text).trim()) return '';
   return `<div class="soap-sec lab-sec-eg">
     <div class="soap-sec-label"><span class="soap-sec-letter lab-letter">예문</span>Example 복사해 고쳐 쓰는 문안</div>
     <div class="lab-example"><b>지시서 예문</b>${_esc(String(text))}</div>
+    <button class="ref-chip lab-build-btn" onclick="event.stopPropagation();_openLabBuilder('${id}')">🧾 이 예문으로 지시서 만들기</button>
   </div>`;
 }
 
@@ -5033,7 +5034,8 @@ function _refToolsHTML(kind, favCount) {
   return `
     <button class="ref-tool${on ? ' active' : ''}" onclick="_setFavOnly('${kind}',${!on})">★ 즐겨찾기${favCount ? ` <span class="ref-tool-n">${favCount}</span>` : ''}</button>
     <button class="ref-tool" onclick="_printRef('${kind}')" title="현재 보이는 목록을 인쇄">🖨 인쇄</button>
-    <button class="ref-tool" onclick="_openChangelog()" title="참고자료 개정 이력">🕘 이력</button>`;
+    <button class="ref-tool" onclick="_openChangelog()" title="참고자료 개정 이력">🕘 이력</button>
+    ${kind === 'lab' ? '<button class="ref-tool primary" onclick="_openLabBuilder()" title="지시서 문안 만들기">🧾 지시서 만들기</button>' : ''}`;
 }
 
 // 현재 필터·검색 결과를 그대로, 모두 펼친 상태로 인쇄
@@ -5131,6 +5133,221 @@ function _fbErrMsg(e, collection) {
     return '네트워크에 연결되지 않아 저장하지 못했습니다.';
   }
   return '실패: ' + (e && e.message ? e.message : e);
+}
+
+// ── 기공지시서 빌더 ──────────────────────────────────────────
+// 예문을 복사해 손으로 고치는 대신, 항목을 고르고 빈칸을 채우면
+// 완성된 지시서 문안이 나오게 한다. 본문은 언제든 직접 고쳐 쓸 수 있다.
+const LAB_ISSUER_KEY = 'dental-lab-issuer';
+
+function _labIssuer() {
+  try { return JSON.parse(localStorage.getItem(LAB_ISSUER_KEY) || '{}'); }
+  catch (e) { return {}; }
+}
+
+function _labTodayISO() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// 예문에는 머리말이 이미 들어 있는 경우가 있다. 폼으로 받는 항목과 겹치지 않게 걷어낸다.
+function _labStripHeader(text, hasSite, hasDue) {
+  return String(text || '').split('\n').filter(line => {
+    const t = line.trim();
+    if (/^\[.*\]$/.test(t)) return false;
+    if (/^(환자|의뢰|의뢰일|연락|환자 정보)\s*[:：]/.test(t)) return false;
+    if (hasSite && /^부위\s*[:：]/.test(t)) return false;
+    if (hasDue && /^납기\s*[:：]/.test(t)) return false;
+    return true;
+  }).join('\n')
+    .replace(/\*\*(.+?)\*\*/g, '$1')   // 마크다운 강조는 지시서 문안에 불필요
+    .replace(/^\n+/, '').replace(/\n{3,}/g, '\n\n');
+}
+
+const LAB_STOCK_NOTES = {
+  spec: '지시 두께·언더컷 등 기준을 충족하기 어려우면 제작 전 연락 바랍니다. 임의 축소 금지.',
+  disinfect: '인상체·교합기록은 구강 제거 직후 세척 후 중수준 소독제로 소독·헹굼하여 발송했습니다. 완성물 발송 시에도 소독 방법을 함께 기재해 주시기 바랍니다.',
+  legal: '본 의뢰서 사본을 본원에 보관합니다 (의료기사 등에 관한 법률 제11조의3 — 치과의사·치과기공소 각각 2년 보존).',
+};
+
+function _openLabBuilder(presetId) {
+  if (!_labItems.length) { _loadLab(); }
+  const iss = _labIssuer();
+  const items = _labItems.slice().sort((a, b) =>
+    _labCatOrder(a.category) - _labCatOrder(b.category) || (a.order || 0) - (b.order || 0));
+  const groups = LAB_CATS.map(cat => {
+    const opts = items.filter(i => i.category === cat).map(i =>
+      `<option value="${i.id}"${i.id === presetId ? ' selected' : ''}>${_esc(i.title)}</option>`).join('');
+    return opts ? `<optgroup label="${cat}">${opts}</optgroup>` : '';
+  }).join('');
+
+  document.body.insertAdjacentHTML('beforeend', `
+  <div id="lab-builder-overlay" class="modal-overlay open" onclick="if(event.target.id==='lab-builder-overlay')_closeLabBuilder()">
+    <div class="modal lab-builder-modal">
+      <button class="modal-close" onclick="_closeLabBuilder()">✕</button>
+      <div class="modal-body">
+        <h3 style="margin:0 0 0.3rem">기공지시서 만들기</h3>
+        <p class="soap-f-hint">항목을 고르면 그 항목의 예문이 본문에 들어옵니다. 빈칸을 채우고 본문을 고쳐 쓴 뒤 복사하거나 인쇄하세요.</p>
+
+        <label class="soap-f-label">항목
+          <select id="lb-item" class="soap-f-input" onchange="_labBuilderPickItem()">${groups}</select>
+        </label>
+
+        <div class="lb-grid">
+          <label class="soap-f-label">환자명<input id="lb-name" class="soap-f-input" oninput="_labBuilderRender()" placeholder="홍○○"></label>
+          <label class="soap-f-label">등록번호<input id="lb-chart" class="soap-f-input" oninput="_labBuilderRender()" placeholder="12345678"></label>
+          <label class="soap-f-label">의뢰일<input id="lb-date" type="date" class="soap-f-input" value="${_labTodayISO()}" oninput="_labBuilderRender()"></label>
+          <label class="soap-f-label">부위<input id="lb-site" class="soap-f-input" oninput="_labBuilderRender()" placeholder="#46"></label>
+          <label class="soap-f-label">납기<input id="lb-due" type="date" class="soap-f-input" oninput="_labBuilderRender()"></label>
+          <label class="soap-f-label">구분
+            <select id="lb-kind" class="soap-f-input" onchange="_labBuilderRender()">
+              <option value="">신규</option>
+              <option value="재제작">재제작</option>
+              <option value="수정">수정</option>
+            </select>
+          </label>
+        </div>
+
+        <details class="lb-issuer"${iss.clinic ? '' : ' open'}>
+          <summary>의뢰자 정보${iss.clinic ? ` — ${_esc(iss.clinic)} ${_esc(iss.doctor || '')}` : ''}</summary>
+          <div class="lb-grid">
+            <label class="soap-f-label">치과명<input id="lb-clinic" class="soap-f-input" value="${_esc(iss.clinic || '')}" oninput="_labBuilderRender()"></label>
+            <label class="soap-f-label">치과의사<input id="lb-doctor" class="soap-f-input" value="${_esc(iss.doctor || '')}" oninput="_labBuilderRender()"></label>
+            <label class="soap-f-label">면허번호<input id="lb-license" class="soap-f-input" value="${_esc(iss.license || '')}" oninput="_labBuilderRender()"></label>
+            <label class="soap-f-label">연락처<input id="lb-phone" class="soap-f-input" value="${_esc(iss.phone || '')}" oninput="_labBuilderRender()"></label>
+          </div>
+          <button class="ref-tool" onclick="_labBuilderSaveIssuer()">💾 이 정보를 이 기기에 저장</button>
+        </details>
+
+        <label class="soap-f-label">본문 — 자유롭게 고쳐 쓰세요 <span class="lb-note">(위 칸에 적은 환자·부위·납기 줄은 중복을 피해 자동으로 빠집니다)</span>
+          <textarea id="lb-body" class="soap-f-ta lb-body" oninput="_labBuilderRender()"></textarea>
+        </label>
+
+        <div class="lb-opts">
+          <label><input type="checkbox" id="lb-opt-spec" checked onchange="_labBuilderRender()"> 기준 미달 시 제작 전 연락 문구</label>
+          <label><input type="checkbox" id="lb-opt-disinfect" onchange="_labBuilderRender()"> 소독·발송 문구</label>
+          <label><input type="checkbox" id="lb-opt-legal" onchange="_labBuilderRender()"> 법정 보존 문구</label>
+        </div>
+
+        <div class="lb-preview-wrap">
+          <div class="lb-preview-label">미리보기</div>
+          <pre id="lb-preview" class="lb-preview"></pre>
+        </div>
+
+        <div class="soap-f-btns">
+          <button class="cal-cancel-btn" onclick="_closeLabBuilder()">닫기</button>
+          <button class="ref-tool" onclick="_printLabDoc()">🖨 인쇄</button>
+          <button class="cal-save-btn" onclick="_copyLabDoc(this)">📋 복사</button>
+        </div>
+      </div>
+    </div>
+  </div>`);
+  _labBuilderPickItem();
+}
+
+function _closeLabBuilder() { document.getElementById('lab-builder-overlay')?.remove(); }
+
+// 항목을 바꾸면 본문을 그 항목의 예문으로 채운다. 이미 손댄 본문은 확인 후 교체.
+function _labBuilderPickItem() {
+  const sel = document.getElementById('lb-item');
+  const ta = document.getElementById('lb-body');
+  if (!sel || !ta) return;
+  const it = _labItems.find(i => i.id === sel.value);
+  const next = _labStripHeader(it?.example, !!_lbVal('lb-site'), !!_lbVal('lb-due'));
+  if (ta.value.trim() && ta.value.trim() !== ta.dataset.seeded &&
+      !confirm('본문을 선택한 항목의 예문으로 바꿀까요? 지금 쓴 내용은 사라집니다.')) {
+    _labBuilderRender();
+    return;
+  }
+  ta.value = next;
+  ta.dataset.seeded = next.trim();
+  _labBuilderRender();
+}
+
+function _lbVal(id) { return (document.getElementById(id)?.value || '').trim(); }
+function _lbChecked(id) { return !!document.getElementById(id)?.checked; }
+
+function _labBuilderCompose() {
+  const it = _labItems.find(i => i.id === _lbVal('lb-item'));
+  const L = [];
+  L.push('[치과기공물제작의뢰서]');
+  const idLine = [
+    _lbVal('lb-name') ? `환자: ${_lbVal('lb-name')}` : '',
+    _lbVal('lb-chart') ? `(등록번호 ${_lbVal('lb-chart')})` : '',
+  ].filter(Boolean).join(' ');
+  const dateLine = _lbVal('lb-date') ? `의뢰일: ${_lbVal('lb-date')}` : '';
+  if (idLine || dateLine) L.push([idLine, dateLine].filter(Boolean).join('     '));
+  const who = [
+    _lbVal('lb-clinic'), _lbVal('lb-doctor'),
+    _lbVal('lb-license') ? `(면허 ${_lbVal('lb-license')})` : '',
+  ].filter(Boolean).join(' ');
+  const contact = _lbVal('lb-phone') ? `연락: ${_lbVal('lb-phone')}` : '';
+  if (who || contact) L.push([who ? `의뢰: ${who}` : '', contact].filter(Boolean).join('     '));
+  L.push('');
+  if (it) L.push(`종류: ${it.title}`);
+  if (_lbVal('lb-site')) L.push(`부위: ${_lbVal('lb-site')}`);
+  if (_lbVal('lb-kind')) L.push(`구분: ${_lbVal('lb-kind')}`);
+  if (_lbVal('lb-due')) L.push(`납기: ${_lbVal('lb-due')}`);
+  L.push('');
+  // 폼으로 이미 적은 항목이 본문에도 있으면 중복되므로 조립 단계에서 걷어낸다
+  const raw = document.getElementById('lb-body')?.value || '';
+  const body = _labStripHeader(raw, !!_lbVal('lb-site'), !!_lbVal('lb-due')).trim();
+  if (body) { L.push(body); L.push(''); }
+  const notes = [];
+  if (_lbChecked('lb-opt-spec')) notes.push(LAB_STOCK_NOTES.spec);
+  if (_lbChecked('lb-opt-disinfect')) notes.push(LAB_STOCK_NOTES.disinfect);
+  if (_lbChecked('lb-opt-legal')) notes.push(LAB_STOCK_NOTES.legal);
+  if (notes.length) { L.push('— 공통 —'); notes.forEach(n => L.push(`· ${n}`)); }
+  return L.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+}
+
+function _labBuilderRender() {
+  const ta = document.getElementById('lb-body');
+  // 아직 손대지 않은 본문이면, 부위·납기를 채운 뒤 그 줄이 남지 않도록 다시 시드한다
+  if (ta && ta.dataset.seeded !== undefined && ta.value.trim() === ta.dataset.seeded) {
+    const it = _labItems.find(i => i.id === _lbVal('lb-item'));
+    const next = _labStripHeader(it?.example, !!_lbVal('lb-site'), !!_lbVal('lb-due'));
+    if (next.trim() !== ta.dataset.seeded) { ta.value = next; ta.dataset.seeded = next.trim(); }
+  }
+  const pre = document.getElementById('lb-preview');
+  if (pre) pre.textContent = _labBuilderCompose();
+}
+
+function _labBuilderSaveIssuer() {
+  const data = {
+    clinic: _lbVal('lb-clinic'), doctor: _lbVal('lb-doctor'),
+    license: _lbVal('lb-license'), phone: _lbVal('lb-phone'),
+  };
+  try { localStorage.setItem(LAB_ISSUER_KEY, JSON.stringify(data)); _edToast('의뢰자 정보를 저장했습니다.'); }
+  catch (e) { _edToast('저장하지 못했습니다.', 'error'); }
+}
+
+async function _copyLabDoc(btn) {
+  const text = _labBuilderCompose();
+  try { await navigator.clipboard.writeText(text); }
+  catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e2) { console.warn('[labdoc copy]', e2); }
+    ta.remove();
+  }
+  if (btn) {
+    const t = btn.textContent;
+    btn.textContent = '복사됨';
+    setTimeout(() => { btn.textContent = t; }, 1400);
+  }
+}
+
+// 인쇄는 기존 #print-area 경로를 그대로 쓴다 (인쇄 시 이 영역만 남는다)
+function _printLabDoc() {
+  const area = document.getElementById('print-area');
+  if (!area) return;
+  area.innerHTML = `<div class="labdoc-print"><pre>${_esc(_labBuilderCompose())}</pre></div>`;
+  const cleanup = () => { area.innerHTML = ''; window.removeEventListener('afterprint', cleanup); };
+  window.addEventListener('afterprint', cleanup);
+  setTimeout(() => { window.print(); setTimeout(cleanup, 1000); }, 80);
 }
 
 // ── 아코디언 스크롤 고정 ─────────────────────────────────────
