@@ -4958,6 +4958,7 @@ function _relatedSoapHTML(labTitle) {
 // ── 차팅 예문 복사 ───────────────────────────────────────────
 // 예문은 EMR에 붙여넣어 쓰는 것이 실제 용도라 한 번에 복사되어야 한다.
 function _injectCopyButtons(root) {
+  _wrapTables(root);
   (root || document).querySelectorAll('.chart-eg, .term-example, .lab-example').forEach(el => {
     if (el.querySelector('.copy-btn')) return;
     const btn = document.createElement('button');
@@ -4967,6 +4968,17 @@ function _injectCopyButtons(root) {
     btn.textContent = '복사';
     btn.onclick = e => { e.stopPropagation(); _copyExample(el, btn); };
     el.appendChild(btn);
+  });
+}
+
+// 마크다운 표는 좁은 화면에서 컨테이너를 넘어 잘린다. 가로 스크롤 상자로 감싼다.
+function _wrapTables(root) {
+  (root || document).querySelectorAll('.markdown-body table, .soap-sec-body table').forEach(t => {
+    if (t.parentElement?.classList.contains('table-scroll')) return;
+    const box = document.createElement('div');
+    box.className = 'table-scroll';
+    t.parentNode.insertBefore(box, t);
+    box.appendChild(t);
   });
 }
 
