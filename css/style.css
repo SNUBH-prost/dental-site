@@ -3501,6 +3501,27 @@ a.cite-link .cite-sup {
 }
 .ref-chip:hover { border-color: var(--primary); color: var(--primary); }
 
+/* 표 — 좁은 화면에서 가로 스크롤 (잘림 방지) */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0.4rem 0;
+  border-radius: 7px;
+}
+.table-scroll table { min-width: max-content; margin: 0 !important; }
+.soap-sec-body table, .markdown-body table {
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.soap-sec-body th, .soap-sec-body td,
+.markdown-body th, .markdown-body td {
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+  white-space: nowrap;
+}
+.soap-sec-body th, .markdown-body th { background: var(--bg); font-weight: 700; }
+
 /* 예문 복사 버튼 */
 .chart-eg, .term-example, .lab-example { position: relative; padding-right: 3.6rem !important; }
 .copy-btn {
