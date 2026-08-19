@@ -31,7 +31,7 @@
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="dns-prefetch" href="https://firestore.googleapis.com">
 
-  <link rel="stylesheet" href="css/style.css?v=90">
+  <link rel="stylesheet" href="css/style.css?v=91">
   <link rel="stylesheet" href="css/editor.css?v=28">
   <script>(function(){var t=localStorage.getItem('dental-theme')||'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})()</script>
 </head>
@@ -67,6 +67,7 @@
           <a href="javascript:void(0)" data-page="exam" onclick="showPage('exam');closeRefMenu()"><b>임상검사</b><span>O 소견을 얻는 술기</span></a>
           <a href="javascript:void(0)" data-page="term" onclick="showPage('term');closeRefMenu()"><b>용어</b><span>O·A 영문 차팅 어휘</span></a>
           <a href="javascript:void(0)" data-page="lab" onclick="showPage('lab');closeRefMenu()"><b>기공지시서</b><span>무엇을 결정해 어떻게 적는가</span></a>
+          <a href="javascript:void(0)" data-page="tip" onclick="showPage('tip');closeRefMenu()"><b>임상 팁</b><span>진료하며 고민한 것들</span></a>
         </div>
       </div>
       <a href="javascript:void(0)" data-page="stats" class="nav-link" onclick="showPage('stats')">통계</a>
@@ -108,6 +109,7 @@
     <a href="javascript:void(0)" onclick="showPage('exam');toggleMobileMenu()"><span class="di">🔬</span>임상검사</a>
     <a href="javascript:void(0)" onclick="showPage('term');toggleMobileMenu()"><span class="di">🔤</span>용어</a>
     <a href="javascript:void(0)" onclick="showPage('lab');toggleMobileMenu()"><span class="di">🧾</span>기공지시서</a>
+    <a href="javascript:void(0)" onclick="showPage('tip');toggleMobileMenu()"><span class="di">💡</span>임상 팁</a>
     <div class="drawer-section-label">기타</div>
     <a href="javascript:void(0)" onclick="showPage('stats');toggleMobileMenu()"><span class="di">📊</span>통계</a>
     <a href="admin.html?v=1"><span class="di">⚙</span>관리</a>
@@ -337,6 +339,20 @@
     <div id="lab-list"></div>
   </div>
 
+  <!-- ── 임상 팁 ── -->
+  <div id="page-tip" class="page">
+    <div class="soap-header">
+      <div>
+        <h2 class="soap-title">임상 팁</h2>
+        <p class="soap-sub">표준이 무엇인가가 아니라, <b>그래서 어떻게 정했는가</b> — 진료하며 고민한 것들을 적어 둡니다.</p>
+      </div>
+      <div class="ref-tools"><div id="tip-tools"></div><div id="tip-admin-btns"></div></div>
+    </div>
+    <div class="soap-cat-tabs" id="tip-cat-tabs"></div>
+    <input class="soap-search" id="tip-search" placeholder="🔍 제목·내용 검색" oninput="_tipFilter(this.value)">
+    <div id="tip-list"></div>
+  </div>
+
   <!-- ── 통계 ── -->
   <div id="page-stats" class="page">
     <div class="stats-header">
@@ -450,8 +466,9 @@
 <script defer src="js/exam-seed.js?v=5"></script>
 <script defer src="js/term-seed.js?v=8"></script>
 <script defer src="js/lab-seed.js?v=7"></script>
-<script defer src="js/changelog.js?v=9"></script>
-<script defer src="js/app.js?v=122"></script>
+<script defer src="js/tip-seed.js?v=1"></script>
+<script defer src="js/changelog.js?v=10"></script>
+<script defer src="js/app.js?v=123"></script>
 <script>
 // defer 스크립트 실행 후(DOMContentLoaded) 초기화
 document.addEventListener('DOMContentLoaded', function() {

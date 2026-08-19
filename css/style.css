@@ -3502,6 +3502,27 @@ a.cite-link .cite-sup {
 }
 .ref-chip:hover { border-color: var(--primary); color: var(--primary); }
 
+/* 임상 팁 카드 — 상황·갈림길·판단·근거·메모 */
+.tip-sec-ctx   { border-color: #64748b; }
+.tip-sec-cross { border-color: #f97316; }
+.tip-sec-judge { border-color: #16a34a; }
+.tip-sec-basis { border-color: #6366f1; }
+.tip-sec-memo  { border-color: #a855f7; }
+.tip-sec-ctx   .tip-letter { background: #64748b; }
+.tip-sec-cross .tip-letter { background: #f97316; }
+.tip-sec-judge .tip-letter { background: #16a34a; }
+.tip-sec-basis .tip-letter { background: #6366f1; }
+.tip-sec-memo  .tip-letter { background: #a855f7; }
+.soap-sec-letter.tip-letter {
+  width: auto;
+  padding: 0 0.42rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+/* 판단 단이 이 탭의 본론이다 */
+.tip-sec-judge { background: rgba(22,163,74,0.05); border-radius: 0 9px 9px 0; padding-right: 0.9rem; }
+[data-theme="dark"] .tip-sec-judge { background: rgba(22,163,74,0.1); }
+
 /* ── 기공지시서 빌더 ── */
 .lab-builder-modal { max-width: 720px; }
 .lb-grid {
@@ -3608,6 +3629,7 @@ a.cite-link .cite-sup {
 .sr-exam { background: #0d9488; }
 .sr-term { background: #2563eb; }
 .sr-lab  { background: #d97706; }
+.sr-tip  { background: #16a34a; }
 
 /* 임상 기록 드롭다운 — 설명줄 포함 */
 #nav-ref-links a { display: block; line-height: 1.35; }
