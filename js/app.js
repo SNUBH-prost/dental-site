@@ -343,7 +343,10 @@ function showPage(pageId) {
   document.getElementById('page-' + pageId).classList.add('active');
   const navLink = document.querySelector(`nav a[data-page="${pageId}"]`);
   if (navLink) navLink.classList.add('active');
+  // 모바일 드로어에서 넘어오면 body 가 아직 overflow:hidden 이라 이 호출이
+  // 무시되고, 잠금이 풀리면서 이전 스크롤 위치로 되돌아간다 → 다음 프레임에 재확인.
   window.scrollTo(0, 0);
+  requestAnimationFrame(() => window.scrollTo(0, 0));
   _currentPage = pageId;
   if (pageId === 'calendar') renderCalendar();
   if (pageId === 'inventory') { _setInvCat(_invCat); if (_invCat === 'diamond' && !_burItems.length) _loadInventory(); }
@@ -4211,6 +4214,7 @@ function _soapCatOrder(cat) {
 function _setSoapCat(cat) {
   _soapCatFilter = cat;
   renderSOAP();
+  _scrollTop();
 }
 
 function _soapFilter(v) {
@@ -4219,8 +4223,9 @@ function _soapFilter(v) {
 }
 
 function _soapToggle(id) {
-  _soapOpenId = _soapOpenId === id ? null : id;
-  renderSOAP();
+  const opening = _soapOpenId !== id;
+  _soapOpenId = opening ? id : null;
+  _renderKeepingAnchor('soap-list', id, renderSOAP, opening);
 }
 
 function renderSOAP() {
@@ -4284,7 +4289,7 @@ function renderSOAP() {
         ${_soapBlock('Tx', '시행 술식 (Treatment)', it.tx)}
       </div>` : '';
     html += `<div class="soap-card${open ? ' open' : ''}">
-      <div class="soap-card-head" onclick="_soapToggle('${it.id}')">
+      <div class="soap-card-head" data-ref-id="${it.id}" onclick="_soapToggle('${it.id}')">
         <span class="soap-cat-badge">${_esc(it.category || '')}</span>
         <span class="soap-card-title">${_esc(it.title || '')}</span>
         ${_favBtn('soap', it.id)}
@@ -4389,9 +4394,13 @@ function _examCatOrder(cat) {
   return i < 0 ? 99 : i;
 }
 
-function _setExamCat(cat) { _examCatFilter = cat; renderExam(); }
+function _setExamCat(cat) { _examCatFilter = cat; renderExam(); _scrollTop(); }
 function _examFilter(v) { _examSearch = (v || '').trim().toLowerCase(); renderExam(); }
-function _examToggle(id) { _examOpenId = _examOpenId === id ? null : id; renderExam(); }
+function _examToggle(id) {
+  const opening = _examOpenId !== id;
+  _examOpenId = opening ? id : null;
+  _renderKeepingAnchor('exam-list', id, renderExam, opening);
+}
 
 function renderExam() {
   const list = document.getElementById('exam-list');
@@ -4447,7 +4456,7 @@ function renderExam() {
       ? `<div class="soap-body">${EXAM_FIELDS.map(([k, label, sub]) => _examBlock(label, sub, it[k])).join('')}${_sourceHTML(it.source)}</div>`
       : '';
     html += `<div class="soap-card exam-card${open ? ' open' : ''}">
-      <div class="soap-card-head" onclick="_examToggle('${it.id}')">
+      <div class="soap-card-head" data-ref-id="${it.id}" onclick="_examToggle('${it.id}')">
         <span class="soap-cat-badge">${_esc(it.category || '')}</span>
         <span class="soap-card-title">${_esc(it.title || '')}</span>
         ${_favBtn('exam', it.id)}
@@ -4671,9 +4680,13 @@ function _labCatOrder(cat) {
   return i < 0 ? 99 : i;
 }
 
-function _setLabCat(cat) { _labCatFilter = cat; renderLab(); }
+function _setLabCat(cat) { _labCatFilter = cat; renderLab(); _scrollTop(); }
 function _labFilter(v) { _labSearch = (v || '').trim().toLowerCase(); renderLab(); }
-function _labToggle(id) { _labOpenId = _labOpenId === id ? null : id; renderLab(); }
+function _labToggle(id) {
+  const opening = _labOpenId !== id;
+  _labOpenId = opening ? id : null;
+  _renderKeepingAnchor('lab-list', id, renderLab, opening);
+}
 
 function renderLab() {
   const list = document.getElementById('lab-list');
@@ -4729,7 +4742,7 @@ function renderLab() {
       ? `<div class="soap-body">${LAB_FIELDS.map(([k, label, sub]) => _labBlock(label, sub, it[k])).join('')}${_labExampleHTML(it.example)}${_sourceHTML(it.source)}</div>`
       : '';
     html += `<div class="soap-card lab-card${open ? ' open' : ''}">
-      <div class="soap-card-head" onclick="_labToggle('${it.id}')">
+      <div class="soap-card-head" data-ref-id="${it.id}" onclick="_labToggle('${it.id}')">
         <span class="soap-cat-badge">${_esc(it.category || '')}</span>
         <span class="soap-card-title">${_esc(it.title || '')}</span>
         ${_favBtn('lab', it.id)}
@@ -5015,6 +5028,36 @@ function _fbErrMsg(e, collection) {
   return '실패: ' + (e && e.message ? e.message : e);
 }
 
+// ── 아코디언 스크롤 고정 ─────────────────────────────────────
+// 긴 항목을 펼친 채 다른 항목을 누르면 위쪽 카드가 접히며 화면이 통째로 밀린다.
+// 누른 항목의 머리를 클릭 직전 위치에 그대로 붙잡아 둔다 (모바일에서 특히 중요).
+function _refAnchorEl(listId, anchorId) {
+  const list = document.getElementById(listId);
+  if (!list) return null;
+  return list.querySelector('[data-ref-id="' + String(anchorId).replace(/["\\]/g, '\\$&') + '"]');
+}
+
+function _renderKeepingAnchor(listId, anchorId, render, opening) {
+  const before = _refAnchorEl(listId, anchorId);
+  const top0 = before ? before.getBoundingClientRect().top : null;
+  render();
+  if (top0 == null) return;
+  const after = _refAnchorEl(listId, anchorId);
+  if (!after) return;
+  let delta = after.getBoundingClientRect().top - top0;
+  if (opening) {
+    // 펼친 항목이 화면 아래쪽에 있으면 본문이 안 보이므로 머리를 헤더 밑으로 끌어올린다
+    const headerH = document.querySelector('header')?.getBoundingClientRect().height || 60;
+    if (top0 > headerH + window.innerHeight * 0.45) {
+      delta = after.getBoundingClientRect().top - (headerH + 8);
+    }
+  }
+  if (Math.abs(delta) > 1) window.scrollBy(0, delta);
+}
+
+// 분류·구획 탭을 바꾸면 목록이 통째로 달라지므로 맨 위에서 다시 시작한다
+function _scrollTop() { window.scrollTo(0, 0); }
+
 // ── 참고자료 딥링크 (SOAP · 임상검사 · 용어) ─────────────────
 // 각 탭은 서로를 참조하므로 항목 단위로 이동·강조할 수 있어야 한다.
 // URL 해시(#soap-… / #exam-… / #term-… / #lab-…)로 특정 항목을 공유할 수도 있다.
@@ -5060,8 +5103,7 @@ async function _openRef(kind, id, opts = {}) {
 function _flashRef(listId, id) {
   const list = document.getElementById(listId);
   if (!list) return;
-  const esc = (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/["\\]/g, '\\$&');
-  const el = list.querySelector(`[onclick*="${esc}"]`)?.closest('.soap-card, .term-row');
+  const el = _refAnchorEl(listId, id)?.closest('.soap-card, .term-row');
   if (!el) return;
   const y = el.getBoundingClientRect().top + window.scrollY - 90;
   window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
@@ -5174,19 +5216,24 @@ async function _seedTerm(existingSnap) {
   catch (e) { console.warn('[term seed meta]', e); }
 }
 
-function _setTermCat(cat) { _termCatFilter = cat; renderTerm(); }
-function _setTermSec(sec) { _termSecFilter = sec; renderTerm(); }
+function _setTermCat(cat) { _termCatFilter = cat; renderTerm(); _scrollTop(); }
+function _setTermSec(sec) { _termSecFilter = sec; renderTerm(); _scrollTop(); }
 function _termFilter(v) { _termSearch = (v || '').trim().toLowerCase(); renderTerm(); }
-function _termToggle(id) { _termOpenId = _termOpenId === id ? null : id; renderTerm(); }
+function _termToggle(id) {
+  const opening = _termOpenId !== id;
+  _termOpenId = opening ? id : null;
+  _renderKeepingAnchor('term-list', id, renderTerm, opening);
+}
 function _termToggleTopic(key) {
-  if (_termOpenTopics.has(key)) _termOpenTopics.delete(key);
-  else _termOpenTopics.add(key);
-  renderTerm();
+  const opening = !_termOpenTopics.has(key);
+  opening ? _termOpenTopics.add(key) : _termOpenTopics.delete(key);
+  _renderKeepingAnchor('term-list', key, renderTerm, opening);
 }
 function _termExpandAll(open) {
   _termOpenTopics = new Set();
   if (open) _termItems.forEach(i => _termOpenTopics.add(i.category + '|' + (i.topic || '기타')));
   renderTerm();
+  _scrollTop();
 }
 
 function renderTerm() {
@@ -5263,7 +5310,7 @@ function renderTerm() {
     }
     const open = searching || _termOpenTopics.has(g.key);
     html += `<div class="term-group${open ? ' open' : ''}">
-      <div class="term-group-head" onclick="_termToggleTopic('${_esc(g.key).replace(/'/g, "\\'")}')">
+      <div class="term-group-head" data-ref-id="${_esc(g.key)}" onclick="_termToggleTopic('${_esc(g.key).replace(/'/g, "\\'")}')">
         <span class="term-group-caret">${open ? '▾' : '▸'}</span>
         <span class="term-group-title">${_esc(g.topic)}</span>
         <span class="term-group-count">${g.terms.length}</span>
@@ -5284,7 +5331,7 @@ function renderTerm() {
             ${_sourceHTML(TERM_SOURCE[it.category])}
           </div>` : '';
         html += `<div class="term-row${rowOpen ? ' open' : ''}">
-          <div class="term-head" onclick="_termToggle('${it.id}')">
+          <div class="term-head" data-ref-id="${it.id}" onclick="_termToggle('${it.id}')">
             <span class="term-sec-badge sec-${secCls}">${_esc(it.section || '')}</span>
             <span class="term-ko">${_esc(it.ko || '')}</span>
             <span class="term-arrow">→</span>

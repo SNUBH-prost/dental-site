@@ -1,6 +1,6 @@
 // 오프라인 대비 — 앱 셸과 참고자료 시드를 캐시해 네트워크가 끊겨도 조회가 되도록 한다.
 // 정책: HTML/JS/CSS 는 network-first(최신 우선) + 실패 시 캐시 폴백.
-const CACHE = 'dental-v53';
+const CACHE = 'dental-v54';
 const BASE = '/dental-site/';
 
 // 설치 시 미리 담아 두는 것 — 이것만 있으면 SOAP·임상검사·용어를 오프라인에서 볼 수 있다
