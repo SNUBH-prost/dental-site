@@ -4283,10 +4283,11 @@ function renderSOAP() {
     const body = open ? `<div class="soap-body">
         ${_soapBlock('S', 'Subjective 주관적', it.subjective)}
         ${_soapBlock('O', 'Objective 객관적', it.objective)}
-        ${_relatedExamHTML(it.category)}
+        ${_relatedExamHTML(it.category, it.title)}
         ${_soapBlock('A', 'Assessment 평가', it.assessment)}
         ${_soapBlock('P', 'Plan 계획', it.plan)}
         ${_soapBlock('Tx', '시행 술식 (Treatment)', it.tx)}
+        ${_relatedLabHTML(it.title)}
       </div>` : '';
     html += `<div class="soap-card${open ? ' open' : ''}">
       <div class="soap-card-head" data-ref-id="${it.id}" onclick="_soapToggle('${it.id}')">
@@ -4587,8 +4588,21 @@ const SOAP_RELATED_EXAM = {
                '중심위 유도 및 CR–MIP 편위 계측', '수직고경 계측 (VDO · VDR · FWS)', '편심 운동 검사 (Excursive movements)'],
 };
 
-function _relatedExamHTML(category) {
-  const titles = SOAP_RELATED_EXAM[category] || [];
+// 항목별로 더 정확한 연결이 필요한 경우의 예외표 (분류 기본값보다 우선한다)
+const SOAP_RELATED_EXAM_BY_TITLE = {
+  '기타 7-1 · 초진 상담 및 전신 위험도 평가': [
+    '활력징후 측정 및 ASA 판정', '항응고·항혈소판제 복용 평가',
+    '골흡수억제제 복용력 및 MRONJ 위험 평가', '당뇨 조절 상태 평가 (HbA1c)',
+    '전신질환의 구강 발현 스크리닝'],
+  '기타 7-6 · 전신질환·복약 환자의 침습 처치 전 평가': [
+    '활력징후 측정 및 ASA 판정', '항응고·항혈소판제 복용 평가',
+    '골흡수억제제 복용력 및 MRONJ 위험 평가',
+    '감염성 심내막염 예방적 항생제 적응증 확인', '당뇨 조절 상태 평가 (HbA1c)',
+    '두경부 방사선치료 병력 및 ORN 위험 평가', '전신질환의 구강 발현 스크리닝'],
+};
+
+function _relatedExamHTML(category, title) {
+  const titles = SOAP_RELATED_EXAM_BY_TITLE[title] || SOAP_RELATED_EXAM[category] || [];
   if (!titles.length) return '';
   const chips = titles.map(t => {
     const id = _examDocId(t);
@@ -4739,7 +4753,7 @@ function renderLab() {
     const editBtn = isAdmin
       ? `<button class="soap-edit-btn" onclick="event.stopPropagation();_openLabEdit('${it.id}')">✏️</button>` : '';
     const body = open
-      ? `<div class="soap-body">${LAB_FIELDS.map(([k, label, sub]) => _labBlock(label, sub, it[k])).join('')}${_labExampleHTML(it.example)}${_sourceHTML(it.source)}</div>`
+      ? `<div class="soap-body">${LAB_FIELDS.map(([k, label, sub]) => _labBlock(label, sub, it[k])).join('')}${_labExampleHTML(it.example)}${_relatedSoapHTML(it.title)}${_sourceHTML(it.source)}</div>`
       : '';
     html += `<div class="soap-card lab-card${open ? ' open' : ''}">
       <div class="soap-card-head" data-ref-id="${it.id}" onclick="_labToggle('${it.id}')">
@@ -4860,6 +4874,85 @@ async function _deleteLab(id) {
   } catch (e) {
     _edToast(_fbErrMsg(e, 'labTemplates'), 'error');
   }
+}
+
+// ── SOAP ↔ 기공지시서 연결 ───────────────────────────────────
+// 진료 단계에서 기공소로 무엇을 넘겨야 하는지는 SOAP 옆에 붙어 있어야 쓸모가 있다.
+// SOAP 항목 제목 → 기공지시서 항목 제목 (양방향으로 쓴다)
+const SOAP_RELATED_LAB = {
+  '고정성 1-1 · 진단 및 치료계획': ['진단 wax-up·시적용 모형', '기공지시서는 무엇을 결정하는 문서인가'],
+  '고정성 1-2 · 지대치 형성 (Tooth Preparation)': ['변연과 적합을 지시하는 법', '모호한 말을 수치로 바꾸는 법'],
+  '고정성 1-3 · 임시보철 (Provisional Restoration)': ['임시 고정성 보철 — 기공소 제작(장기 임시)'],
+  '고정성 1-4 · 정밀인상 및 악간관계 채득': ['인상·스캔·디지털 파일을 지시하는 법', '교합을 지시하는 법', '색조를 지시하는 법'],
+  '고정성 1-5 · 시적 (Framework / Bisque Try-in)': ['단관 — 금속도재(PFM)', '단관 — 모놀리식 지르코니아', '가공의치(FPD) — pontic 설계 지시'],
+  '고정성 1-6 · 최종 접착 및 장착 (Cementation)': ['단관 — 리튬디실리케이트', '인레이·온레이'],
+  '고정성 1-7 · Post & Core (실활치 수복)': ['주조 post & core'],
+  '고정성 1-8 · 치관연장술 / 교정적 정출 협진': ['주조 post & core', '변연과 적합을 지시하는 법'],
+  '고정성 1-9 · 보철물 탈락·파절 응급 처치': ['재제작·수정 의뢰서 쓰는 법', '접착 브릿지(resin-bonded FDP)'],
+  'RPD 2-1 · 진단·서베잉·설계': ['RPD 진단·서베잉 의뢰 — 설계를 확정하기 전에'],
+  'RPD 2-2 · 구강 형성 (Mouth Preparation)': ['RPD 금속구조물(framework) 설계 지시', '이중관(telescopic) 보철 의뢰'],
+  'RPD 2-3 · 정밀인상 (Final Impression)': ['RPD 이차 인상(altered cast) 의뢰'],
+  'RPD 2-4 · 금속 주조체 시적 (Framework Try-in)': ['RPD 금속구조물(framework) 설계 지시'],
+  'RPD 2-5 · 악간관계 채득 및 인공치 선택': ['RPD 인공치 배열·온성 지시'],
+  'RPD 2-6 · 납의치 시적 (Wax Try-in)': ['RPD 인공치 배열·온성 지시'],
+  'RPD 2-7 · 의치 장착 및 초기 조정': ['RPD 인공치 배열·온성 지시'],
+  'RPD 2-8 · 사후관리 — 이장·수리·재평가': ['RPD 수리·첨상·이장 의뢰'],
+  'CD 3-1 · 진단 및 예비인상': ['총의치 — 개인 트레이(custom tray) 제작 지시'],
+  'CD 3-2 · 정밀인상 (Final Impression)': ['총의치 — 개인 트레이(custom tray) 제작 지시', '총의치 — 후방 봉쇄(post-dam)와 의치상 외형 지시'],
+  'CD 3-3 · 악간관계 채득 (Jaw Relation Record)': ['총의치 — record base·occlusal rim 지시'],
+  'CD 3-4 · 납의치 시적 (Wax Try-in)': ['총의치 — 인공치 선택·배열 지시', '단일 총의치 — 대합이 자연치·RPD일 때'],
+  'CD 3-5 · 의치 장착 (Insertion)': ['총의치 — 온성·remount 지시'],
+  'CD 3-6 · 장착 후 조정 (Post-insertion)': ['총의치 — 온성·remount 지시'],
+  'CD 3-7 · 유지관리 — 이장·재제작·의치성 구내염': ['총의치 — 이장·개상·수리 의뢰', '조직조정·치료용 의치 의뢰', '총의치 — 디지털(밀링·프린팅) 제작 지시'],
+  '임플란트 4-1 · 보철 주도 치료계획': ['임플란트 서지컬 가이드 의뢰', '진단 wax-up·시적용 모형'],
+  '임플란트 4-2 · 2차 수술 및 연조직 형성': ['임플란트 임시보철 — 연조직 형태를 만드는 지시'],
+  '임플란트 4-3 · 인상 채득': ['임플란트 인상·스캔 자료 전달 지시'],
+  '임플란트 4-4 · Abutment & Crown 시적': ['임플란트 단관 — 어버트먼트 선택을 지시서에 적는 법', '임플란트 다수 유닛·브리지 — passive fit 지시', '임플란트 전악 고정성 보철 — 재료와 공간 지시'],
+  '임플란트 4-5 · 최종 장착 및 유지관리 이관': ['임플란트 단관 — 어버트먼트 선택을 지시서에 적는 법'],
+  '임플란트 4-6 · 임플란트 오버덴처 (IOD)': ['임플란트 오버덴처 — 어태치먼트 선택 지시'],
+  '임플란트 4-7 · 유지관리 및 임플란트 주위 질환': ['임플란트 보철 유지관리·수리 의뢰'],
+  '임시의치 5-1 · 임시 국소의치 (Interim RPD)': ['RPD 수리·첨상·이장 의뢰'],
+  '임시의치 5-2 · 즉시의치 (Immediate Denture)': ['즉시의치(immediate denture) 의뢰'],
+  '임시의치 5-3 · 조직 조정 (Tissue Conditioning)': ['조직조정·치료용 의치 의뢰'],
+  '심미 6-1 · 심미 진단 및 디자인': ['진단 wax-up·시적용 모형', '단일 전치 수복 — 색을 맞추기 가장 어려운 증례'],
+  '심미 6-2 · 라미네이트 베니어 — 형성 및 인상': ['라미네이트 베니어'],
+  '심미 6-3 · 라미네이트 베니어 — 시적 및 접착': ['라미네이트 베니어', '단일 전치 수복 — 색을 맞추기 가장 어려운 증례'],
+  '기타 7-2 · 교합안정장치 (Occlusal Splint)': ['교합안정장치(스플린트)', '수면무호흡 구강내장치(MAD) 의뢰', '스포츠 마우스가드 의뢰'],
+  '기타 7-4 · 교합 재구성 진단 (VDO · 전악 재수복)': ['교합을 지시하는 법', '진단 wax-up·시적용 모형', '임시 고정성 보철 — 기공소 제작(장기 임시)'],
+  '기타 7-5 · 보철 정기 리콜 및 유지관리': ['재제작·수정 의뢰서 쓰는 법', '기공물 소독·운송·보관 — 지시서에 함께 적는 것'],
+};
+
+// 기공지시서 → SOAP 역방향 (위 표를 뒤집어 만든다)
+let _labToSoap = null;
+function _labRelatedSoapTitles(labTitle) {
+  if (!_labToSoap) {
+    _labToSoap = {};
+    Object.entries(SOAP_RELATED_LAB).forEach(([soapTitle, labs]) =>
+      labs.forEach(l => (_labToSoap[l] = _labToSoap[l] || []).push(soapTitle)));
+  }
+  return _labToSoap[labTitle] || [];
+}
+
+function _relatedLabHTML(soapTitle) {
+  const titles = SOAP_RELATED_LAB[soapTitle] || [];
+  if (!titles.length) return '';
+  const chips = titles.map(t =>
+    `<button class="ref-chip" onclick="event.stopPropagation();_openRef('lab','${_labDocId(t)}')">${_esc(t)}</button>`).join('');
+  return `<div class="ref-links ref-links-lab">
+    <span class="ref-links-label">🧾 기공지시서 작성</span>
+    <div class="ref-chips">${chips}</div>
+  </div>`;
+}
+
+function _relatedSoapHTML(labTitle) {
+  const titles = _labRelatedSoapTitles(labTitle);
+  if (!titles.length) return '';
+  const chips = titles.map(t =>
+    `<button class="ref-chip" onclick="event.stopPropagation();_openRef('soap','${_soapDocId(t)}')">${_esc(t)}</button>`).join('');
+  return `<div class="ref-links ref-links-soap">
+    <span class="ref-links-label">📝 관련 진료 단계 (SOAP)</span>
+    <div class="ref-chips">${chips}</div>
+  </div>`;
 }
 
 // ── 차팅 예문 복사 ───────────────────────────────────────────

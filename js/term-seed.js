@@ -32,7 +32,7 @@
  * ───────────────────────────────────────────────────────────── */
 
 const TERM_CATS = ["기술 어휘", "판정 어휘", "구강내과", "구강외과", "치아·수복물", "치수·치근단", "치주", "교정", "교합·악관절", "의치", "임플란트", "방사선"];
-const TERM_SEED_VERSION = 7;
+const TERM_SEED_VERSION = 8;
 
 const TERM_SEED = [
   // ── 기술 어휘 · 원발진·속발진 ──
@@ -2052,5 +2052,69 @@ const TERM_SEED = [
     distinguish: "- **공격적 병변에서 기술되는 소견**이므로 관찰되면 지체 없이 정밀 검사·의뢰를 고려\n- 만성 감염(골수염)에서도 나타나므로 **임상 경과와 함께** 해석\n- 하악 하연을 따라 잘 관찰된다 — 파노라마에서 이 부위를 의식해 본다",
     example: "Onion-skin periosteal reaction along the inferior border.",
     caution: "**공격적 병변에서 기술되는 소견**으로, 관찰되면 지체 없이 정밀 검사·의뢰를 고려한다.",
+  },
+  {
+    ko: '점상출혈', en: 'petechiae', section: 'O', category: '구강내과', topic: '점막 기본 소견', order: 6,
+    meaning: '직경 **1–2 mm 이하**의 붉은–자주색 점 모양 출혈. 모세혈관에서 혈액이 조직으로 새어 나온 것이라 **유리 슬라이드로 눌러도 색이 빠지지 않는다.** 구개(특히 연구개), 협점막, 혀에 잘 나타난다. 흡인 압력(구강성교·기침·구토)에 의한 국소 원인부터 **혈소판 감소·응고 이상·감염성 단핵구증**까지 원인의 폭이 넓다.',
+    variants: 'petechia (단수) / petechiae (복수)',
+    distinguish: '- **혈관성 병변과의 구분**: 유리 슬라이드로 압박했을 때 **색이 빠지면 혈관성**(혈관종·정맥류), 빠지지 않으면 출혈성이다\n- **반상출혈(ecchymosis)과의 구분**: 크기다. 점상은 1–2 mm 이하의 점, 반상은 그보다 크고 면으로 번진 형태\n- **적색 반점(erythematous macule)과의 구분**: 압박 시 퇴색 여부로 가른다\n- **단발 vs 다발**: 다발성·양측성이면 국소 원인보다 **전신 원인(혈액·간·약물)** 을 먼저 고려한다',
+    example: 'Multiple non-blanching petechiae on the soft palate, bilateral.',
+    caution: '**전신 출혈 경향의 첫 신호일 수 있다.** 다발성이거나 자발 치은 출혈이 동반되면 침습 처치 전에 혈액검사·의뢰를 고려한다.'
+  },
+  {
+    ko: '반상출혈', en: 'ecchymosis', section: 'O', category: '구강내과', topic: '점막 기본 소견', order: 7,
+    meaning: '점상출혈보다 **크고 면으로 번진** 피하·점막하 출혈. 시간이 지나며 자주색 → 녹색 → 황색으로 색이 변한다(혈색소 분해). 외상·발치 후에 흔하지만, **경미한 자극에도 반복해서 생긴다면** 응고·혈소판 이상이나 항혈전제 복용을 시사한다.',
+    variants: 'ecchymosis (단수) / ecchymoses (복수) · bruise · hematoma(융기를 이루면)',
+    distinguish: '- **점상출혈과의 구분**: 크기와 형태 — 점 vs 면\n- **혈종(hematoma)과의 구분**: 만져서 **융기와 파동감**이 있으면 혈종이다. 반상출혈은 평평하다\n- **색소침착과의 구분**: 색소는 시간이 지나도 색이 변하지 않는다. 반상출혈은 **며칠에 걸쳐 색이 변한다** — 경과 관찰이 감별 수단\n- **압박 시** 색이 빠지지 않는 점은 점상출혈과 같다',
+    example: 'Ecchymosis on the left buccal mucosa, 15 x 10 mm, yellow-green discoloration (resolving).',
+    caution: '발치·마취 후 예상 범위를 넘는 반상출혈이 반복되면 **출혈 경향 평가**로 연결한다. 색 변화 단계를 적어 두면 발생 시점을 추정할 수 있다.'
+  },
+  {
+    ko: '치아 불소증', en: 'dental fluorosis', section: 'O·A', category: '치아·수복물', topic: '흡수·형성이상', order: 6,
+    meaning: '치아 형성기의 **과다한 불소 노출**로 생긴 법랑질 저광화. 경미하면 흰 선·반점, 심하면 갈색 착색과 표면 요철·소실이 나타난다. **좌우 대칭적**이고 **같은 시기에 형성된 치아군**에 함께 나타나는 것이 특징이다.',
+    variants: 'mottled enamel (구용어) · fluorotic enamel',
+    distinguish: '- **초기 우식 백색 병소와의 구분**: 우식 백색 병소는 **치태 정체 부위(치경부·인접면)에 국한**되고 비대칭이다. 불소증은 **교두정·절단 1/3 에 대칭적**으로 나타난다\n- **법랑질 형성부전(hypoplasia)과의 구분**: 형성부전은 **양적 결손**(요철·함몰)이고, 불소증은 주로 **질적 결손**(광화 부족)이다. 다만 중증 불소증은 표면 소실을 동반한다\n- **MIH 와의 구분**: MIH 는 **제1대구치·절치에 비대칭적**으로, 경계가 뚜렷한 크림–갈색 반점으로 나타난다\n- 병력이 결정적이다 — **거주지 수불소화·불소 보충제·치약 삼킴** 병력을 확인',
+    example: 'Symmetrical white opacities on the incisal third of maxillary incisors, consistent with mild dental fluorosis.',
+    caution: '심미 수복 전에 **불소증 여부를 적어 두어야** 접착 전략(표면 처리·미백 병용)이 달라진다.'
+  },
+  {
+    ko: '구치-절치 저광화', en: 'molar-incisor hypomineralization (MIH)', section: 'O·A', category: '치아·수복물', topic: '흡수·형성이상', order: 7,
+    meaning: '**제1대구치**와 흔히 **절치**를 침범하는 원인 미상의 법랑질 저광화. 경계가 뚜렷한 **크림색–황갈색 반점**으로 나타나며, 저광화된 법랑질은 맹출 후 쉽게 부서져(post-eruptive breakdown) 급속한 치질 소실과 **강한 지각과민**을 동반한다.',
+    variants: 'hypomineralized first permanent molar · cheese molar (속칭)',
+    distinguish: '- **불소증과의 구분**: MIH 는 **비대칭적**이고 경계가 뚜렷하며 색이 크림–갈색이다. 불소증은 대칭적이고 경계가 흐리다\n- **우식과의 구분**: 초기에는 **치태 정체와 무관한 부위**에 색 변화가 있고 표면이 매끈하다. 다만 파괴가 시작되면 우식이 빠르게 겹친다\n- **법랑질 형성부전과의 구분**: 맹출 시점의 표면 형태로 가른다 — 형성부전은 처음부터 결손이 있고, MIH 는 처음엔 매끈하다가 **부서진다**\n- 침범 치아 조합(제1대구치 ± 절치)이 진단의 핵심 단서',
+    example: 'Demarcated creamy-brown opacity on #16 occlusal surface with post-eruptive enamel breakdown; #11, #21 with similar opacities — MIH.',
+    caution: '**마취가 잘 듣지 않는 경우가 흔하고** 지각과민이 심해 협조도가 떨어진다. 수복 전에 이 점을 기록하고 계획에 반영한다.'
+  },
+  {
+    ko: '방사선 우식', en: 'radiation caries', section: 'O·A', category: '치아·수복물', topic: '치질 소실', order: 6,
+    meaning: '두경부 방사선치료 후 **타액 감소·조성 변화**를 배경으로 급속히 진행하는 우식. **치경부와 절단연·교두정** 등 통상적인 우식 호발 부위가 아닌 곳에서 시작해 치아를 둘러싸듯 진행하며, 치관이 통째로 부러지는 양상으로 끝나기도 한다.',
+    variants: 'radiation-related caries · post-radiation caries',
+    distinguish: '- **일반 우식과의 구분**: 부위와 속도다. **치경부를 띠처럼 두르는 분포**와 **수개월 단위의 급속 진행**이 특징\n- **치경부 마모·굴곡파절과의 구분**: 마모는 단단하고 매끈한 면, 방사선 우식은 **연화된 치질과 착색**\n- **구강건조(약물성)에 의한 우식과의 구분**: 형태는 유사하다. **방사선 조사 병력과 조사 부위**로 가른다',
+    example: 'Rapidly progressing cervical caries encircling #13, #14 following head and neck radiotherapy — radiation caries.',
+    caution: '이 소견이 보이면 **발치 위험(ORN)** 과 직결된다. 조사 선량·부위를 확인하고 보존적 접근을 우선 검토한다.'
+  },
+  {
+    ko: '신생치 · 유아치', en: 'natal / neonatal tooth', section: 'O', category: '치아·수복물', topic: '맹출 이상', order: 4,
+    meaning: '**출생 시 이미 나와 있는 치아를 natal tooth**, **생후 30일 이내에 맹출한 치아를 neonatal tooth** 라 한다. 대부분 하악 유중절치이며, **과잉치가 아니라 정상 유치가 조기 맹출한 경우**가 많다. 치근 형성이 덜 되어 동요가 심한 경우가 흔하다.',
+    variants: 'natal tooth (출생 시) / neonatal tooth (생후 30일 이내)',
+    distinguish: '- **과잉치와의 구분**: 방사선으로 **유치열 치식과 대조**한다. 정상 유치라면 발거 시 그 자리가 비게 된다\n- **동요도 평가가 핵심**: 흡인 위험이 있을 정도로 심하게 흔들리는지\n- **Riga-Fede 병변 동반 여부**: 혀 하면의 궤양 — 수유 시 마찰로 생긴다',
+    example: 'Mandibular central incisor present at birth with grade 3 mobility — natal tooth. Riga-Fede ulceration on ventral tongue.',
+    caution: '발거 여부는 **동요도·수유 장애·흡인 위험**으로 판단한다. 정상 유치를 발거하면 그 자리는 영구치까지 비어 있게 된다는 점을 보호자에게 설명한다.'
+  },
+  {
+    ko: 'Turner 치아', en: 'Turner tooth (Turner hypoplasia)', section: 'O·A', category: '치아·수복물', topic: '흡수·형성이상', order: 8,
+    meaning: '선행 **유치의 근단 감염이나 외상**이 아래에서 발육 중인 영구치 치배를 침범해 생긴 국소적 법랑질 형성부전·저광화. **한 개 치아에만** 나타나는 것이 특징이며, 흔히 소구치(선행 유구치 감염)나 상악 절치(외상)에서 본다.',
+    variants: 'Turner hypoplasia · localized enamel hypoplasia',
+    distinguish: '- **전신 원인 형성부전과의 구분**: 전신 원인이면 **같은 시기 형성된 여러 치아에 대칭적**으로 나타난다. Turner 치아는 <b>단일 치아</b>\n- **MIH 와의 구분**: MIH 는 제1대구치·절치 조합, Turner 는 선행 유치 병력이 있는 부위 한 곳\n- **병력이 진단이다** — 해당 부위 유치의 감염·외상·조기 상실 기록을 확인',
+    example: 'Localized enamel hypoplasia on #45 only, with history of periapical infection of the primary predecessor — Turner tooth.',
+    caution: '**한 개만 다르다면 국소 원인을 찾는다.** 대칭성 여부가 전신 원인과 국소 원인을 가르는 첫 갈림길이다.'
+  },
+  {
+    ko: '공간 소실', en: 'space loss / arch length loss', section: 'O·A', category: '교정', topic: '계측·분석', order: 6,
+    meaning: '유치 조기 상실이나 인접면 우식으로 인접치가 **기울거나 이동해** 후속 영구치가 나올 자리가 줄어든 상태. 계측으로 확인하며, 정중선 변위·인접치 경사·대합치 정출을 동반한다.',
+    variants: 'arch length deficiency · space deficiency',
+    distinguish: '- **총생(crowding)과의 구분**: 총생은 **치아 크기와 악궁 길이의 부조화**이고, 공간 소실은 **상실 후 이동**의 결과다. 병력과 좌우 비교로 가른다\n- **좌우 대칭 비교**가 가장 실용적이다 — 반대측 동일 부위의 폭과 비교\n- **정중선 변위** 동반 여부를 함께 기록',
+    example: 'Space loss of 2.5 mm in the #75 area with mesial tipping of #36; midline deviated 1 mm to the left.',
+    caution: '유치 조기 상실 시점에 **공간유지 필요 여부**를 판단하지 않으면 되돌리는 데 훨씬 큰 비용이 든다. 상실 부위·시점·잔여 맹출 기간을 함께 기록한다.'
   },
 ];
